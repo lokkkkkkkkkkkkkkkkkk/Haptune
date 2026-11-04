@@ -4,7 +4,7 @@
 #   bash scripts/screenshots.sh <Haptune.app (simulator build)> <HaptuneWatch.app> <output folder>
 set -uo pipefail
 APP="$1"; WATCH_APP="$2"; OUT="$3"
-BUNDLE=com.example.haptune
+BUNDLE=com.haptune.app
 mkdir -p "$OUT"
 
 pick() {   # newest available simulator whose name starts with $1

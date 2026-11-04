@@ -87,6 +87,35 @@
           }
         }
       }
+    },
+    "NSLocalNetworkUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haptune connects to the Haptune server on your computer over Wi-Fi for heavy jobs such as reading PDF sheet music."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haptune 会通过 Wi-Fi 连接你电脑上的 Haptune 服务器，处理读取 PDF 乐谱等较重的工作。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haptune 會透過 Wi-Fi 連線到你電腦上的 Haptune 伺服器，處理讀取 PDF 樂譜等較重的工作。"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haptune bersambung ke pelayan Haptune pada komputer anda melalui Wi-Fi untuk kerja berat seperti membaca skor muzik PDF."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

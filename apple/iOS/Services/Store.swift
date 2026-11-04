@@ -7,10 +7,21 @@ import SwiftUI
 /// test purchases in Xcode and the simulator without App Store Connect.
 @MainActor
 final class Store: ObservableObject {
-    static let yearly = "com.example.haptune.plus.yearly"
-    static let monthly = "com.example.haptune.plus.monthly"
-    static let lifetime = "com.example.haptune.plus.lifetime"
+    static let yearly = "com.haptune.app.plus.yearly"
+    static let monthly = "com.haptune.app.plus.monthly"
+    static let lifetime = "com.haptune.app.plus.lifetime"
     static let productIDs = [yearly, monthly, lifetime]
+    static let tester = "tester"
+
+    /// Test builds (the .ipa you sideload with a free Apple ID) can't buy anything from the App Store,
+    /// so every Plus feature is unlocked. CI builds them with `SWIFT_ACTIVE_COMPILATION_CONDITIONS=TESTER`.
+    static var isTestBuild: Bool {
+        #if TESTER
+        return true
+        #else
+        return false
+        #endif
+    }
 
     @Published private(set) var products: [Product] = []
     @Published private(set) var isPlus = false
@@ -55,6 +66,7 @@ final class Store: ObservableObject {
             renews = t.expirationDate
         }
         if AppSettings.isDemo && UserDefaults.standard.bool(forKey: "HaptuneDemoPlus") { plus = true; active = Self.yearly }
+        if Self.isTestBuild { plus = true; active = Self.tester; renews = nil }
         isPlus = plus
         activeProductID = active
         renewalDate = renews
@@ -100,6 +112,7 @@ final class Store: ObservableObject {
         case Self.yearly: return String(localized: "Yearly")
         case Self.monthly: return String(localized: "Monthly")
         case Self.lifetime: return String(localized: "Lifetime")
+        case Self.tester: return String(localized: "Test Build")
         default: return ""
         }
     }

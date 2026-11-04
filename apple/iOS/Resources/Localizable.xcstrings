@@ -5193,6 +5193,28 @@
         }
       }
     },
+    "Test Build": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "测试版"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "測試版"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Binaan Ujian"
+          }
+        }
+      }
+    },
     "Test Connection": {
       "localizations": {
         "zh-Hans": {
@@ -5277,6 +5299,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pemisahan tidak selesai."
+          }
+        }
+      }
+    },
+    "This is a test build: every Plus feature is unlocked and nothing can be bought.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这是测试版：所有 Plus 功能均已解锁，无法购买任何内容。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這是測試版：所有 Plus 功能皆已解鎖，無法購買任何內容。"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ini binaan ujian: semua ciri Plus dibuka dan tiada apa yang boleh dibeli."
           }
         }
       }

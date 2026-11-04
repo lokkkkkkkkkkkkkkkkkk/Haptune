@@ -2,7 +2,7 @@
 # One iOS target runs on iPhone, iPad and Mac (Mac Catalyst); the Watch app is embedded for iPhone.
 name: Haptune
 options:
-  bundleIdPrefix: com.example.haptune          # change to your own reverse-domain prefix
+  bundleIdPrefix: com.haptune                  # change to your own reverse-domain prefix before publishing
   deploymentTarget:
     iOS: "18.0"
     watchOS: "11.0"
@@ -45,6 +45,9 @@ targets:
         UIApplicationSupportsIndirectInputEvents: true
         NSMicrophoneUsageDescription: Haptune listens while you play so it can follow the score and tap your Apple Watch when a note is wrong, out of tune or out of time. Audio stays on your device unless you ask for a full analysis or a band split.
         NSCameraUsageDescription: Haptune uses the camera to scan printed sheet music.
+        NSLocalNetworkUsageDescription: Haptune connects to the Haptune server on your computer over Wi-Fi for heavy jobs such as reading PDF sheet music.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         LSSupportsOpeningDocumentsInPlace: true
@@ -69,7 +72,7 @@ targets:
             UTTypeTagSpecification: { public.filename-extension: [mxl] }
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.haptune
+        PRODUCT_BUNDLE_IDENTIFIER: com.haptune.app
         TARGETED_DEVICE_FAMILY: "1,2,6"
         SUPPORTS_MACCATALYST: YES
         DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER: NO
@@ -90,10 +93,10 @@ targets:
         CFBundleDevelopmentRegion: en
         CFBundleLocalizations: [en, zh-Hans, zh-Hant, ms]
         WKApplication: true
-        WKCompanionAppBundleIdentifier: com.example.haptune
+        WKCompanionAppBundleIdentifier: com.haptune.app
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.haptune.watchkitapp
+        PRODUCT_BUNDLE_IDENTIFIER: com.haptune.app.watchkitapp
         TARGETED_DEVICE_FAMILY: "4"
 schemes:
   Haptune:

@@ -103,7 +103,9 @@ struct AccountView: View {
 
     private var subscription: some View {
         Section {
-            if store.isPlus {
+            if Store.isTestBuild {
+                LabeledContent("Haptune Plus", value: store.activePlanName)
+            } else if store.isPlus {
                 LabeledContent("Haptune Plus", value: store.activePlanName)
                 if let d = store.renewalDate {
                     LabeledContent("Renews", value: d.formatted(date: .abbreviated, time: .omitted))
@@ -122,9 +124,15 @@ struct AccountView: View {
                     }
                 }
             }
-            Button("Restore Purchases") { Task { await store.restore() } }
+            if !Store.isTestBuild {
+                Button("Restore Purchases") { Task { await store.restore() } }
+            }
         } header: {
             Text("Subscription")
+        } footer: {
+            if Store.isTestBuild {
+                Text("This is a test build: every Plus feature is unlocked and nothing can be bought.")
+            }
         }
     }
 

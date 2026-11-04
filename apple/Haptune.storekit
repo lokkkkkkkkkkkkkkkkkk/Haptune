@@ -15,7 +15,7 @@
           "locale" : "en_US"
         }
       ],
-      "productID" : "com.example.haptune.plus.lifetime",
+      "productID" : "com.haptune.app.plus.lifetime",
       "referenceName" : "Haptune Plus Lifetime",
       "type" : "NonConsumable"
     }
@@ -62,7 +62,7 @@
               "locale" : "en_US"
             }
           ],
-          "productID" : "com.example.haptune.plus.yearly",
+          "productID" : "com.haptune.app.plus.yearly",
           "recurringSubscriptionPeriod" : "P1Y",
           "referenceName" : "Haptune Plus Yearly",
           "subscriptionGroupID" : "21500001",
@@ -86,7 +86,7 @@
               "locale" : "en_US"
             }
           ],
-          "productID" : "com.example.haptune.plus.monthly",
+          "productID" : "com.haptune.app.plus.monthly",
           "recurringSubscriptionPeriod" : "P1M",
           "referenceName" : "Haptune Plus Monthly",
           "subscriptionGroupID" : "21500001",

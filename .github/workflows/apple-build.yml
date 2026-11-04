@@ -58,6 +58,45 @@ jobs:
           path: apple/screenshots
           if-no-files-found: ignore
 
+  # The app you install on your own iPhone / iPad with Sideloadly and a free Apple ID (see apple/README.md).
+  # Built unsigned here; Sideloadly signs it with your Apple ID. TESTER unlocks every Plus feature.
+  test-app:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        working-directory: apple
+        run: xcodegen generate
+      - name: Build for iPhone and iPad (Release, unsigned)
+        working-directory: apple
+        run: |
+          set -o pipefail
+          xcodebuild -project Haptune.xcodeproj -scheme Haptune -configuration Release \
+            -destination 'generic/platform=iOS' -derivedDataPath build-device \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) TESTER' build | xcpretty
+      - name: Package Haptune.ipa (and a copy with the Watch app inside)
+        working-directory: apple
+        run: |
+          set -e
+          APP=build-device/Build/Products/Release-iphoneos/Haptune.app
+          test -d "$APP"
+          rm -rf ipa && mkdir -p ipa/Payload
+          cp -R "$APP" ipa/Payload/
+          (cd ipa && zip -qry ../Haptune-with-Watch.ipa Payload)
+          rm -rf ipa/Payload/Haptune.app/Watch
+          (cd ipa && zip -qry ../Haptune.ipa Payload)
+          ls -lh *.ipa
+      - name: Upload the test app
+        uses: actions/upload-artifact@v4
+        with:
+          name: Haptune-test-app
+          path: |
+            apple/Haptune.ipa
+            apple/Haptune-with-Watch.ipa
+
   # Uncomment once you have a paid Apple Developer account and have added these repository secrets:
   # APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_KEY (the .p8 contents), TEAM_ID.
   # testflight:

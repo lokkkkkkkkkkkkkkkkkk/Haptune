@@ -40,9 +40,27 @@ Public repositories get these macOS minutes free; private ones use your free min
 Apps → Claude → Configure*, and add this repository under *Repository access*. Then Claude can read the
 Actions logs and push fixes itself instead of you pasting logs.
 
-## Install on your own devices
+## Install on your own iPhone or iPad from Windows (free, no Mac)
 
-You need Xcode (a borrowed Mac or a rented cloud Mac):
+Every push builds **Haptune-test-app** (Actions → the run → Artifacts). It holds two files:
+`Haptune.ipa` (iPhone and iPad) and `Haptune-with-Watch.ipa` (the same app with the Watch app inside).
+They are test builds: every Plus feature is unlocked.
+
+1. On the Windows PC install **iTunes** and **iCloud** from apple.com (the website versions, not the
+   Microsoft Store versions), then **Sideloadly** from sideloadly.io.
+2. Plug the iPhone in with a cable, unlock it and tap **Trust This Computer**.
+3. Open Sideloadly, drag `Haptune.ipa` into it, type your Apple ID email and press **Start**. Enter the
+   Apple ID password and the 6-digit code when asked. (You can use a second Apple ID if you prefer.)
+4. On the iPhone: *Settings → Privacy & Security → Developer Mode* → on → restart → **Turn On**.
+   Then *Settings → General → VPN & Device Management* → your Apple ID → **Trust**.
+5. Open Haptune. The iPad is the same, with the iPad plugged in.
+
+A free Apple ID keeps the app working for **7 days**; plug in and press Start again (your pieces stay).
+Sideloadly's *automatic refresh* option does this for you while the PC is on. Free Apple IDs allow
+3 sideloaded apps at a time. **Apple Watch:** try `Haptune-with-Watch.ipa`; if the Watch app does not
+appear, use `Haptune.ipa` (the iPhone app works on its own) and add the Watch once you have TestFlight.
+
+## Install with Xcode (if you can borrow a Mac)
 
 ```bash
 brew install xcodegen
@@ -50,7 +68,8 @@ cd apple && xcodegen generate && open Haptune.xcodeproj
 ```
 
 1. *Haptune* target → *Signing & Capabilities* → choose your team (a free Apple ID works for your own
-   devices; apps expire after 7 days). Change `com.example.haptune` in `project.yml` to your own prefix first.
+   devices; apps expire after 7 days). Change `com.haptune.app` in `project.yml` to your own prefix if
+   Xcode says the identifier is taken.
 2. **iPhone + Watch:** plug in the iPhone (paired with the Watch) and press Run; the Watch app installs with it.
 3. **iPad:** same, with the iPad as the run destination.
 4. **Mac:** choose *My Mac (Mac Catalyst)* as the destination and press Run.
