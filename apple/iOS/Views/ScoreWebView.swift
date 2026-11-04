@@ -36,7 +36,8 @@ final class ScoreBridge: NSObject, ObservableObject, WKScriptMessageHandler {
     }
 
     nonisolated func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
-        guard let body = message.body as? [String: Any], let type = body["type"] as? String else { return }
+        let raw = message.body
+        guard let body = raw as? [String: Any], let type = body["type"] as? String else { return }
         let pages = body["pages"] as? Int
         let quarter = body["quarter"] as? Double
         Task { @MainActor in
