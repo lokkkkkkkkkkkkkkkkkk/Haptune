@@ -1,0 +1,984 @@
+<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Practice Report</title><style>
+:root{
+  --surface:#fcfcfb;--surface-2:#f3f2ef;--ink:#0b0b0b;--ink-2:#52514e;--ink-3:#8a8984;--grid:#e4e2dc;
+  --critical:#d03b3b;--serious:#ec835a;--warning:#c98500;--good:#0ca30c;--flat:#2a78d6;--sharp:#6250d6;
+  --accent:#2a78d6;--heat-0:#fcfcfb;--heat-1:#fbe3d6;--heat-2:#f6bf9f;--heat-3:#ee9467;--heat-4:#d95926;
+  color-scheme:light}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --surface:#1a1a19;--surface-2:#242422;--ink:#f0efec;--ink-2:#c3c2b7;--ink-3:#8f8e86;--grid:#34332f;
+  --critical:#e66767;--serious:#ec835a;--warning:#fab219;--good:#0ca30c;--flat:#3987e5;--sharp:#9085e9;
+  --accent:#3987e5;--heat-0:#1a1a19;--heat-1:#3a271d;--heat-2:#6a3a22;--heat-3:#a24c22;--heat-4:#d95926;color-scheme:dark}}
+:root[data-theme="dark"]{--surface:#1a1a19;--surface-2:#242422;--ink:#f0efec;--ink-2:#c3c2b7;--ink-3:#8f8e86;
+  --grid:#34332f;--critical:#e66767;--serious:#ec835a;--warning:#fab219;--flat:#3987e5;--sharp:#9085e9;
+  --accent:#3987e5;--heat-0:#1a1a19;--heat-1:#3a271d;--heat-2:#6a3a22;--heat-3:#a24c22;--heat-4:#d95926;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--surface);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+main{max-width:1080px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:26px;margin:0 0 2px}h2{font-size:17px;margin:34px 0 10px}
+.sub{color:var(--ink-2);margin:0 0 18px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.tile{background:var(--surface-2);border-radius:14px;padding:14px 16px}
+.tile .k{color:var(--ink-2);font-size:13px}.tile .v{font-size:34px;font-weight:650;letter-spacing:-.5px}
+.tile .d{color:var(--ink-2);font-size:13px}
+.card{background:var(--surface-2);border-radius:14px;padding:14px;overflow:hidden}
+.sheet svg{width:100%;height:auto;background:#fff;border-radius:10px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin:10px 0 0;color:var(--ink-2);font-size:13px}
+.legend span b{display:inline-block;width:18px;text-align:center;font-weight:700}
+.heat{display:flex;flex-wrap:wrap;gap:2px}
+.heat div{flex:1 0 34px;min-width:34px;height:46px;border-radius:6px;display:flex;align-items:flex-end;
+  justify-content:center;font-size:12px;color:var(--ink);padding-bottom:3px;cursor:default}
+svg text{fill:var(--ink-2);font-size:11px}
+.chart{width:100%;height:auto;display:block}
+.tip{margin:6px 0;padding:10px 12px;border-left:3px solid var(--accent);background:var(--surface-2);border-radius:6px}
+.plan{display:grid;gap:10px}
+.step{display:flex;gap:10px;align-items:baseline}.step b{min-width:76px}
+table{border-collapse:collapse;width:100%;font-size:13px}td,th{padding:5px 8px;border-bottom:1px solid var(--grid);text-align:left}
+#tt{position:fixed;pointer-events:none;background:var(--ink);color:var(--surface);padding:6px 9px;border-radius:8px;
+  font-size:12px;opacity:0;transition:opacity .08s;max-width:260px;z-index:9}
+details summary{cursor:pointer;color:var(--ink-2)}
+.note{color:var(--ink-3);font-size:12px;margin-top:28px}
+</style></head><body>
+<main>
+<h1>Minuet in G (BWV Anh. 114)</h1>
+<p class='sub'>Violin · 31 s take · demo take with planted mistakes</p>
+<div class='tiles'><div class='tile'><div class='k'>Overall</div><div class='v'>96</div><div class='d'>out of 100</div></div><div class='tile'><div class='k'>Notes</div><div class='v'>94</div><div class='d'>2 wrong · 1 missed · 1 extra</div></div><div class='tile'><div class='k'>Rhythm</div><div class='v'>99</div><div class='d'>96.4 BPM average</div></div><div class='tile'><div class='k'>Intonation</div><div class='v'>97</div><div class='d'>overall +1 cents</div></div></div>
+<h2>Your score, marked</h2>
+<div class='card'><style>g#h1u4dr88 .notehead, g#h1u4dr88 .accid{fill:var(--flat)}g#n1lprc3c .notehead, g#n1lprc3c .accid{fill:var(--critical)}g#h37753o .notehead, g#h37753o .accid{fill:var(--serious)}g#v17o2ovb .notehead, g#v17o2ovb .accid{fill:var(--sharp)}g#cgfpldp .notehead, g#cgfpldp .accid{fill:var(--critical)}g#r7mkyci .notehead, g#r7mkyci .accid{fill:var(--warning)}</style><div class='sheet'><svg viewBox="0 0 798 298" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" overflow="visible" id="asmtssy">
+   <desc>Engraved by Verovio 6.4.1-fbe8f46</desc>
+   <defs>
+      <g id="E050-asmtssy">
+         <path transform="scale(1,-1)" d="M376 415l25 -145c3 -18 3 -18 29 -18c147 0 241 -113 241 -241c0 -113 -67 -198 -168 -238c-14 -6 -15 -5 -13 -17c11 -62 29 -157 29 -214c0 -170 -130 -200 -197 -200c-151 0 -190 98 -190 163c0 62 40 115 107 115c61 0 96 -47 96 -102c0 -58 -36 -85 -67 -94 c-23 -7 -32 -10 -32 -17c0 -13 26 -29 80 -29c59 0 159 18 159 166c0 47 -15 134 -27 201c-2 12 -4 11 -15 9c-20 -4 -46 -6 -69 -6c-245 0 -364 165 -364 339c0 202 153 345 297 464c12 10 11 12 9 24c-7 41 -14 106 -14 164c0 104 24 229 98 311c20 22 51 48 65 48 c11 0 37 -28 52 -50c41 -60 65 -146 65 -233c0 -153 -82 -280 -190 -381c-6 -6 -8 -7 -6 -19zM470 943c-61 0 -133 -96 -133 -252c0 -32 2 -66 6 -92c2 -13 6 -14 13 -8c79 69 174 159 174 270c0 55 -27 82 -60 82zM361 262l-21 128c-2 11 -4 12 -14 4 c-47 -38 -93 -75 -153 -142c-83 -94 -93 -173 -93 -232c0 -139 113 -236 288 -236c20 0 40 2 56 5c15 3 16 3 14 14l-50 298c-2 11 -4 12 -20 8c-61 -17 -100 -60 -100 -117c0 -46 30 -89 72 -107c7 -3 15 -6 15 -13c0 -6 -4 -11 -12 -11c-7 0 -19 3 -27 6 c-68 23 -115 87 -115 177c0 85 57 164 145 194c18 6 18 5 15 24zM430 103l49 -285c2 -12 4 -12 16 -6c56 28 94 79 94 142c0 88 -67 156 -148 163c-12 1 -13 -2 -11 -14z" />
+      </g>
+      <g id="E262-asmtssy">
+         <path transform="scale(1,-1)" d="M237 118l-26 -10c-8 -3 -13 -22 -13 -29v-93c0 -12 7 -18 13 -18l26 10c2 1 3 1 5 1c4 0 7 -3 7 -8v-71c0 -6 -5 -14 -12 -17c0 0 -21 -8 -28 -11s-11 -15 -11 -23v-142c0 -6 -6 -11 -17 -11c-7 0 -13 5 -13 11v125c0 6 -5 18 -14 18l-2 -1h-1l-61 -25 c-5 -2 -10 -9 -10 -22v-139c0 -6 -7 -11 -17 -11c-7 0 -13 5 -13 11v123c0 5 -5 16 -12 16c-1 0 -2 0 -3 -1c-9 -3 -23 -9 -24 -9l-2 -1c-6 0 -9 3 -9 9v71c0 6 5 14 12 16c0 0 21 9 27 11c6 3 11 12 11 23v99c0 8 -6 18 -14 18l-1 -1c-8 -4 -23 -10 -24 -10l-2 -1 c-6 0 -9 3 -9 9v71c0 6 5 14 12 16c0 0 20 8 26 11s12 13 12 27v135c0 6 6 11 16 11c7 0 14 -5 14 -11v-120c0 -8 3 -20 12 -20c17 4 51 18 63 25c9 6 12 19 13 29v130c0 6 6 11 16 11c8 0 14 -5 14 -11v-122c0 -8 7 -13 14 -13c5 1 25 9 25 9c2 1 3 1 5 1c4 0 7 -3 7 -8 v-71c0 -6 -5 -14 -12 -17zM168 -45c2 9 4 37 4 64s-2 52 -4 57c-2 4 -8 6 -15 6c-25 0 -71 -21 -73 -38c-2 -8 -3 -43 -3 -74c0 -24 1 -46 3 -50c1 -3 6 -5 12 -5c23 0 70 20 76 40z" />
+      </g>
+      <g id="E083-asmtssy">
+         <path transform="scale(1,-1)" d="M213 248c42 -3 167 -30 167 -122c0 -46 -21 -72 -61 -91c-9 -5 -20 -6 -31 -9c-3 -1 -4 -5 -4 -9c0 -2 0 -3 1 -5c2 -4 5 -4 10 -5l33 -9l21 -12c10 -6 18 -13 24 -21c19 -22 26 -41 28 -70v-7c0 -88 -102 -139 -201 -139h-9c-98 2 -169 32 -171 110c0 22 5 46 22 61 c12 13 31 23 48 26c4 1 7 1 11 1c43 0 72 -30 72 -72c-1 -29 -23 -44 -23 -66v-5c1 -15 20 -15 28 -16c1 0 5 -1 9 -1c22 0 76 12 76 118c0 13 -9 91 -124 91c-8 0 -25 0 -25 12c0 11 14 16 24 17c63 3 122 32 122 106v7c0 24 -8 77 -93 77c-9 0 -40 -8 -42 -25v-4 c0 -14 15 -12 20 -14s30 -4 33 -41v-8c0 -33 -22 -65 -66 -65h-5c-62 4 -81 48 -81 81c0 53 86 110 172 110h4l7 -1h4z" />
+      </g>
+      <g id="E084-asmtssy">
+         <path transform="scale(1,-1)" d="M362 -74h73c11 0 15 -7 15 -19s-5 -19 -15 -19h-73v-59c0 -32 21 -38 31 -38s22 -6 22 -20s-10 -21 -20 -21h-213c-15 0 -19 11 -19 21s7 19 23 19c18 0 40 8 40 35v63h-186c-12 0 -20 7 -20 17c0 3 1 7 3 12l1 1v1l6 8c30 42 128 181 128 305c0 16 14 19 23 19 c8 0 53 -2 71 -2s59 2 68 2c8 0 15 -6 15 -15l-1 -3c-3 -12 -163 -239 -243 -307h135v84c0 12 5 18 9 23l95 115c6 7 11 9 20 9c11 0 12 -9 12 -17v-214z" />
+      </g>
+      <g id="E0A4-asmtssy">
+         <path transform="scale(1,-1)" d="M97 -125c-54 0 -97 31 -97 83c0 86 88 167 198 167c57 0 97 -32 97 -83c0 -85 -109 -167 -198 -167z" />
+      </g>
+      <g id="E0A3-asmtssy">
+         <path transform="scale(1,-1)" d="M97 -125c-55 0 -97 30 -97 83c0 52 47 167 196 167c58 0 99 -32 99 -83c0 -33 -33 -167 -198 -167zM75 -87c48 0 189 88 189 131c0 7 -3 13 -6 19c-7 12 -18 21 -37 21c-47 0 -192 -79 -192 -128c0 -7 3 -14 6 -20c7 -12 19 -23 40 -23z" />
+      </g>
+   </defs>
+   <style type="text/css">#asmtssy g.ending, #asmtssy g.fing, #asmtssy g.reh, #asmtssy g.tempo {font-weight:bold;}#asmtssy g.dir, #asmtssy g.dynam, #asmtssy g.mNum {font-style:italic;}#asmtssy g.label {font-weight:normal;}#asmtssy ellipse, #asmtssy path, #asmtssy polygon, #asmtssy polyline, #asmtssy rect {stroke:currentColor}#asmtssy g.cursor {fill:dodgerblue; color:dodgerblue;}#asmtssy g.cursor.chord {fill:limegreen; color:limegreen;}#asmtssy g.placeholder {visibility:hidden}</style>
+   <svg class="definition-scale" color="black" font-family="Times, serif" viewBox="0 0 21000 7840">
+      <g class="page-margin" transform="translate(500, 500)">
+         <g id="k9u5vdw" class="mdiv pageMilestone" />
+         <g id="l133v84q" class="score pageMilestone" />
+         <g id="l19x1u80" class="system">
+            <g id="svof4p3" class="label">
+               <text x="1201" y="1716" text-anchor="end" font-size="0px">
+                  <tspan id="t1irnpzb" class="text">
+                     <tspan font-size="405px">Violin</tspan>
+                  </tspan>
+               </text>
+            </g>
+            <g id="nxc9o0u" class="section placeholder systemMilestone">
+               <ellipse cx="1381" cy="186" rx="90" ry="90" />
+            </g>
+            <g id="hgdl2ea" class="section placeholder systemMilestone">
+               <ellipse cx="1381" cy="726" rx="90" ry="90" />
+            </g>
+            <g id="c16f3nb9" class="measure">
+               <g id="lsvp8r6" class="staff">
+                  <path d="M1381 1266 L5902 1266" stroke-width="13" />
+                  <path d="M1381 1446 L5902 1446" stroke-width="13" />
+                  <path d="M1381 1626 L5902 1626" stroke-width="13" />
+                  <path d="M1381 1806 L5902 1806" stroke-width="13" />
+                  <path d="M1381 1986 L5902 1986" stroke-width="13" />
+                  <g id="wkleefo" class="clef">
+                     <use xlink:href="#E050-asmtssy" transform="translate(1471, 1806) scale(0.72, 0.72)" />
+                  </g>
+                  <g id="x1jktmr5" class="keySig">
+                     <g id="y12pn2ol" class="keyAccid">
+                        <use xlink:href="#E262-asmtssy" transform="translate(2134, 1266) scale(0.72, 0.72)" />
+                     </g>
+                  </g>
+                  <g id="zjd1ajk" class="meterSig">
+                     <use xlink:href="#E083-asmtssy" transform="translate(2496, 1446) scale(0.72, 0.72)" />
+                     <use xlink:href="#E084-asmtssy" transform="translate(2479, 1806) scale(0.72, 0.72)" />
+                  </g>
+                  <g id="n1ekokz4" class="layer">
+                     <g id="os0irhi" class="note">
+                        <g class="notehead">
+                           <use xlink:href="#E0A4-asmtssy" transform="translate(3070, 1446) scale(0.72, 0.72)" />
+                        </g>
+                        <g id="nhk62z7" class="stem">
+                           <path d="M3079 1476 L3079 2076" stroke-width="18" />
+                        </g>
+                     </g>
+                     <g id="p1c8svub" class="beam">
+                        <polygon points="4045,1086 4573,1041 4573,1131 4045,1176" />
+                        <g id="q1yfpnxr" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(3851, 1806) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="ozzs5ic" class="stem">
+                              <path d="M4054 1776 L4054 1104" stroke-width="18" />
+                           </g>
+                        </g>
+                        <g id="r6kv8oa" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(4361, 1716) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="p1afi02h" class="stem">
+                              <path d="M4564 1686 L4564 1059" stroke-width="18" />
+                           </g>
+                        </g>
+                     </g>
+                     <g id="s1e7in7r" class="beam">
+                        <polygon points="4870,2211 5397,2166 5397,2076 4870,2121" />
+                        <g id="t8m7upp" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(4870, 1626) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="q86of7k" class="stem">
+                              <path d="M4879 1656 L4879 2193" stroke-width="18" />
+                           </g>
+                        </g>
+                        <g id="ug1lvn8" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(5379, 1536) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="r43dgzd" class="stem">
+                              <path d="M5388 1566 L5388 2148" stroke-width="18" />
+                           </g>
+                        </g>
+                     </g>
+                  </g>
+               </g>
+               <g id="mra5s3x" class="tempo">
+                  <text x="2477" y="1221" font-size="0px" />
+               </g>
+               <g id="k1alf0go" class="barLine">
+                  <path d="M5889 1266 L5889 1986" stroke-width="27" />
+               </g>
+            </g>
+            <g id="vmedlxb" class="measure">
+               <g id="enzo3yx" class="staff">
+                  <path d="M5902 1266 L8438 1266" stroke-width="13" />
+                  <path d="M5902 1446 L8438 1446" stroke-width="13" />
+                  <path d="M5902 1626 L8438 1626" stroke-width="13" />
+                  <path d="M5902 1806 L8438 1806" stroke-width="13" />
+                  <path d="M5902 1986 L8438 1986" stroke-width="13" />
+                  <g id="f1x8k68o" class="layer">
+                     <g id="ga1xppu" class="note">
+                        <g class="notehead">
+                           <use xlink:href="#E0A4-asmtssy" transform="translate(6080, 1446) scale(0.72, 0.72)" />
+                        </g>
+                        <g id="sxhduiz" class="stem">
+                           <path d="M6089 1476 L6089 2076" stroke-width="18" />
+                        </g>
+                     </g>
+                     <g id="h1u4dr88" class="note">
+                        <g class="notehead">
+                           <use xlink:href="#E0A4-asmtssy" transform="translate(6861, 1806) scale(0.72, 0.72)" />
+                        </g>
+                        <g id="to005so" class="stem">
+                           <path d="M7064 1776 L7064 1176" stroke-width="18" />
+                        </g>
+                     </g>
+                     <g id="igciivv" class="note">
+                        <g class="notehead">
+                           <use xlink:href="#E0A4-asmtssy" transform="translate(7643, 1806) scale(0.72, 0.72)" />
+                        </g>
+                        <g id="u1mktlj9" class="stem">
+                           <path d="M7846 1776 L7846 1176" stroke-width="18" />
+                        </g>
+                     </g>
+                  </g>
+               </g>
+               <g id="dz8qucs" class="barLine">
+                  <path d="M8425 1266 L8425 1986" stroke-width="27" />
+               </g>
+            </g>
+            <g id="j1rsacju" class="measure">
+               <g id="s1iwo41l" class="staff">
+                  <path d="M8438 1266 L11448 1266" stroke-width="13" />
+                  <path d="M8438 1446 L11448 1446" stroke-width="13" />
+                  <path d="M8438 1626 L11448 1626" stroke-width="13" />
+                  <path d="M8438 1806 L11448 1806" stroke-width="13" />
+                  <path d="M8438 1986 L11448 1986" stroke-width="13" />
+                  <g id="tcpv4d7" class="layer">
+                     <g id="u160mq3u" class="note">
+                        <g class="notehead">
+                           <use xlink:href="#E0A4-asmtssy" transform="translate(8616, 1356) scale(0.72, 0.72)" />
+                        </g>
+                        <g id="v4jevbp" class="stem">
+                           <path d="M8625 1386 L8625 1986" stroke-width="18" />
+                        </g>
+                     </g>
+                     <g id="v31631m" class="beam">
+                        <polygon points="9397,2211 9925,2166 9925,2076 9397,2121" />
+                        <g id="w1l4jem2" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(9397, 1536) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="w1n3ug88" class="stem">
+                              <path d="M9406 1566 L9406 2193" stroke-width="18" />
+                           </g>
+                        </g>
+                        <g id="x3mfijy" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(9907, 1446) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="x1tcw2q0" class="stem">
+                              <path d="M9916 1476 L9916 2148" stroke-width="18" />
+                           </g>
+                        </g>
+                     </g>
+                     <g id="y1xbl67s" class="beam">
+                        <polygon points="10416,2031 10943,1986 10943,1896 10416,1941" />
+                        <g id="z1vjrbvg" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(10416, 1356) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="y1olpyaa" class="stem">
+                              <path d="M10425 1386 L10425 2013" stroke-width="18" />
+                           </g>
+                        </g>
+                        <g id="a61htv9" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(10925, 1266) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="z7up3q" class="stem">
+                              <path d="M10934 1296 L10934 1968" stroke-width="18" />
+                           </g>
+                           <g id="b154hoxj" class="accid" />
+                        </g>
+                     </g>
+                  </g>
+               </g>
+               <g id="r4hp75s" class="barLine">
+                  <path d="M11435 1266 L11435 1986" stroke-width="27" />
+               </g>
+            </g>
+            <g id="c1rw7o29" class="measure">
+               <g id="lsu02v" class="staff">
+                  <path d="M11448 1266 L13984 1266" stroke-width="13" />
+                  <path d="M11448 1446 L13984 1446" stroke-width="13" />
+                  <path d="M11448 1626 L13984 1626" stroke-width="13" />
+                  <path d="M11448 1806 L13984 1806" stroke-width="13" />
+                  <path d="M11448 1986 L13984 1986" stroke-width="13" />
+                  <g id="myqjboj" class="layer">
+                     <g id="n1lprc3c" class="note">
+                        <g class="notehead">
+                           <use xlink:href="#E0A4-asmtssy" transform="translate(11626, 1176) scale(0.72, 0.72)" />
+                        </g>
+                        <g id="a16je5dr" class="stem">
+                           <path d="M11635 1206 L11635 1806" stroke-width="18" />
+                        </g>
+                     </g>
+                     <g id="o9cfd5v" class="note">
+                        <g class="notehead">
+                           <use xlink:href="#E0A4-asmtssy" transform="translate(12407, 1806) scale(0.72, 0.72)" />
+                        </g>
+                        <g id="bh8c6kc" class="stem">
+                           <path d="M12610 1776 L12610 1176" stroke-width="18" />
+                        </g>
+                     </g>
+                     <g id="pudppbv" class="note">
+                        <g class="notehead">
+                           <use xlink:href="#E0A4-asmtssy" transform="translate(13189, 1806) scale(0.72, 0.72)" />
+                        </g>
+                        <g id="c68w6s7" class="stem">
+                           <path d="M13392 1776 L13392 1176" stroke-width="18" />
+                        </g>
+                     </g>
+                  </g>
+               </g>
+               <g id="kow6duz" class="barLine">
+                  <path d="M13971 1266 L13971 1986" stroke-width="27" />
+               </g>
+            </g>
+            <g id="qmgobaf" class="measure">
+               <g id="zy4hac5" class="staff">
+                  <path d="M13984 1266 L16994 1266" stroke-width="13" />
+                  <path d="M13984 1446 L16994 1446" stroke-width="13" />
+                  <path d="M13984 1626 L16994 1626" stroke-width="13" />
+                  <path d="M13984 1806 L16994 1806" stroke-width="13" />
+                  <path d="M13984 1986 L16994 1986" stroke-width="13" />
+                  <g id="a1r0fy1c" class="layer">
+                     <g id="bldqodg" class="note">
+                        <g class="notehead">
+                           <use xlink:href="#E0A4-asmtssy" transform="translate(14162, 1536) scale(0.72, 0.72)" />
+                        </g>
+                        <g id="d1pbl70e" class="stem">
+                           <path d="M14171 1566 L14171 2166" stroke-width="18" />
+                        </g>
+                     </g>
+                     <g id="c62pc7t" class="beam">
+                        <polygon points="14943,2166 15471,2211 15471,2121 14943,2076" />
+                        <g id="d17hb2cx" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(14943, 1446) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="e1i6s5gn" class="stem">
+                              <path d="M14952 1476 L14952 2148" stroke-width="18" />
+                           </g>
+                        </g>
+                        <g id="e13lfrun" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(15453, 1536) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="fgbt1hh" class="stem">
+                              <path d="M15462 1566 L15462 2193" stroke-width="18" />
+                           </g>
+                        </g>
+                     </g>
+                     <g id="for0ans" class="beam">
+                        <polygon points="16156,1041 16683,1086 16683,1176 16156,1131" />
+                        <g id="g1okl9tm" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(15962, 1626) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="ggjnerv" class="stem">
+                              <path d="M16165 1596 L16165 1059" stroke-width="18" />
+                           </g>
+                        </g>
+                        <g id="h37753o" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(16471, 1716) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="hmlf2rx" class="stem">
+                              <path d="M16674 1686 L16674 1104" stroke-width="18" />
+                           </g>
+                        </g>
+                     </g>
+                  </g>
+               </g>
+               <g id="ygatz2c" class="barLine">
+                  <path d="M16981 1266 L16981 1986" stroke-width="27" />
+               </g>
+            </g>
+            <g id="i16xabda" class="measure">
+               <g id="r144gtlh" class="staff">
+                  <path d="M16994 1266 L20004 1266" stroke-width="13" />
+                  <path d="M16994 1446 L20004 1446" stroke-width="13" />
+                  <path d="M16994 1626 L20004 1626" stroke-width="13" />
+                  <path d="M16994 1806 L20004 1806" stroke-width="13" />
+                  <path d="M16994 1986 L20004 1986" stroke-width="13" />
+                  <g id="s3t3xtb" class="layer">
+                     <g id="t9jybu9" class="note">
+                        <g class="notehead">
+                           <use xlink:href="#E0A4-asmtssy" transform="translate(17172, 1626) scale(0.72, 0.72)" />
+                        </g>
+                        <g id="i1wkrxx9" class="stem">
+                           <path d="M17181 1656 L17181 2226" stroke-width="18" />
+                        </g>
+                     </g>
+                     <g id="u7xkvr2" class="beam">
+                        <polygon points="17953,2166 18481,2211 18481,2121 17953,2076" />
+                        <g id="v16tiy5u" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(17953, 1536) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="jmww9og" class="stem">
+                              <path d="M17962 1566 L17962 2148" stroke-width="18" />
+                           </g>
+                        </g>
+                        <g id="wm6o2ej" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(18463, 1626) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="k1bwn29x" class="stem">
+                              <path d="M18472 1656 L18472 2193" stroke-width="18" />
+                           </g>
+                        </g>
+                     </g>
+                     <g id="xwlo37d" class="beam">
+                        <polygon points="19166,1041 19693,1086 19693,1176 19166,1131" />
+                        <g id="ynt7j35" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(18972, 1716) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="ln3h0o6" class="stem">
+                              <path d="M19175 1686 L19175 1059" stroke-width="18" />
+                           </g>
+                        </g>
+                        <g id="z1b1si1t" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(19481, 1806) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="m1x3239s" class="stem">
+                              <path d="M19684 1776 L19684 1104" stroke-width="18" />
+                           </g>
+                        </g>
+                     </g>
+                  </g>
+               </g>
+               <g id="q1epo58i" class="barLine">
+                  <path d="M19991 1266 L19991 1986" stroke-width="27" />
+               </g>
+            </g>
+         </g>
+         <g id="on4wfzq" class="system">
+            <g id="a1031m1u" class="measure">
+               <g id="r1hx448m" class="mNum autogenerated">
+                  <text y="3183" text-anchor="middle" font-size="0px">
+                     <tspan id="s1gcpx16" class="text">
+                        <tspan font-size="324px">7</tspan>
+                     </tspan>
+                  </text>
+               </g>
+               <g id="j39i5l7" class="staff">
+                  <path d="M0 3426 L3637 3426" stroke-width="13" />
+                  <path d="M0 3606 L3637 3606" stroke-width="13" />
+                  <path d="M0 3786 L3637 3786" stroke-width="13" />
+                  <path d="M0 3966 L3637 3966" stroke-width="13" />
+                  <path d="M0 4146 L3637 4146" stroke-width="13" />
+                  <g id="itidccc" class="clef">
+                     <use xlink:href="#E050-asmtssy" transform="translate(90, 3966) scale(0.72, 0.72)" />
+                  </g>
+                  <g id="jvxqp8e" class="keySig">
+                     <g id="k10v1oso" class="keyAccid">
+                        <use xlink:href="#E262-asmtssy" transform="translate(753, 3426) scale(0.72, 0.72)" />
+                     </g>
+                  </g>
+                  <g id="kxj887w" class="layer">
+                     <g id="lb1h4gd" class="note">
+                        <g class="notehead">
+                           <use xlink:href="#E0A4-asmtssy" transform="translate(1202, 4056) scale(0.72, 0.72)" />
+                        </g>
+                        <g id="nn6hv5b" class="stem">
+                           <path d="M1405 4026 L1405 3426" stroke-width="18" />
+                        </g>
+                        <g id="m142c2qt" class="accid" />
+                     </g>
+                     <g id="n1waucxt" class="beam">
+                        <polygon points="2067,3246 2523,3201 2523,3291 2067,3336" />
+                        <g id="o1nfvc04" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(1873, 3966) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="ofqlzya" class="stem">
+                              <path d="M2076 3936 L2076 3264" stroke-width="18" />
+                           </g>
+                        </g>
+                        <g id="p1psf2fk" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(2311, 3876) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="p1me68st" class="stem">
+                              <path d="M2514 3846 L2514 3219" stroke-width="18" />
+                           </g>
+                        </g>
+                     </g>
+                     <g id="q23fcp0" class="beam">
+                        <polygon points="2942,3201 3398,3246 3398,3336 2942,3291" />
+                        <g id="rflwhv3" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(2748, 3786) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="qqe0kph" class="stem">
+                              <path d="M2951 3756 L2951 3219" stroke-width="18" />
+                           </g>
+                        </g>
+                        <g id="s6hbtu3" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(3186, 3966) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="r1bhdmx1" class="stem">
+                              <path d="M3389 3936 L3389 3264" stroke-width="18" />
+                           </g>
+                        </g>
+                     </g>
+                  </g>
+               </g>
+               <g id="irq9cpc" class="barLine">
+                  <path d="M3624 3426 L3624 4146" stroke-width="27" />
+               </g>
+            </g>
+            <g id="t1qpxlfu" class="measure">
+               <g id="c1cgdsbc" class="staff">
+                  <path d="M3637 3426 L5133 3426" stroke-width="13" />
+                  <path d="M3637 3606 L5133 3606" stroke-width="13" />
+                  <path d="M3637 3786 L5133 3786" stroke-width="13" />
+                  <path d="M3637 3966 L5133 3966" stroke-width="13" />
+                  <path d="M3637 4146 L5133 4146" stroke-width="13" />
+                  <g id="djb2xp0" class="layer">
+                     <g id="e17v2evk" class="note">
+                        <g class="notehead">
+                           <use xlink:href="#E0A3-asmtssy" transform="translate(3817, 3876) scale(0.72, 0.72)" />
+                        </g>
+                        <g id="t1azhura" class="dots">
+                           <ellipse cx="4119" cy="3876" rx="36" ry="36" />
+                        </g>
+                        <g id="s166n8on" class="stem">
+                           <path d="M4020 3846 L4020 3246" stroke-width="18" />
+                        </g>
+                     </g>
+                  </g>
+               </g>
+               <g id="b1fzurx4" class="barLine">
+                  <path d="M5120 3426 L5120 4146" stroke-width="27" />
+               </g>
+            </g>
+            <g id="fhrw914" class="measure">
+               <g id="o9jmeci" class="staff">
+                  <path d="M5133 3426 L7748 3426" stroke-width="13" />
+                  <path d="M5133 3606 L7748 3606" stroke-width="13" />
+                  <path d="M5133 3786 L7748 3786" stroke-width="13" />
+                  <path d="M5133 3966 L7748 3966" stroke-width="13" />
+                  <path d="M5133 4146 L7748 4146" stroke-width="13" />
+                  <g id="pz6t50e" class="layer">
+                     <g id="q99majp" class="note">
+                        <g class="notehead">
+                           <use xlink:href="#E0A4-asmtssy" transform="translate(5313, 3606) scale(0.72, 0.72)" />
+                        </g>
+                        <g id="ulveyj9" class="stem">
+                           <path d="M5322 3636 L5322 4236" stroke-width="18" />
+                        </g>
+                     </g>
+                     <g id="r1m5pv88" class="beam">
+                        <polygon points="6178,3246 6634,3201 6634,3291 6178,3336" />
+                        <g id="sjtiydu" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(5984, 3966) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="vd1s07o" class="stem">
+                              <path d="M6187 3936 L6187 3264" stroke-width="18" />
+                           </g>
+                        </g>
+                        <g id="t10xza5d" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(6422, 3876) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="w1aduznc" class="stem">
+                              <path d="M6625 3846 L6625 3219" stroke-width="18" />
+                           </g>
+                        </g>
+                     </g>
+                     <g id="u1asg2e8" class="beam">
+                        <polygon points="6859,4371 7315,4326 7315,4236 6859,4281" />
+                        <g id="v17o2ovb" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(6859, 3786) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="x11kuvoc" class="stem">
+                              <path d="M6868 3816 L6868 4353" stroke-width="18" />
+                           </g>
+                        </g>
+                        <g id="w7k2on5" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(7297, 3696) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="ylw2p1y" class="stem">
+                              <path d="M7306 3726 L7306 4308" stroke-width="18" />
+                           </g>
+                        </g>
+                     </g>
+                  </g>
+               </g>
+               <g id="n1fm8q6u" class="barLine">
+                  <path d="M7735 3426 L7735 4146" stroke-width="27" />
+               </g>
+            </g>
+            <g id="x5jen1h" class="measure">
+               <g id="g7n673h" class="staff">
+                  <path d="M7748 3426 L9954 3426" stroke-width="13" />
+                  <path d="M7748 3606 L9954 3606" stroke-width="13" />
+                  <path d="M7748 3786 L9954 3786" stroke-width="13" />
+                  <path d="M7748 3966 L9954 3966" stroke-width="13" />
+                  <path d="M7748 4146 L9954 4146" stroke-width="13" />
+                  <g id="h1kcn972" class="layer">
+                     <g id="iq26wzu" class="note">
+                        <g class="notehead">
+                           <use xlink:href="#E0A4-asmtssy" transform="translate(7928, 3606) scale(0.72, 0.72)" />
+                        </g>
+                        <g id="zb50s7q" class="stem">
+                           <path d="M7937 3636 L7937 4236" stroke-width="18" />
+                        </g>
+                     </g>
+                     <g id="j61iuh4" class="note">
+                        <g class="notehead">
+                           <use xlink:href="#E0A4-asmtssy" transform="translate(8599, 3966) scale(0.72, 0.72)" />
+                        </g>
+                        <g id="a8c1o66" class="stem">
+                           <path d="M8802 3936 L8802 3336" stroke-width="18" />
+                        </g>
+                     </g>
+                     <g id="k7et02k" class="note">
+                        <g class="notehead">
+                           <use xlink:href="#E0A4-asmtssy" transform="translate(9270, 3966) scale(0.72, 0.72)" />
+                        </g>
+                        <g id="bjiypas" class="stem">
+                           <path d="M9473 3936 L9473 3336" stroke-width="18" />
+                        </g>
+                     </g>
+                  </g>
+               </g>
+               <g id="f1oicik2" class="barLine">
+                  <path d="M9941 3426 L9941 4146" stroke-width="27" />
+               </g>
+            </g>
+            <g id="l10py7ab" class="measure">
+               <g id="u15r7179" class="staff">
+                  <path d="M9954 3426 L12569 3426" stroke-width="13" />
+                  <path d="M9954 3606 L12569 3606" stroke-width="13" />
+                  <path d="M9954 3786 L12569 3786" stroke-width="13" />
+                  <path d="M9954 3966 L12569 3966" stroke-width="13" />
+                  <path d="M9954 4146 L12569 4146" stroke-width="13" />
+                  <g id="v14eqqwj" class="layer">
+                     <g id="w1ebra8u" class="note">
+                        <g class="notehead">
+                           <use xlink:href="#E0A4-asmtssy" transform="translate(10134, 3516) scale(0.72, 0.72)" />
+                        </g>
+                        <g id="c1x39per" class="stem">
+                           <path d="M10143 3546 L10143 4146" stroke-width="18" />
+                        </g>
+                     </g>
+                     <g id="x17nduun" class="beam">
+                        <polygon points="10805,4371 11261,4326 11261,4236 10805,4281" />
+                        <g id="y86odzc" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(10805, 3696) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="dgnr51t" class="stem">
+                              <path d="M10814 3726 L10814 4353" stroke-width="18" />
+                           </g>
+                        </g>
+                        <g id="z1dgmc8j" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(11243, 3606) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="e1mpbccs" class="stem">
+                              <path d="M11252 3636 L11252 4308" stroke-width="18" />
+                           </g>
+                        </g>
+                     </g>
+                     <g id="a1ox8mzp" class="beam">
+                        <polygon points="11680,4191 12136,4146 12136,4056 11680,4101" />
+                        <g id="b1kqkxas" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(11680, 3516) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="f1tgfv7v" class="stem">
+                              <path d="M11689 3546 L11689 4173" stroke-width="18" />
+                           </g>
+                        </g>
+                        <g id="cgfpldp" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(12118, 3426) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="g1y8hs5q" class="stem">
+                              <path d="M12127 3456 L12127 4128" stroke-width="18" />
+                           </g>
+                           <g id="du53752" class="accid" />
+                        </g>
+                     </g>
+                  </g>
+               </g>
+               <g id="tyd50w8" class="barLine">
+                  <path d="M12556 3426 L12556 4146" stroke-width="27" />
+               </g>
+            </g>
+            <g id="e10rban7" class="measure">
+               <g id="nb3y7nj" class="staff">
+                  <path d="M12569 3426 L14775 3426" stroke-width="13" />
+                  <path d="M12569 3606 L14775 3606" stroke-width="13" />
+                  <path d="M12569 3786 L14775 3786" stroke-width="13" />
+                  <path d="M12569 3966 L14775 3966" stroke-width="13" />
+                  <path d="M12569 4146 L14775 4146" stroke-width="13" />
+                  <g id="o18mp2or" class="layer">
+                     <g id="pg9u8z0" class="note">
+                        <g class="notehead">
+                           <use xlink:href="#E0A4-asmtssy" transform="translate(12749, 3336) scale(0.72, 0.72)" />
+                        </g>
+                        <g id="h1fquh5o" class="stem">
+                           <path d="M12758 3366 L12758 3966" stroke-width="18" />
+                        </g>
+                     </g>
+                     <g id="qpf1p06" class="note">
+                        <g class="notehead">
+                           <use xlink:href="#E0A4-asmtssy" transform="translate(13420, 3966) scale(0.72, 0.72)" />
+                        </g>
+                        <g id="ipixmsf" class="stem">
+                           <path d="M13623 3936 L13623 3336" stroke-width="18" />
+                        </g>
+                     </g>
+                     <g id="r7mkyci" class="note">
+                        <g class="notehead">
+                           <use xlink:href="#E0A4-asmtssy" transform="translate(14091, 3966) scale(0.72, 0.72)" />
+                        </g>
+                        <g id="j4q2gjp" class="stem">
+                           <path d="M14294 3936 L14294 3336" stroke-width="18" />
+                        </g>
+                     </g>
+                  </g>
+               </g>
+               <g id="m1y1gn83" class="barLine">
+                  <path d="M14762 3426 L14762 4146" stroke-width="27" />
+               </g>
+            </g>
+            <g id="sahyoal" class="measure">
+               <g id="byhrzi6" class="staff">
+                  <path d="M14775 3426 L17390 3426" stroke-width="13" />
+                  <path d="M14775 3606 L17390 3606" stroke-width="13" />
+                  <path d="M14775 3786 L17390 3786" stroke-width="13" />
+                  <path d="M14775 3966 L17390 3966" stroke-width="13" />
+                  <path d="M14775 4146 L17390 4146" stroke-width="13" />
+                  <g id="c1fdkfg1" class="layer">
+                     <g id="du38hbd" class="note">
+                        <g class="notehead">
+                           <use xlink:href="#E0A4-asmtssy" transform="translate(14955, 3696) scale(0.72, 0.72)" />
+                        </g>
+                        <g id="k1vqjcz2" class="stem">
+                           <path d="M14964 3726 L14964 4326" stroke-width="18" />
+                        </g>
+                     </g>
+                     <g id="ewn36qo" class="beam">
+                        <polygon points="15626,4326 16082,4371 16082,4281 15626,4236" />
+                        <g id="fjo8fcb" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(15626, 3606) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="lzxojlu" class="stem">
+                              <path d="M15635 3636 L15635 4308" stroke-width="18" />
+                           </g>
+                        </g>
+                        <g id="g7a4m9x" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(16064, 3696) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="m1n1cbfs" class="stem">
+                              <path d="M16073 3726 L16073 4353" stroke-width="18" />
+                           </g>
+                        </g>
+                     </g>
+                     <g id="hw0aih" class="beam">
+                        <polygon points="16695,3201 17151,3246 17151,3336 16695,3291" />
+                        <g id="i18mggpy" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(16501, 3786) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="ne7k35c" class="stem">
+                              <path d="M16704 3756 L16704 3219" stroke-width="18" />
+                           </g>
+                        </g>
+                        <g id="jzyijuz" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(16939, 3876) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="ojl7854" class="stem">
+                              <path d="M17142 3846 L17142 3264" stroke-width="18" />
+                           </g>
+                        </g>
+                     </g>
+                  </g>
+               </g>
+               <g id="a1u6zel9" class="barLine">
+                  <path d="M17377 3426 L17377 4146" stroke-width="27" />
+               </g>
+            </g>
+            <g id="k1fe93cf" class="measure">
+               <g id="t1cbveim" class="staff">
+                  <path d="M17390 3426 L20005 3426" stroke-width="13" />
+                  <path d="M17390 3606 L20005 3606" stroke-width="13" />
+                  <path d="M17390 3786 L20005 3786" stroke-width="13" />
+                  <path d="M17390 3966 L20005 3966" stroke-width="13" />
+                  <path d="M17390 4146 L20005 4146" stroke-width="13" />
+                  <g id="u1omv64m" class="layer">
+                     <g id="v1t5z9u2" class="note">
+                        <g class="notehead">
+                           <use xlink:href="#E0A4-asmtssy" transform="translate(17570, 3786) scale(0.72, 0.72)" />
+                        </g>
+                        <g id="pdb0jpx" class="stem">
+                           <path d="M17579 3816 L17579 4386" stroke-width="18" />
+                        </g>
+                     </g>
+                     <g id="w1q0u2k8" class="beam">
+                        <polygon points="18241,4326 18697,4371 18697,4281 18241,4236" />
+                        <g id="x1km24iy" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(18241, 3696) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="q10uate6" class="stem">
+                              <path d="M18250 3726 L18250 4308" stroke-width="18" />
+                           </g>
+                        </g>
+                        <g id="y1xgc4r8" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(18679, 3786) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="ruw8s26" class="stem">
+                              <path d="M18688 3816 L18688 4353" stroke-width="18" />
+                           </g>
+                        </g>
+                     </g>
+                     <g id="z10ynu8b" class="beam">
+                        <polygon points="19310,3201 19766,3246 19766,3336 19310,3291" />
+                        <g id="a16n836g" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(19116, 3876) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="s136ubvy" class="stem">
+                              <path d="M19319 3846 L19319 3219" stroke-width="18" />
+                           </g>
+                        </g>
+                        <g id="bhro802" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(19554, 3966) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="tuuqluj" class="stem">
+                              <path d="M19757 3936 L19757 3264" stroke-width="18" />
+                           </g>
+                        </g>
+                     </g>
+                  </g>
+               </g>
+               <g id="s1dkyfjf" class="barLine">
+                  <path d="M19992 3426 L19992 4146" stroke-width="27" />
+               </g>
+            </g>
+         </g>
+         <g id="r9ronn8" class="system">
+            <g id="c9iqu3b" class="measure">
+               <g id="hsohv59" class="mNum autogenerated">
+                  <text y="5343" text-anchor="middle" font-size="0px">
+                     <tspan id="inhhbir" class="text">
+                        <tspan font-size="324px">15</tspan>
+                     </tspan>
+                  </text>
+               </g>
+               <g id="lmam0g2" class="staff">
+                  <path d="M0 5586 L3644 5586" stroke-width="13" />
+                  <path d="M0 5766 L3644 5766" stroke-width="13" />
+                  <path d="M0 5946 L3644 5946" stroke-width="13" />
+                  <path d="M0 6126 L3644 6126" stroke-width="13" />
+                  <path d="M0 6306 L3644 6306" stroke-width="13" />
+                  <g id="t1xo9az0" class="clef">
+                     <use xlink:href="#E050-asmtssy" transform="translate(90, 6126) scale(0.72, 0.72)" />
+                  </g>
+                  <g id="u1g3jkjg" class="keySig">
+                     <g id="v1ll7q5c" class="keyAccid">
+                        <use xlink:href="#E262-asmtssy" transform="translate(753, 5586) scale(0.72, 0.72)" />
+                     </g>
+                  </g>
+                  <g id="m1ypfxcb" class="layer">
+                     <g id="nfzif1o" class="note">
+                        <g class="notehead">
+                           <use xlink:href="#E0A4-asmtssy" transform="translate(1202, 6036) scale(0.72, 0.72)" />
+                        </g>
+                        <g id="u9b16l1" class="stem">
+                           <path d="M1405 6006 L1405 5406" stroke-width="18" />
+                        </g>
+                     </g>
+                     <g id="o1ofe86u" class="beam">
+                        <polygon points="2069,5361 2526,5406 2526,5496 2069,5451" />
+                        <g id="phsa8tr" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(1875, 5946) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="v1ums0qj" class="stem">
+                              <path d="M2078 5916 L2078 5379" stroke-width="18" />
+                           </g>
+                        </g>
+                        <g id="qfw7014" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(2314, 6036) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="w137n7co" class="stem">
+                              <path d="M2517 6006 L2517 5424" stroke-width="18" />
+                           </g>
+                        </g>
+                     </g>
+                     <g id="r7653b5" class="beam">
+                        <polygon points="2947,5451 3404,5496 3404,5586 2947,5541" />
+                        <g id="siaslbh" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(2753, 6126) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="x1usfaie" class="stem">
+                              <path d="M2956 6096 L2956 5469" stroke-width="18" />
+                           </g>
+                        </g>
+                        <g id="t1z0xbr0" class="note">
+                           <g class="notehead">
+                              <use xlink:href="#E0A4-asmtssy" transform="translate(3192, 6216) scale(0.72, 0.72)" />
+                           </g>
+                           <g id="yqo0xkz" class="stem">
+                              <path d="M3395 6186 L3395 5514" stroke-width="18" />
+                           </g>
+                           <g id="u1mlonxw" class="accid" />
+                        </g>
+                     </g>
+                  </g>
+               </g>
+               <g id="k7748bk" class="barLine">
+                  <path d="M3631 5586 L3631 6306" stroke-width="27" />
+               </g>
+            </g>
+            <g id="vwlg7uq" class="measure">
+               <g id="eowaz9v" class="staff">
+                  <path d="M3644 5586 L5306 5586" stroke-width="13" />
+                  <path d="M3644 5766 L5306 5766" stroke-width="13" />
+                  <path d="M3644 5946 L5306 5946" stroke-width="13" />
+                  <path d="M3644 6126 L5306 6126" stroke-width="13" />
+                  <path d="M3644 6306 L5306 6306" stroke-width="13" />
+                  <g id="fpw3pg0" class="layer">
+                     <g id="ghvsh45" class="note">
+                        <g class="notehead">
+                           <use xlink:href="#E0A3-asmtssy" transform="translate(3824, 6126) scale(0.72, 0.72)" />
+                        </g>
+                        <g id="atcd8tg" class="dots">
+                           <ellipse cx="4126" cy="6036" rx="36" ry="36" />
+                        </g>
+                        <g id="z1uhu722" class="stem">
+                           <path d="M4027 6096 L4027 5496" stroke-width="18" />
+                        </g>
+                     </g>
+                  </g>
+               </g>
+               <g id="d1t2rkx9" class="barLine">
+                  <path d="M5131 5586 L5131 6306" stroke-width="27" />
+                  <path d="M5261 5586 L5261 6306" stroke-width="90" />
+               </g>
+            </g>
+            <g id="q404mld" class="systemMilestoneEnd hgdl2ea" />
+            <g id="r1bow07p" class="systemMilestoneEnd nxc9o0u" />
+         </g>
+         <g id="s7bsqff" class="pageMilestoneEnd l133v84q" />
+         <g id="t1uuwf37" class="pageMilestoneEnd k9u5vdw" />
+         <g id="u1xlxro2" class="pgHead autogenerated">
+            <text font-size="0px">
+               <tspan id="v1xdksw0" class="rend" x="10000" y="414" text-anchor="middle">
+                  <title class="labelAttr">title</title>
+                  <tspan id="w3beanc" class="rend">
+                     <tspan id="xnfrfsa" class="text">
+                        <tspan font-size="607px">Minuet in G (BWV Anh. 114)</tspan>
+                     </tspan>
+                  </tspan>
+               </tspan>
+            </text>
+         </g>
+      </g>
+   </svg>
+</svg>
+</div><div class='legend'><span><b style='color:var(--critical)'>✕</b> Wrong note</span><span><b style='color:var(--serious)'>○</b> Missed</span><span><b style='color:var(--sharp)'>↑</b> Sharp</span><span><b style='color:var(--flat)'>↓</b> Flat</span><span><b style='color:var(--warning)'>◆</b> Early / late</span></div></div>
+<h2>Bar by bar</h2>
+<div class='card'><div class='heat'><div style='background:var(--heat-0)' data-tip='Bar 1: 100/100 — clean · 96 BPM'>1</div><div style='background:var(--heat-1)' data-tip='Bar 2: 95/100 — 1 out of tune · 96 BPM'>2</div><div style='background:var(--heat-0)' data-tip='Bar 3: 100/100 — clean · 97 BPM'>3</div><div style='background:var(--heat-2)' data-tip='Bar 4: 77/100 — 1 wrong · 96 BPM'>4</div><div style='background:var(--heat-1)' data-tip='Bar 5: 86/100 — 1 missed · 96 BPM'>5</div><div style='background:var(--heat-0)' data-tip='Bar 6: 100/100 — clean · 96 BPM'>6</div><div style='background:var(--heat-1)' data-tip='Bar 7: 93/100 — 1 extra · 96 BPM'>7</div><div style='background:var(--heat-0)' data-tip='Bar 8: 100/100 — clean · 96 BPM'>8</div><div style='background:var(--heat-0)' data-tip='Bar 9: 97/100 — 1 out of tune · 96 BPM'>9</div><div style='background:var(--heat-0)' data-tip='Bar 10: 100/100 — clean · 96 BPM'>10</div><div style='background:var(--heat-1)' data-tip='Bar 11: 86/100 — 1 wrong · 97 BPM'>11</div><div style='background:var(--heat-1)' data-tip='Bar 12: 93/100 — 1 timing · 100 BPM'>12</div><div style='background:var(--heat-0)' data-tip='Bar 13: 100/100 — clean · 109 BPM'>13</div><div style='background:var(--heat-0)' data-tip='Bar 14: 100/100 — clean · 109 BPM'>14</div><div style='background:var(--heat-0)' data-tip='Bar 15: 100/100 — clean · 99 BPM'>15</div><div style='background:var(--heat-0)' data-tip='Bar 16: 100/100 — clean'>16</div></div><div class='legend'><span>Bar colour = how much needs work:</span><span><b style='background:var(--heat-0);border-radius:4px'>&nbsp;</b> clean</span><span><b style='background:var(--heat-1);border-radius:4px'>&nbsp;</b> minor</span><span><b style='background:var(--heat-2);border-radius:4px'>&nbsp;</b> some</span><span><b style='background:var(--heat-3);border-radius:4px'>&nbsp;</b> many</span><span><b style='background:var(--heat-4);border-radius:4px'>&nbsp;</b> most</span></div></div>
+<h2>What you played vs. the score</h2>
+<div class='card'><svg class='chart' viewBox='0 0 1040 232' role='img' aria-label='What you played compared with the score'><line x1='44' x2='1030' y1='128.4' y2='128.4' stroke='var(--grid)'/><text x='38' y='132.4' text-anchor='end'>C5</text><text x='26.6' y='224' text-anchor='middle'>0s</text><text x='96.5' y='224' text-anchor='middle'>2s</text><text x='166.4' y='224' text-anchor='middle'>4s</text><text x='236.3' y='224' text-anchor='middle'>6s</text><text x='306.2' y='224' text-anchor='middle'>8s</text><text x='376.1' y='224' text-anchor='middle'>10s</text><text x='446.0' y='224' text-anchor='middle'>12s</text><text x='515.9' y='224' text-anchor='middle'>14s</text><text x='585.8' y='224' text-anchor='middle'>16s</text><text x='655.7' y='224' text-anchor='middle'>18s</text><text x='725.6' y='224' text-anchor='middle'>20s</text><text x='795.5' y='224' text-anchor='middle'>22s</text><text x='865.4' y='224' text-anchor='middle'>24s</text><text x='935.3' y='224' text-anchor='middle'>26s</text><text x='1005.2' y='224' text-anchor='middle'>28s</text><rect x='44.0' y='105.8' width='19.8' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='66.7' y='171.9' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='77.4' y='153.0' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='88.5' y='134.1' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='99.3' y='124.7' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='110.3' y='105.8' width='19.8' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='132.7' y='171.9' width='19.8' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='154.0' y='171.9' width='19.8' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='175.8' y='86.9' width='19.8' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='198.0' y='124.7' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='208.7' y='105.8' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='219.7' y='86.9' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='230.4' y='68.0' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='241.3' y='58.6' width='19.8' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='263.3' y='171.9' width='19.8' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='284.9' y='171.9' width='19.8' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='307.2' y='124.7' width='19.8' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='328.9' y='105.8' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='339.8' y='124.7' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='350.6' y='134.1' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='361.5' y='153.0' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='372.5' y='134.1' width='19.8' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='394.4' y='124.7' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='405.3' y='134.1' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='416.1' y='153.0' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='427.1' y='171.9' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='438.0' y='181.3' width='19.8' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='459.7' y='171.9' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='470.7' y='153.0' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='481.5' y='134.1' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='492.5' y='171.9' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='503.4' y='153.0' width='63.3' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='568.8' y='105.8' width='19.8' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='591.1' y='171.9' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='601.8' y='153.0' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='612.8' y='134.1' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='623.7' y='124.7' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='634.7' y='105.8' width='19.8' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='656.6' y='171.9' width='19.8' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='678.5' y='171.9' width='19.8' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='700.5' y='86.9' width='19.8' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='722.2' y='124.7' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='733.1' y='105.8' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='743.9' y='86.9' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='754.8' y='68.0' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='765.9' y='58.6' width='19.8' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='787.3' y='171.9' width='19.8' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='807.7' y='171.9' width='19.8' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='828.4' y='124.7' width='19.8' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='848.6' y='105.8' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='858.5' y='124.7' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='867.8' y='134.1' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='877.5' y='153.0' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='886.8' y='134.1' width='19.8' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='905.5' y='124.7' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='915.1' y='134.1' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='924.9' y='153.0' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='934.8' y='171.9' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='944.9' y='153.0' width='19.8' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='965.5' y='134.1' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='975.8' y='153.0' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='986.6' y='171.9' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='997.1' y='181.3' width='8.9' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='1008.4' y='171.9' width='63.3' height='7.6' rx='2' fill='none' stroke='var(--ink-3)' stroke-width='1' stroke-dasharray='3 2'/><rect x='44.9' y='105.8' width='19.8' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 1: Correct — expected D5, played D5, +27 ms, -0 cents'/><rect x='66.0' y='171.9' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 1: Correct — expected G4, played G4, -20 ms, +1 cents'/><rect x='77.8' y='153.0' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 1: Correct — expected A4, played A4, +12 ms, +1 cents'/><rect x='88.0' y='134.1' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 1: Correct — expected B4, played B4, -14 ms, -0 cents'/><rect x='99.7' y='124.7' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 1: Correct — expected C5, played C5, +13 ms, +1 cents'/><rect x='110.7' y='105.8' width='19.8' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 2: Correct — expected D5, played D5, +10 ms, -0 cents'/><rect x='131.0' y='171.9' width='19.8' height='7.6' rx='2' fill='var(--flat)' data-tip='Bar 2: Flat — expected G4, played G4, -51 ms, -40 cents'/><rect x='155.3' y='171.9' width='19.8' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 2: Correct — expected G4, played G4, +37 ms, +0 cents'/><rect x='177.2' y='86.9' width='19.8' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 3: Correct — expected E5, played E5, +40 ms, +1 cents'/><rect x='197.1' y='124.7' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 3: Correct — expected C5, played C5, -27 ms, +1 cents'/><rect x='208.9' y='105.8' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 3: Correct — expected D5, played D5, +6 ms, +0 cents'/><rect x='219.0' y='86.9' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 3: Correct — expected E5, played E5, -18 ms, +1 cents'/><rect x='230.4' y='68.0' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 3: Correct — expected F#5, played F#5, -2 ms, +0 cents'/><rect x='242.6' y='68.0' width='19.8' height='7.6' rx='2' fill='var(--critical)' data-tip='Bar 4: Wrong note — expected G5, played F#5, +34 ms'/><rect x='262.8' y='171.9' width='19.8' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 4: Correct — expected G4, played G4, -14 ms, +0 cents'/><rect x='286.0' y='171.9' width='19.8' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 4: Correct — expected G4, played G4, +30 ms, +1 cents'/><rect x='306.7' y='124.7' width='19.8' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 5: Correct — expected C5, played C5, -15 ms, +1 cents'/><rect x='329.0' y='105.8' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 5: Correct — expected D5, played D5, +2 ms, -0 cents'/><rect x='339.9' y='124.7' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 5: Correct — expected C5, played C5, +5 ms, +1 cents'/><rect x='350.9' y='134.1' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 5: Correct — expected B4, played B4, +8 ms, +0 cents'/><rect x='372.4' y='134.1' width='19.8' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 6: Correct — expected B4, played B4, -2 ms, -0 cents'/><rect x='393.9' y='124.7' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 6: Correct — expected C5, played C5, -13 ms, +0 cents'/><rect x='404.9' y='134.1' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 6: Correct — expected B4, played B4, -12 ms, +0 cents'/><rect x='416.2' y='153.0' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 6: Correct — expected A4, played A4, +3 ms, +1 cents'/><rect x='427.2' y='171.9' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 6: Correct — expected G4, played G4, +3 ms, +1 cents'/><rect x='438.0' y='181.3' width='19.8' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 7: Correct — expected F#4, played F#4, +2 ms, +0 cents'/><rect x='460.9' y='171.9' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 7: Correct — expected G4, played G4, +34 ms, +0 cents'/><rect x='470.6' y='153.0' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 7: Correct — expected A4, played A4, -4 ms, +1 cents'/><rect x='481.5' y='134.1' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 7: Correct — expected B4, played B4, +0 ms, -0 cents'/><rect x='492.1' y='171.9' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 7: Correct — expected G4, played G4, -10 ms, +1 cents'/><rect x='503.0' y='153.0' width='63.3' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 8: Correct — expected A4, played A4, -11 ms, +1 cents'/><rect x='569.6' y='105.8' width='19.8' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 9: Correct — expected D5, played D5, +22 ms, +0 cents'/><rect x='590.7' y='171.9' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 9: Correct — expected G4, played G4, -11 ms, +1 cents'/><rect x='602.1' y='153.0' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 9: Correct — expected A4, played A4, +8 ms, +1 cents'/><rect x='612.2' y='134.1' width='8.9' height='7.6' rx='2' fill='var(--sharp)' data-tip='Bar 9: Sharp — expected B4, played B4, -18 ms, +35 cents'/><rect x='623.5' y='124.7' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 9: Correct — expected C5, played C5, -7 ms, +1 cents'/><rect x='634.5' y='105.8' width='19.8' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 10: Correct — expected D5, played D5, -5 ms, +0 cents'/><rect x='656.8' y='171.9' width='19.8' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 10: Correct — expected G4, played G4, +7 ms, +1 cents'/><rect x='678.7' y='171.9' width='19.8' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 10: Correct — expected G4, played G4, +6 ms, +1 cents'/><rect x='700.7' y='86.9' width='19.8' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 11: Correct — expected E5, played E5, +6 ms, +1 cents'/><rect x='722.6' y='124.7' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 11: Correct — expected C5, played C5, +11 ms, +1 cents'/><rect x='733.1' y='105.8' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 11: Correct — expected D5, played D5, +1 ms, +0 cents'/><rect x='744.1' y='86.9' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 11: Correct — expected E5, played E5, +4 ms, +1 cents'/><rect x='754.6' y='49.1' width='8.9' height='7.6' rx='2' fill='var(--critical)' data-tip='Bar 11: Wrong note — expected F#5, played G#5, -6 ms'/><rect x='765.2' y='58.6' width='19.8' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 12: Correct — expected G5, played G5, -20 ms, +2 cents'/><rect x='787.1' y='171.9' width='19.8' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 12: Correct — expected G4, played G4, -6 ms, +1 cents'/><rect x='810.2' y='171.9' width='19.8' height='7.6' rx='2' fill='var(--warning)' data-tip='Bar 12: Early / late — expected G4, played G4, +71 ms, +0 cents'/><rect x='830.5' y='124.7' width='19.8' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 13: Correct — expected C5, played C5, +59 ms, +1 cents'/><rect x='849.6' y='105.8' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 13: Correct — expected D5, played D5, +26 ms, +0 cents'/><rect x='858.1' y='124.7' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 13: Correct — expected C5, played C5, -13 ms, +0 cents'/><rect x='869.0' y='134.1' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 13: Correct — expected B4, played B4, +36 ms, -0 cents'/><rect x='876.8' y='153.0' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 13: Correct — expected A4, played A4, -21 ms, +1 cents'/><rect x='886.5' y='134.1' width='19.8' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 14: Correct — expected B4, played B4, -9 ms, +0 cents'/><rect x='906.0' y='124.7' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 14: Correct — expected C5, played C5, +14 ms, +1 cents'/><rect x='914.9' y='134.1' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 14: Correct — expected B4, played B4, -6 ms, +0 cents'/><rect x='924.2' y='153.0' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 14: Correct — expected A4, played A4, -18 ms, +0 cents'/><rect x='933.2' y='171.9' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 14: Correct — expected G4, played G4, -48 ms, +1 cents'/><rect x='942.9' y='153.0' width='19.8' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 15: Correct — expected A4, played A4, -58 ms, +1 cents'/><rect x='963.6' y='134.1' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 15: Correct — expected B4, played B4, -54 ms, -0 cents'/><rect x='974.9' y='153.0' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 15: Correct — expected A4, played A4, -25 ms, +1 cents'/><rect x='985.5' y='171.9' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 15: Correct — expected G4, played G4, -32 ms, +1 cents'/><rect x='998.1' y='181.3' width='8.9' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 15: Correct — expected F#4, played F#4, +27 ms, +0 cents'/><rect x='1009.0' y='171.9' width='63.3' height='7.6' rx='2' fill='var(--accent)' data-tip='Bar 16: Correct — expected G4, played G4, +18 ms, +0 cents'/><rect x='487.2' y='115.2' width='8' height='7.6' rx='2' fill='var(--critical)' opacity='.55' data-tip='Extra note C#5 at 13.18s'/><text x='38' y='20' text-anchor='end'>Watch</text><g data-tip='3.16s · Watch buzz: flat -40c'><circle cx='137.2' cy='16' r='8' fill='var(--flat)'/><text x='137.2' y='20' text-anchor='middle' style='fill:var(--surface);font-weight:700'>↓</text></g><g data-tip='6.17s · Watch buzz: wrong note G5'><circle cx='242.3' cy='16' r='8' fill='var(--critical)'/><text x='242.3' y='20' text-anchor='middle' style='fill:var(--surface);font-weight:700'>✕</text></g><g data-tip='9.87s · Watch buzz: missed note A4'><circle cx='371.7' cy='16' r='8' fill='var(--serious)'/><text x='371.7' y='20' text-anchor='middle' style='fill:var(--surface);font-weight:700'>○</text></g><g data-tip='13.18s · Watch buzz: wrong note G4'><circle cx='487.3' cy='16' r='8' fill='var(--critical)'/><text x='487.3' y='20' text-anchor='middle' style='fill:var(--surface);font-weight:700'>✕</text></g><g data-tip='16.92s · Watch buzz: sharp +35c'><circle cx='618.0' cy='16' r='8' fill='var(--sharp)'/><text x='618.0' y='20' text-anchor='middle' style='fill:var(--surface);font-weight:700'>↑</text></g><g data-tip='20.85s · Watch buzz: wrong note F#5'><circle cx='755.2' cy='16' r='8' fill='var(--critical)'/><text x='755.2' y='20' text-anchor='middle' style='fill:var(--surface);font-weight:700'>✕</text></g><g data-tip='24.60s · Watch buzz: rushing rushing'><circle cx='886.2' cy='16' r='8' fill='var(--warning)'/><text x='886.2' y='20' text-anchor='middle' style='fill:var(--surface);font-weight:700'>»</text></g></svg><div class='legend'><span><b style='color:var(--accent)'>▬</b> played (correct)</span><span><b style='color:var(--ink-3)'>┅</b> where the score expected it</span><span><b style='color:var(--critical)'>✕</b> Wrong note</span><span><b style='color:var(--serious)'>○</b> Missed</span><span><b style='color:var(--sharp)'>↑</b> Sharp</span><span><b style='color:var(--flat)'>↓</b> Flat</span><span><b style='color:var(--warning)'>◆</b> Early / late</span></div></div>
+<details><summary>What your Watch would have felt (7 buzzes)</summary><table><tr><th>Time</th><th>Bar</th><th>Buzz</th><th>Shown</th></tr><tr><td>3.16s</td><td>2</td><td>flat</td><td>-40c</td></tr><tr><td>6.17s</td><td>4</td><td>wrong note</td><td>G5</td></tr><tr><td>9.87s</td><td>5</td><td>missed note</td><td>A4</td></tr><tr><td>13.18s</td><td>7</td><td>wrong note</td><td>G4</td></tr><tr><td>16.92s</td><td>9</td><td>sharp</td><td>+35c</td></tr><tr><td>20.85s</td><td>11</td><td>wrong note</td><td>F#5</td></tr><tr><td>24.60s</td><td>14</td><td>rushing</td><td>rushing</td></tr></table></details>
+<h2>Tempo</h2><div class='card'><svg class='chart' viewBox='0 0 1040 200' role='img' aria-label='Tempo by bar'><line x1='44' x2='1026' y1='155.1' y2='155.1' stroke='var(--grid)'/><text x='38' y='159.1' text-anchor='end'>90</text><line x1='44' x2='1026' y1='108.4' y2='108.4' stroke='var(--grid)'/><text x='38' y='112.4' text-anchor='end'>100</text><line x1='44' x2='1026' y1='61.7' y2='61.7' stroke='var(--grid)'/><text x='38' y='65.7' text-anchor='end'>110</text><line x1='44' x2='1026' y1='15.1' y2='15.1' stroke='var(--grid)'/><text x='38' y='19.1' text-anchor='end'>120</text><line x1='44' x2='1026' y1='125.2' y2='125.2' stroke='var(--ink-3)' stroke-dasharray='4 3'/><text x='1024' y='120.2' text-anchor='end'>your average 96</text><path d='M44.0,126.6 L114.1,126.6 L184.3,123.4 L254.4,128.5 L324.6,125.2 L394.7,127.1 L464.9,124.8 L535.0,126.6 L605.1,125.2 L675.3,129.4 L745.4,124.3 L815.6,108.4 L885.7,65.0 L955.9,65.9 L1026.0,113.6' fill='none' stroke='var(--accent)' stroke-width='2' stroke-linejoin='round'/><circle cx='44.0' cy='126.6' r='9' fill='transparent' data-tip='Bar 1: 96 BPM'/><circle cx='44.0' cy='126.6' r='3' fill='var(--accent)' pointer-events='none'/><circle cx='114.1' cy='126.6' r='9' fill='transparent' data-tip='Bar 2: 96 BPM'/><circle cx='114.1' cy='126.6' r='3' fill='var(--accent)' pointer-events='none'/><circle cx='184.3' cy='123.4' r='9' fill='transparent' data-tip='Bar 3: 97 BPM'/><circle cx='184.3' cy='123.4' r='3' fill='var(--accent)' pointer-events='none'/><circle cx='254.4' cy='128.5' r='9' fill='transparent' data-tip='Bar 4: 96 BPM'/><circle cx='254.4' cy='128.5' r='3' fill='var(--accent)' pointer-events='none'/><circle cx='324.6' cy='125.2' r='9' fill='transparent' data-tip='Bar 5: 96 BPM'/><circle cx='324.6' cy='125.2' r='3' fill='var(--accent)' pointer-events='none'/><circle cx='394.7' cy='127.1' r='9' fill='transparent' data-tip='Bar 6: 96 BPM'/><circle cx='394.7' cy='127.1' r='3' fill='var(--accent)' pointer-events='none'/><circle cx='464.9' cy='124.8' r='9' fill='transparent' data-tip='Bar 7: 96 BPM'/><circle cx='464.9' cy='124.8' r='3' fill='var(--accent)' pointer-events='none'/><circle cx='535.0' cy='126.6' r='9' fill='transparent' data-tip='Bar 8: 96 BPM'/><circle cx='535.0' cy='126.6' r='3' fill='var(--accent)' pointer-events='none'/><circle cx='605.1' cy='125.2' r='9' fill='transparent' data-tip='Bar 9: 96 BPM'/><circle cx='605.1' cy='125.2' r='3' fill='var(--accent)' pointer-events='none'/><circle cx='675.3' cy='129.4' r='9' fill='transparent' data-tip='Bar 10: 96 BPM'/><circle cx='675.3' cy='129.4' r='3' fill='var(--accent)' pointer-events='none'/><circle cx='745.4' cy='124.3' r='9' fill='transparent' data-tip='Bar 11: 97 BPM'/><circle cx='745.4' cy='124.3' r='3' fill='var(--accent)' pointer-events='none'/><circle cx='815.6' cy='108.4' r='9' fill='transparent' data-tip='Bar 12: 100 BPM'/><circle cx='815.6' cy='108.4' r='3' fill='var(--accent)' pointer-events='none'/><circle cx='885.7' cy='65.0' r='9' fill='transparent' data-tip='Bar 13: 109 BPM'/><circle cx='885.7' cy='65.0' r='3' fill='var(--accent)' pointer-events='none'/><circle cx='955.9' cy='65.9' r='9' fill='transparent' data-tip='Bar 14: 109 BPM'/><circle cx='955.9' cy='65.9' r='3' fill='var(--accent)' pointer-events='none'/><circle cx='1026.0' cy='113.6' r='9' fill='transparent' data-tip='Bar 15: 99 BPM'/><circle cx='1026.0' cy='113.6' r='3' fill='var(--accent)' pointer-events='none'/><text x='44.0' y='192' text-anchor='middle'>1</text><text x='114.1' y='192' text-anchor='middle'>2</text><text x='184.3' y='192' text-anchor='middle'>3</text><text x='254.4' y='192' text-anchor='middle'>4</text><text x='324.6' y='192' text-anchor='middle'>5</text><text x='394.7' y='192' text-anchor='middle'>6</text><text x='464.9' y='192' text-anchor='middle'>7</text><text x='535.0' y='192' text-anchor='middle'>8</text><text x='605.1' y='192' text-anchor='middle'>9</text><text x='675.3' y='192' text-anchor='middle'>10</text><text x='745.4' y='192' text-anchor='middle'>11</text><text x='815.6' y='192' text-anchor='middle'>12</text><text x='885.7' y='192' text-anchor='middle'>13</text><text x='955.9' y='192' text-anchor='middle'>14</text><text x='1026.0' y='192' text-anchor='middle'>15</text></svg><div class='legend'><span>Tempo (quarter-note BPM) per bar</span></div></div>
+<h2>Intonation</h2><div class='card'><svg class='chart' viewBox='0 0 1040 220' role='img' aria-label='Intonation per note in cents'><rect x='44' y='77.0' width='982' height='54.0' fill='var(--good)' opacity='.12'/><line x1='44' x2='1026' y1='194.0' y2='194.0' stroke='var(--grid)'/><text x='38' y='198.0' text-anchor='end'>-50</text><line x1='44' x2='1026' y1='149.0' y2='149.0' stroke='var(--grid)'/><text x='38' y='153.0' text-anchor='end'>-25</text><line x1='44' x2='1026' y1='104.0' y2='104.0' stroke='var(--grid)'/><text x='38' y='108.0' text-anchor='end'>+0</text><line x1='44' x2='1026' y1='59.0' y2='59.0' stroke='var(--grid)'/><text x='38' y='63.0' text-anchor='end'>+25</text><line x1='44' x2='1026' y1='14.0' y2='14.0' stroke='var(--grid)'/><text x='38' y='18.0' text-anchor='end'>+50</text><circle cx='44.0' cy='104.0' r='10' fill='transparent' data-tip='D5 (bar 1): -0 cents'/><circle cx='44.0' cy='104.0' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='65.4' cy='102.9' r='10' fill='transparent' data-tip='G4 (bar 1): +1 cents'/><circle cx='65.4' cy='102.9' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='77.4' cy='102.9' r='10' fill='transparent' data-tip='A4 (bar 1): +1 cents'/><circle cx='77.4' cy='102.9' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='87.7' cy='104.7' r='10' fill='transparent' data-tip='B4 (bar 1): -0 cents'/><circle cx='87.7' cy='104.7' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='99.6' cy='102.7' r='10' fill='transparent' data-tip='C5 (bar 1): +1 cents'/><circle cx='99.6' cy='102.7' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='110.7' cy='104.0' r='10' fill='transparent' data-tip='D5 (bar 2): -0 cents'/><circle cx='110.7' cy='104.0' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='131.3' cy='176.4' r='10' fill='transparent' data-tip='G4 (bar 2): -40 cents'/><circle cx='131.3' cy='176.4' r='4.5' fill='var(--flat)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='156.0' cy='103.1' r='10' fill='transparent' data-tip='G4 (bar 2): +0 cents'/><circle cx='156.0' cy='103.1' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='178.3' cy='102.9' r='10' fill='transparent' data-tip='E5 (bar 3): +1 cents'/><circle cx='178.3' cy='102.9' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='198.4' cy='102.6' r='10' fill='transparent' data-tip='C5 (bar 3): +1 cents'/><circle cx='198.4' cy='102.6' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='210.4' cy='104.0' r='10' fill='transparent' data-tip='D5 (bar 3): +0 cents'/><circle cx='210.4' cy='104.0' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='220.7' cy='102.9' r='10' fill='transparent' data-tip='E5 (bar 3): +1 cents'/><circle cx='220.7' cy='102.9' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='232.2' cy='104.0' r='10' fill='transparent' data-tip='F#5 (bar 3): +0 cents'/><circle cx='232.2' cy='104.0' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='265.1' cy='103.3' r='10' fill='transparent' data-tip='G4 (bar 4): +0 cents'/><circle cx='265.1' cy='103.3' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='288.6' cy='102.9' r='10' fill='transparent' data-tip='G4 (bar 4): +1 cents'/><circle cx='288.6' cy='102.9' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='309.6' cy='102.7' r='10' fill='transparent' data-tip='C5 (bar 5): +1 cents'/><circle cx='309.6' cy='102.7' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='332.3' cy='104.0' r='10' fill='transparent' data-tip='D5 (bar 5): -0 cents'/><circle cx='332.3' cy='104.0' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='343.4' cy='102.7' r='10' fill='transparent' data-tip='C5 (bar 5): +1 cents'/><circle cx='343.4' cy='102.7' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='354.5' cy='103.8' r='10' fill='transparent' data-tip='B4 (bar 5): +0 cents'/><circle cx='354.5' cy='103.8' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='376.3' cy='104.0' r='10' fill='transparent' data-tip='B4 (bar 6): -0 cents'/><circle cx='376.3' cy='104.0' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='398.2' cy='103.1' r='10' fill='transparent' data-tip='C5 (bar 6): +0 cents'/><circle cx='398.2' cy='103.1' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='409.3' cy='103.8' r='10' fill='transparent' data-tip='B4 (bar 6): +0 cents'/><circle cx='409.3' cy='103.8' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='420.8' cy='102.6' r='10' fill='transparent' data-tip='A4 (bar 6): +1 cents'/><circle cx='420.8' cy='102.6' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='431.9' cy='102.9' r='10' fill='transparent' data-tip='G4 (bar 6): +1 cents'/><circle cx='431.9' cy='102.9' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='443.0' cy='103.8' r='10' fill='transparent' data-tip='F#4 (bar 7): +0 cents'/><circle cx='443.0' cy='103.8' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='466.1' cy='103.1' r='10' fill='transparent' data-tip='G4 (bar 7): +0 cents'/><circle cx='466.1' cy='103.1' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='476.0' cy='102.7' r='10' fill='transparent' data-tip='A4 (bar 7): +1 cents'/><circle cx='476.0' cy='102.7' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='487.1' cy='104.2' r='10' fill='transparent' data-tip='B4 (bar 7): -0 cents'/><circle cx='487.1' cy='104.2' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='497.8' cy='102.6' r='10' fill='transparent' data-tip='G4 (bar 7): +1 cents'/><circle cx='497.8' cy='102.6' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='508.9' cy='102.9' r='10' fill='transparent' data-tip='A4 (bar 8): +1 cents'/><circle cx='508.9' cy='102.9' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='576.5' cy='104.0' r='10' fill='transparent' data-tip='D5 (bar 9): +0 cents'/><circle cx='576.5' cy='104.0' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='597.9' cy='102.9' r='10' fill='transparent' data-tip='G4 (bar 9): +1 cents'/><circle cx='597.9' cy='102.9' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='609.4' cy='102.7' r='10' fill='transparent' data-tip='A4 (bar 9): +1 cents'/><circle cx='609.4' cy='102.7' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='619.7' cy='41.4' r='10' fill='transparent' data-tip='B4 (bar 9): +35 cents'/><circle cx='619.7' cy='41.4' r='4.5' fill='var(--sharp)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='631.2' cy='102.7' r='10' fill='transparent' data-tip='C5 (bar 9): +1 cents'/><circle cx='631.2' cy='102.7' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='642.4' cy='103.6' r='10' fill='transparent' data-tip='D5 (bar 10): +0 cents'/><circle cx='642.4' cy='103.6' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='665.0' cy='102.4' r='10' fill='transparent' data-tip='G4 (bar 10): +1 cents'/><circle cx='665.0' cy='102.4' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='687.2' cy='102.6' r='10' fill='transparent' data-tip='G4 (bar 10): +1 cents'/><circle cx='687.2' cy='102.6' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='709.5' cy='102.7' r='10' fill='transparent' data-tip='E5 (bar 11): +1 cents'/><circle cx='709.5' cy='102.7' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='731.7' cy='102.6' r='10' fill='transparent' data-tip='C5 (bar 11): +1 cents'/><circle cx='731.7' cy='102.6' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='742.4' cy='103.6' r='10' fill='transparent' data-tip='D5 (bar 11): +0 cents'/><circle cx='742.4' cy='103.6' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='753.5' cy='102.7' r='10' fill='transparent' data-tip='E5 (bar 11): +1 cents'/><circle cx='753.5' cy='102.7' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='775.0' cy='100.9' r='10' fill='transparent' data-tip='G5 (bar 12): +2 cents'/><circle cx='775.0' cy='100.9' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='797.2' cy='102.7' r='10' fill='transparent' data-tip='G4 (bar 12): +1 cents'/><circle cx='797.2' cy='102.7' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='820.7' cy='103.1' r='10' fill='transparent' data-tip='G4 (bar 12): +0 cents'/><circle cx='820.7' cy='103.1' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='841.3' cy='102.9' r='10' fill='transparent' data-tip='C5 (bar 13): +1 cents'/><circle cx='841.3' cy='102.9' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='860.6' cy='104.0' r='10' fill='transparent' data-tip='D5 (bar 13): +0 cents'/><circle cx='860.6' cy='104.0' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='869.3' cy='103.1' r='10' fill='transparent' data-tip='C5 (bar 13): +0 cents'/><circle cx='869.3' cy='103.1' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='880.4' cy='104.2' r='10' fill='transparent' data-tip='B4 (bar 13): -0 cents'/><circle cx='880.4' cy='104.2' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='888.2' cy='102.6' r='10' fill='transparent' data-tip='A4 (bar 13): +1 cents'/><circle cx='888.2' cy='102.6' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='898.1' cy='104.0' r='10' fill='transparent' data-tip='B4 (bar 14): +0 cents'/><circle cx='898.1' cy='104.0' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='917.9' cy='102.6' r='10' fill='transparent' data-tip='C5 (bar 14): +1 cents'/><circle cx='917.9' cy='102.6' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='926.9' cy='103.8' r='10' fill='transparent' data-tip='B4 (bar 14): +0 cents'/><circle cx='926.9' cy='103.8' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='936.4' cy='103.1' r='10' fill='transparent' data-tip='A4 (bar 14): +0 cents'/><circle cx='936.4' cy='103.1' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='945.4' cy='102.9' r='10' fill='transparent' data-tip='G4 (bar 14): +1 cents'/><circle cx='945.4' cy='102.9' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='955.3' cy='102.6' r='10' fill='transparent' data-tip='A4 (bar 15): +1 cents'/><circle cx='955.3' cy='102.6' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='976.3' cy='104.2' r='10' fill='transparent' data-tip='B4 (bar 15): -0 cents'/><circle cx='976.3' cy='104.2' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='987.9' cy='102.7' r='10' fill='transparent' data-tip='A4 (bar 15): +1 cents'/><circle cx='987.9' cy='102.7' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='998.6' cy='102.7' r='10' fill='transparent' data-tip='G4 (bar 15): +1 cents'/><circle cx='998.6' cy='102.7' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='1011.3' cy='103.8' r='10' fill='transparent' data-tip='F#4 (bar 15): +0 cents'/><circle cx='1011.3' cy='103.8' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/><circle cx='1022.5' cy='103.1' r='10' fill='transparent' data-tip='G4 (bar 16): +0 cents'/><circle cx='1022.5' cy='103.1' r='4.5' fill='var(--ink-2)' stroke='var(--surface)' stroke-width='2' pointer-events='none'/></svg><div class='legend'><span>Cents from the written pitch, per note. Green band = in tune (±15 c)</span><span><b style='color:var(--sharp)'>↑</b> sharp</span><span><b style='color:var(--flat)'>↓</b> flat</span></div></div>
+<h2>Coach's notes</h2>
+<div class='tip'>Wrong notes - bar 4: G5 (you played F#5); bar 11: F#5 (you played G#5). Play these bars slowly in Wait mode (the score waits for the right note).</div><div class='tip'>Speeding up in bar(s) 13, 14 (about 13% faster than your average).</div>
+<h2>Practice plan</h2>
+<div class='plan'><div class='card'><div><b>Loop bars 3-5</b> <span class='sub'>· wrong notes</span></div><div class='step'><b>77 BPM</b><span>3 clean passes in a row (Wait mode: the score waits for you)</span></div><div class='step'><b>86 BPM</b><span>3 clean passes with the haptic metronome</span></div><div class='step'><b>96 BPM</b><span>2 clean passes at full tempo, then play from 2 bars earlier</span></div></div></div>
+<p class='note'>Wrong / missed notes are only marked when the analysis is confident; octave doublings hidden in
+another note's overtones are shown as "not judged" instead of counted against you.</p>
+</main><div id='tt' role='tooltip'></div><script>
+const tt=document.getElementById('tt');
+document.querySelectorAll('[data-tip]').forEach(el=>{
+  el.addEventListener('mousemove',e=>{tt.textContent=el.dataset.tip;tt.style.opacity=1;
+    const x=Math.min(e.clientX+14,innerWidth-280);tt.style.left=x+'px';tt.style.top=(e.clientY+14)+'px'});
+  el.addEventListener('mouseleave',()=>tt.style.opacity=0);
+});
+</script></body></html>

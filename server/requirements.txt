@@ -1,0 +1,15 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9
+numpy>=1.26
+scipy>=1.11
+soundfile>=0.12
+music21>=9.1
+mido>=1.3
+verovio>=4.3
+pymupdf>=1.24
+pillow>=10.0
+onnxruntime>=1.17   # band split: MDX-Net separation models (downloaded once, ~150 MB)
+homr>=0.7           # optical music recognition (downloads ~150 MB of ONNX models on first run)
+# Optional, better 6-stem separation (vocals, drums, bass, guitar, piano, other) - needs PyTorch:
+# demucs>=4.0

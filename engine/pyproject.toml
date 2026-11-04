@@ -1,0 +1,22 @@
+[project]
+name = "haptune"
+version = "0.2.0"
+description = "Score-informed music practice analysis with Apple Watch feedback"
+requires-python = ">=3.11"
+dependencies = ["numpy>=1.26", "scipy>=1.11", "soundfile>=0.12", "music21>=9.1", "mido>=1.3", "verovio>=4.3"]
+
+[project.optional-dependencies]
+omr = ["homr>=0.7", "pymupdf>=1.24"]
+split = ["onnxruntime>=1.17"]
+demucs = ["demucs>=4.0"]
+dev = ["pytest", "cairosvg"]
+
+[project.scripts]
+haptune = "haptune.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["haptune"]

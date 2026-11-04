@@ -1,0 +1,105 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<style>
+  :root { --cursor: rgba(42,120,214,.22); --wrong:#d03b3b; --missed:#ec835a; --sharp:#6250d6; --flat:#2a78d6; --ok:#0ca30c; }
+  html, body { margin: 0; background: #fff; -webkit-user-select: none; user-select: none; }
+  #score svg { width: 100%; height: auto; display: block; }
+  g.wm-current .notehead, g.wm-current .stem, g.wm-current .accid { fill: #2a78d6; stroke: #2a78d6; }
+  g.wm-wrong .notehead, g.wm-wrong .accid { fill: var(--wrong); }
+  g.wm-missed .notehead { fill: var(--missed); }
+  g.wm-sharp .notehead { fill: var(--sharp); }
+  g.wm-flat .notehead { fill: var(--flat); }
+  g.wm-ok .notehead { fill: var(--ok); }
+  g.measure.wm-loop .staff > path { stroke: #2a78d6; }
+  #status { font: 13px -apple-system, sans-serif; color: #777; padding: 8px; }
+</style>
+</head>
+<body>
+<div id="status">Loading engraver…</div>
+<div id="score"></div>
+<script src="verovio-toolkit-wasm.js"></script>
+<script>
+// Bridge between the iPhone app (WKWebView) and Verovio.
+// Swift calls: WM.load(xml, options) · WM.cursorAt(quarter) · WM.mark(quarter, midi, kind) · WM.clearMarks()
+// JS posts:    {type:"ready"} · {type:"loaded", pages, timemap} · {type:"tap", quarter} · {type:"error", message}
+const post = (msg) => { try { window.webkit.messageHandlers.wm.postMessage(msg); } catch (e) { console.log(JSON.stringify(msg)); } };
+const WM = {
+  tk: null, timemap: [], page: 1, pages: 0, byQuarter: new Map(), current: [],
+  init() {
+    this.tk = new verovio.toolkit();
+    document.getElementById('status').textContent = '';
+    post({ type: 'ready', version: this.tk.getVersion() });
+  },
+  load(xml, opts) {
+    const width = Math.max(600, Math.round(window.innerWidth * 2.2));
+    this.tk.setOptions(Object.assign({
+      pageWidth: width, pageHeight: Math.round(width * 1.35), scale: 42, adjustPageHeight: true,
+      breaks: 'auto', footer: 'none', header: 'auto', svgViewBox: true
+    }, opts || {}));
+    if (!this.tk.loadData(xml)) { post({ type: 'error', message: 'Could not read this score' }); return; }
+    this.pages = this.tk.getPageCount();
+    this.timemap = this.tk.renderToTimemap({ includeMeasures: true });
+    this.byQuarter = new Map();
+    for (const e of this.timemap) {
+      if (!e.on) continue;
+      const q = Math.round(e.qstamp * 1000) / 1000;
+      const ids = this.byQuarter.get(q) || [];
+      this.byQuarter.set(q, ids.concat(e.on));
+    }
+    this.show(1);
+    post({ type: 'loaded', pages: this.pages, quarters: Array.from(this.byQuarter.keys()) });
+  },
+  show(page) {
+    this.page = Math.min(Math.max(1, page), this.pages || 1);
+    document.getElementById('score').innerHTML = this.tk.renderToSVG(this.page);
+    this.reapply();
+  },
+  marks: [],   // [{q, midi, kind}]
+  reapply() {
+    for (const m of this.marks) this._paint(m.q, m.midi, 'wm-' + m.kind);
+    for (const id of this.current) { const el = document.getElementById(id); if (el) el.classList.add('wm-current'); }
+  },
+  idsAt(q, midi) {
+    const key = Math.round(q * 1000) / 1000;
+    const ids = this.byQuarter.get(key) || [];
+    if (midi == null) return ids;
+    const hit = ids.filter(id => { try { const v = this.tk.getMIDIValuesForElement(id); return v && (v.pitch === midi); } catch (e) { return false; } });
+    // transposing instruments: Verovio reports sounding pitch; with a single note there is no ambiguity
+    return hit.length ? hit : (ids.length === 1 ? ids : []);
+  },
+  _paint(q, midi, cls) {
+    for (const id of this.idsAt(q, midi)) { const el = document.getElementById(id); if (el) el.classList.add(cls); }
+  },
+  cursorAt(q) {   // highlight the notes starting at quarter q (last entry <= q), turn pages automatically
+    let best = null;
+    for (const key of this.byQuarter.keys()) { if (key <= q + 1e-6 && (best === null || key > best)) best = key; }
+    if (best === null) return;
+    document.querySelectorAll('.wm-current').forEach(el => el.classList.remove('wm-current'));
+    this.current = this.byQuarter.get(best) || [];
+    if (this.current.length) {
+      const p = this.tk.getPageWithElement(this.current[0]);
+      if (p && p !== this.page) { this.show(p); post({ type: 'page', page: p }); }
+    }
+    for (const id of this.current) { const el = document.getElementById(id); if (el) { el.classList.add('wm-current'); } }
+    const first = this.current.length ? document.getElementById(this.current[0]) : null;
+    if (first && first.getBoundingClientRect) {
+      const r = first.getBoundingClientRect();
+      if (r.top < 40 || r.bottom > window.innerHeight - 40) window.scrollBy({ top: r.top - window.innerHeight / 3, behavior: 'smooth' });
+    }
+  },
+  mark(q, midi, kind) { this.marks.push({ q, midi, kind }); this._paint(q, midi, 'wm-' + kind); },
+  clearMarks() { this.marks = []; document.querySelectorAll('[class*="wm-"]').forEach(el => el.classList.remove('wm-wrong','wm-missed','wm-sharp','wm-flat','wm-ok')); }
+};
+document.addEventListener('click', (ev) => {
+  let el = ev.target;
+  while (el && !(el.classList && el.classList.contains('note'))) el = el.parentNode;
+  if (!el) return;
+  try { const t = WM.tk.getTimesForElement(el.id); post({ type: 'tap', id: el.id, quarter: (t && t.qfracOn) ? t.qfracOn[0] : null, ms: t ? t.realTimeOnsetMilliseconds : null }); } catch (e) {}
+});
+verovio.module.onRuntimeInitialized = () => WM.init();
+</script>
+</body>
+</html>

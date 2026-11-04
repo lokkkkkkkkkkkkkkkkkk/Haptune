@@ -1,0 +1,84 @@
+# Builds the iPhone/iPad, Mac (Catalyst) and Apple Watch apps, runs the Swift tests and takes
+# screenshots of every screen on GitHub's macOS runners, so you can check everything without a Mac.
+name: apple-build
+on:
+  push:
+    paths: ["apple/**", ".github/workflows/apple-build.yml"]
+  pull_request:
+    paths: ["apple/**", ".github/workflows/apple-build.yml"]
+  workflow_dispatch:
+
+jobs:
+  practice-core-tests:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Swift tests (score parser, MIDI, DSP, live follower)
+        working-directory: apple/Packages/PracticeCore
+        run: swift test
+
+  build-apps:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        working-directory: apple
+        run: xcodegen generate
+      - name: Build iPhone + iPad app (simulator)
+        working-directory: apple
+        run: |
+          set -o pipefail
+          xcodebuild -project Haptune.xcodeproj -scheme Haptune -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug -derivedDataPath build CODE_SIGNING_ALLOWED=NO build | xcpretty
+      - name: Build Mac app (Mac Catalyst)
+        working-directory: apple
+        run: |
+          set -o pipefail
+          xcodebuild -project Haptune.xcodeproj -scheme Haptune -destination 'generic/platform=macOS,variant=Mac Catalyst' \
+            -configuration Debug -derivedDataPath build-mac CODE_SIGNING_ALLOWED=NO build | xcpretty
+      - name: Build Watch app (simulator)
+        working-directory: apple
+        run: |
+          set -o pipefail
+          xcodebuild -project Haptune.xcodeproj -scheme HaptuneWatch -destination 'generic/platform=watchOS Simulator' \
+            -configuration Debug -derivedDataPath build-watch CODE_SIGNING_ALLOWED=NO build | xcpretty
+      - name: Screenshots (iPhone, iPad, Watch; English + Chinese)
+        working-directory: apple
+        continue-on-error: true
+        run: |
+          bash scripts/screenshots.sh build/Build/Products/Debug-iphonesimulator/Haptune.app \
+            build-watch/Build/Products/Debug-watchsimulator/HaptuneWatch.app screenshots
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: apple/screenshots
+          if-no-files-found: ignore
+
+  # Uncomment once you have a paid Apple Developer account and have added these repository secrets:
+  # APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_KEY (the .p8 contents), TEAM_ID.
+  # testflight:
+  #   needs: build-apps
+  #   runs-on: macos-15
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - run: brew install xcodegen && cd apple && xcodegen generate
+  #     - name: Archive (automatic signing via App Store Connect API key)
+  #       working-directory: apple
+  #       run: |
+  #         echo "${{ secrets.APP_STORE_CONNECT_KEY }}" > key.p8
+  #         xcodebuild -project Haptune.xcodeproj -scheme Haptune -configuration Release \
+  #           -archivePath build/Haptune.xcarchive -destination 'generic/platform=iOS' \
+  #           DEVELOPMENT_TEAM=${{ secrets.TEAM_ID }} -allowProvisioningUpdates \
+  #           -authenticationKeyPath $PWD/key.p8 -authenticationKeyID ${{ secrets.APP_STORE_CONNECT_KEY_ID }} \
+  #           -authenticationKeyIssuerID ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }} archive
+  #     - name: Upload to TestFlight
+  #       working-directory: apple
+  #       run: |
+  #         xcodebuild -exportArchive -archivePath build/Haptune.xcarchive -exportPath build/export \
+  #           -exportOptionsPlist ExportOptions.plist -allowProvisioningUpdates \
+  #           -authenticationKeyPath $PWD/key.p8 -authenticationKeyID ${{ secrets.APP_STORE_CONNECT_KEY_ID }} \
+  #           -authenticationKeyIssuerID ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}

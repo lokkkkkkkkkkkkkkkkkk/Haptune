@@ -1,0 +1,171 @@
+{
+ "schema": "haptune.haptics/1",
+ "events": [
+  {
+   "event": "wrong_note",
+   "watch_haptic": "failure",
+   "pattern": [
+    [
+     0,
+     "failure"
+    ]
+   ],
+   "glyph": "xmark.circle.fill",
+   "priority": 5,
+   "cooldown_ms": 700,
+   "description": "Wrong pitch: strong double buzz. The Watch shows the note that was expected."
+  },
+  {
+   "event": "missed_note",
+   "watch_haptic": "retry",
+   "pattern": [
+    [
+     0,
+     "retry"
+    ]
+   ],
+   "glyph": "arrow.uturn.backward.circle",
+   "priority": 4,
+   "cooldown_ms": 900,
+   "description": "A note (or chord tone) was skipped."
+  },
+  {
+   "event": "sharp",
+   "watch_haptic": "directionUp",
+   "pattern": [
+    [
+     0,
+     "directionUp"
+    ]
+   ],
+   "glyph": "arrow.up.circle",
+   "priority": 3,
+   "cooldown_ms": 1200,
+   "description": "Sharp: rising tap. Bring the pitch down."
+  },
+  {
+   "event": "flat",
+   "watch_haptic": "directionDown",
+   "pattern": [
+    [
+     0,
+     "directionDown"
+    ]
+   ],
+   "glyph": "arrow.down.circle",
+   "priority": 3,
+   "cooldown_ms": 1200,
+   "description": "Flat: falling tap. Bring the pitch up."
+  },
+  {
+   "event": "rushing",
+   "watch_haptic": "stop",
+   "pattern": [
+    [
+     0,
+     "click"
+    ],
+    [
+     120,
+     "click"
+    ],
+    [
+     240,
+     "click"
+    ]
+   ],
+   "glyph": "hare.fill",
+   "priority": 2,
+   "cooldown_ms": 2500,
+   "description": "Rushing: three quick taps. Hold back."
+  },
+  {
+   "event": "dragging",
+   "watch_haptic": "start",
+   "pattern": [
+    [
+     0,
+     "click"
+    ],
+    [
+     350,
+     "click"
+    ]
+   ],
+   "glyph": "tortoise.fill",
+   "priority": 2,
+   "cooldown_ms": 2500,
+   "description": "Dragging: two slow taps. Move forward."
+  },
+  {
+   "event": "section_clean",
+   "watch_haptic": "success",
+   "pattern": [
+    [
+     0,
+     "success"
+    ]
+   ],
+   "glyph": "checkmark.seal.fill",
+   "priority": 1,
+   "cooldown_ms": 0,
+   "description": "Loop played cleanly."
+  },
+  {
+   "event": "count_in",
+   "watch_haptic": "click",
+   "pattern": [
+    [
+     0,
+     "click"
+    ]
+   ],
+   "glyph": "metronome",
+   "priority": 0,
+   "cooldown_ms": 0,
+   "description": "Count-in tick."
+  },
+  {
+   "event": "beat",
+   "watch_haptic": "click",
+   "pattern": [
+    [
+     0,
+     "click"
+    ]
+   ],
+   "glyph": "metronome",
+   "priority": 0,
+   "cooldown_ms": 0,
+   "description": "Metronome beat (played on the Watch)."
+  },
+  {
+   "event": "downbeat",
+   "watch_haptic": "start",
+   "pattern": [
+    [
+     0,
+     "start"
+    ]
+   ],
+   "glyph": "metronome.fill",
+   "priority": 0,
+   "cooldown_ms": 0,
+   "description": "Metronome downbeat."
+  },
+  {
+   "event": "page_turn",
+   "watch_haptic": "notification",
+   "pattern": [
+    [
+     0,
+     "notification"
+    ]
+   ],
+   "glyph": "doc.text",
+   "priority": 0,
+   "cooldown_ms": 0,
+   "description": "Score turned the page (optional)."
+  }
+ ]
+}

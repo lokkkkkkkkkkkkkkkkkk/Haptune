@@ -1,0 +1,113 @@
+# XcodeGen spec -> run `xcodegen generate` (on a Mac or in GitHub Actions) to create Haptune.xcodeproj.
+# One iOS target runs on iPhone, iPad and Mac (Mac Catalyst); the Watch app is embedded for iPhone.
+name: Haptune
+options:
+  bundleIdPrefix: com.example.haptune          # change to your own reverse-domain prefix
+  deploymentTarget:
+    iOS: "18.0"
+    watchOS: "11.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MARKETING_VERSION: "0.2.0"
+    CURRENT_PROJECT_VERSION: "2"
+    DEVELOPMENT_TEAM: ""                       # your Apple Developer team id (needed for devices / TestFlight)
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+    SWIFT_EMIT_LOC_STRINGS: YES
+packages:
+  PracticeCore:
+    path: Packages/PracticeCore
+targets:
+  Haptune:
+    type: application
+    platform: iOS
+    sources:
+      - path: iOS
+      - path: Shared
+      - path: Haptune.storekit
+        buildPhase: none
+    dependencies:
+      - package: PracticeCore
+      - target: HaptuneWatch
+        platformFilter: iOS
+    info:
+      path: iOS/Info.plist
+      properties:
+        CFBundleDisplayName: Haptune
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [en, zh-Hans, zh-Hant, ms]
+        LSApplicationCategoryType: public.app-category.music
+        ITSAppUsesNonExemptEncryption: false
+        UILaunchScreen: {}
+        UIBackgroundModes: [audio]
+        UIApplicationSupportsIndirectInputEvents: true
+        NSMicrophoneUsageDescription: Haptune listens while you play so it can follow the score and tap your Apple Watch when a note is wrong, out of tune or out of time. Audio stays on your device unless you ask for a full analysis or a band split.
+        NSCameraUsageDescription: Haptune uses the camera to scan printed sheet music.
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        LSSupportsOpeningDocumentsInPlace: false
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: MusicXML score
+            LSHandlerRank: Alternate
+            LSItemContentTypes: [org.musicxml.musicxml, com.recordare.musicxml.compressed, public.xml]
+          - CFBundleTypeName: Sheet music
+            LSHandlerRank: Alternate
+            LSItemContentTypes: [com.adobe.pdf, public.image, public.midi-audio]
+          - CFBundleTypeName: Recording
+            LSHandlerRank: Alternate
+            LSItemContentTypes: [public.audio, public.movie]
+        UTImportedTypeDeclarations:
+          - UTTypeIdentifier: org.musicxml.musicxml
+            UTTypeDescription: MusicXML
+            UTTypeConformsTo: [public.xml]
+            UTTypeTagSpecification: { public.filename-extension: [musicxml] }
+          - UTTypeIdentifier: com.recordare.musicxml.compressed
+            UTTypeDescription: Compressed MusicXML
+            UTTypeConformsTo: [public.data, public.archive]
+            UTTypeTagSpecification: { public.filename-extension: [mxl] }
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.haptune
+        TARGETED_DEVICE_FAMILY: "1,2,6"
+        SUPPORTS_MACCATALYST: YES
+        DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER: NO
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+        ENABLE_PREVIEWS: YES
+  HaptuneWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - path: Watch
+      - path: Shared
+    dependencies:
+      - package: PracticeCore
+    info:
+      path: Watch/Info.plist
+      properties:
+        CFBundleDisplayName: Haptune
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [en, zh-Hans, zh-Hant, ms]
+        WKApplication: true
+        WKCompanionAppBundleIdentifier: com.example.haptune
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.haptune.watchkitapp
+        TARGETED_DEVICE_FAMILY: "4"
+schemes:
+  Haptune:
+    build:
+      targets:
+        Haptune: all
+    run:
+      config: Debug
+      storeKitConfiguration: Haptune.storekit
+    archive:
+      config: Release
+  HaptuneWatch:
+    build:
+      targets:
+        HaptuneWatch: all
+    run:
+      config: Debug

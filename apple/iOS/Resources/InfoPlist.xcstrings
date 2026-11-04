@@ -1,0 +1,93 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "CFBundleDisplayName": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haptune"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "触乐"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "觸樂"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haptune"
+          }
+        }
+      }
+    },
+    "NSMicrophoneUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haptune listens while you play so it can follow the score and tap your Apple Watch when a note is wrong, out of tune or out of time. Audio stays on your device unless you ask for a full analysis or a band split."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haptune 会在你演奏时聆听，以便跟随乐谱，并在音弹错、音不准或节奏不对时轻触你的 Apple Watch。除非你要求完整分析或分轨，否则音频只保留在你的设备上。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haptune 會在你演奏時聆聽，以便跟隨樂譜，並在音彈錯、音不準或節奏不對時輕觸你的 Apple Watch。除非你要求完整分析或分軌，否則音訊只保留在你的裝置上。"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haptune mendengar semasa anda bermain supaya dapat mengikut skor dan mengetuk Apple Watch anda apabila not salah, sumbang atau lari rentak. Audio kekal pada peranti anda melainkan anda meminta analisis penuh atau pisah band."
+          }
+        }
+      }
+    },
+    "NSCameraUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haptune uses the camera to scan printed sheet music."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haptune 使用相机扫描印刷乐谱。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haptune 使用相機掃描印刷樂譜。"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haptune menggunakan kamera untuk mengimbas skor muzik bercetak."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
