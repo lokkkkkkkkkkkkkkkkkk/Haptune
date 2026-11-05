@@ -89,6 +89,27 @@ def test_ai_read_is_rate_limited(monkeypatch):
     assert client.post("/ai/read", files={"file": ("a.pdf", b"%PDF", "application/pdf")}, headers=h).status_code == 429
 
 
+def test_ai_limits_ignore_a_made_up_forwarded_address(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.setattr(app_module, "READS_PER_DAY", 1)              # 3 a day per address
+    monkeypatch.setattr(app_module, "_run_read", lambda *a: None)
+    pdf = {"file": ("a.pdf", b"%PDF", "application/pdf")}
+    codes = [client.post("/ai/read", files=pdf, headers={"X-Forwarded-For": f"10.0.0.{i}"}).status_code for i in range(4)]
+    assert codes == [200, 200, 200, 429]
+    # behind Fly, its proxy says who the client is
+    assert client.post("/ai/read", files=pdf, headers={"Fly-Client-IP": "203.0.113.7"}).status_code == 200
+
+
+def test_ai_whole_server_daily_cap(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.setitem(app_module.ALL_PER_DAY, "read", 2)
+    monkeypatch.setattr(app_module, "_run_read", lambda *a: None)
+    pdf = {"file": ("a.pdf", b"%PDF", "application/pdf")}
+    codes = [client.post("/ai/read", files=pdf, headers={"Fly-Client-IP": f"203.0.113.{i}", "X-Haptune-Device": f"d{i}"}).status_code
+             for i in range(3)]
+    assert codes == [200, 200, 429]
+
+
 def test_ai_find_with_fake_model(monkeypatch):
     from haptune.ai import finder
     found = {"song": {"title": "Ode to Joy", "artist": "Beethoven", "copyrighted": False}, "advice": "Public domain.",

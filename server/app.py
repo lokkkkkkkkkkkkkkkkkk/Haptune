@@ -218,14 +218,28 @@ _limiter = _Limiter()
 DAY = 24 * 3600
 
 
+# Whole-server daily caps, so many devices or addresses together can't run up the AI bill either.
+ALL_PER_DAY = {"read": int(os.environ.get("HAPTUNE_READS_ALL_PER_DAY", "150")),
+               "find": int(os.environ.get("HAPTUNE_FINDS_ALL_PER_DAY", "300")),
+               "tutor": int(os.environ.get("HAPTUNE_TUTOR_ALL_PER_DAY", "600"))}
+
+
+def _client_ip(request: Request) -> str:
+    # Fly's proxy sets Fly-Client-IP itself. X-Forwarded-For begins with whatever the client sent, so a
+    # made-up address in it would get a fresh daily allowance with every request.
+    return (request.headers.get("fly-client-ip") or (request.client.host if request.client else "") or "?").strip()
+
+
 def _limit(request: Request, kind: str, per_day: int) -> None:
     device = (request.headers.get("x-haptune-device") or "").strip()[:64]
-    ip = (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "?")).split(",")[0].strip()
-    ok = _limiter.allow(f"{kind}:ip:{ip}", per_day * 3, DAY)
+    ok = _limiter.allow(f"{kind}:ip:{_client_ip(request)}", per_day * 3, DAY)
     if ok and device:
         ok = _limiter.allow(f"{kind}:dev:{device}", per_day, DAY)
     if not ok:
         raise HTTPException(429, "You've used today's free AI reads. Please try again tomorrow.")
+    cap = ALL_PER_DAY.get(kind)
+    if cap and not _limiter.allow(f"{kind}:all", cap, DAY):
+        raise HTTPException(429, "Haptune's AI is fully booked for today. Please try again tomorrow.")
 
 
 def _job(jid: str) -> dict:
