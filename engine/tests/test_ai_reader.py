@@ -33,6 +33,14 @@ def test_parse_voice_reports_errors_without_raising():
     assert len(evs) == 2 and len(errs) == 3
 
 
+def test_parse_accidental_written_before_the_letter():
+    evs, errs = parse_voice("bC5/16 #F4+nB4/8!stacc bbB3/4 bb4/8")
+    assert not errs
+    assert [(p.step, p.acc, p.octave) for e in evs for p in e.pitches] == \
+        [("C", "b", 5), ("F", "#", 4), ("B", "n", 4), ("B", "bb", 3), ("B", "b", 4)]
+    assert "staccato" in evs[1].marks
+
+
 def test_parse_marks_text_and_lyrics():
     evs, errs = parse_voice('C4+E4+G4/2!chord="C"!words="dolce cantabile"!ly="Twin-"!tempo="Allegro"!bpm=120 R')
     assert not errs
@@ -96,6 +104,38 @@ def test_writer_two_voices_dynamics_and_engine_roundtrip():
     assert sorted(n.pitch for n in sc.notes if n.measure == 1) == [59, 66, 67, 67, 74]   # F in G major is F#4
 
 
+def test_writer_writes_the_tempo_once():
+    doc = _doc([(['D5/4!tempo="Allegro" G4/8 A4/8 B4/8 C5/8'], ["G3+B3/2 A3/4"])])
+    doc.tempo_text = "Allegro"                                   # the page overview found it too
+    assert write_musicxml(doc).count("Allegro") == 1
+    doc = _doc([(["D5/4 G4/8 A4/8 B4/8 C5/8"], ["G3+B3/2 A3/4"])])
+    doc.tempo_text, doc.tempo_bpm = "Allegro", 132
+    xml = write_musicxml(doc)
+    assert xml.count("Allegro") == 1 and "<per-minute>132</per-minute>" in xml
+
+
+def test_cache_gate_lets_one_request_start_first():
+    import threading
+    import time
+    from haptune.ai.reader import _CacheGate
+    gate, log = _CacheGate(timeout=5), []
+
+    def worker():
+        ev = gate.enter()
+        log.append((ev is not None, time.monotonic()))
+        if ev is not None:
+            time.sleep(0.2)
+            ev.set()                                             # its answer started: the cache is written
+    threads = [threading.Thread(target=worker) for _ in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    first = [t for is_first, t in log if is_first]
+    assert len(first) == 1
+    assert all(t >= first[0] + 0.15 for is_first, t in log if not is_first)
+
+
 def test_writer_pickup_bar_is_implicit():
     doc = _doc([(["D5/4"], ["r/4"]), (["G4/2."], ["G3/2."])])
     xml = write_musicxml(doc)
@@ -116,6 +156,71 @@ def test_layout_finds_every_line(minuet):
     systems = [s for p in pages for s in p.systems]
     assert len(systems) == len(bars) // 4
     assert all(len(s.staves) == len(meta["parts"]) for s in systems)
+
+
+def _draw_system(a, top, x0=208, x1=1150, staves=3, brace=True, barline=True):
+    """Draws `staves` staves (space 20 px) starting at row `top`; the lower two are a braced grand staff."""
+    tops = [top + i * 200 for i in range(staves)]
+    for t in tops:
+        for k in range(5):
+            a[t + 20 * k:t + 20 * k + 2, x0:x1] = 0
+    if barline:
+        a[tops[0]:tops[-1] + 82, x0:x0 + 2] = 0                 # system barline at the start of the lines
+    if brace:
+        a[tops[-2]:tops[-1] + 82, x0 - 20:x0 - 12] = 0          # brace left of it, touching the staff lines
+    return a
+
+
+def test_layout_keeps_a_voice_staff_with_its_braced_piano():
+    import numpy as np
+    from PIL import Image
+    from haptune.ai.layout import binarize, find_systems
+    a = np.full((1700, 1200), 255, dtype=np.uint8)
+    _draw_system(a, 60)
+    _draw_system(a, 900)
+    systems = find_systems(binarize(Image.fromarray(a)))
+    assert [len(s.staves) for s in systems] == [3, 3]
+
+
+def test_layout_joins_a_system_whose_barline_was_missed():
+    import numpy as np
+    from PIL import Image
+    from haptune.ai.layout import binarize, find_systems
+    a = np.full((2500, 1200), 255, dtype=np.uint8)
+    _draw_system(a, 60)
+    _draw_system(a, 900, barline=False)                         # voice staff not joined: looks like 1 + 2
+    _draw_system(a, 1740)
+    systems = find_systems(binarize(Image.fromarray(a)))
+    assert [len(s.staves) for s in systems] == [3, 3, 3]
+    assert systems[1].box[1] < 900 < 1300 < systems[1].box[3]
+
+
+def test_layout_finds_a_short_last_line():
+    import numpy as np
+    from PIL import Image
+    from haptune.ai.layout import binarize, find_systems
+    a = np.full((1500, 2400), 255, dtype=np.uint8)
+    _draw_system(a, 100, x1=2300, staves=2)
+    _draw_system(a, 600, x1=2300, staves=2)
+    _draw_system(a, 1100, x1=700, staves=2)                    # the piece ends a fifth of the way across
+    systems = find_systems(binarize(Image.fromarray(a)))
+    assert [len(s.staves) for s in systems] == [2, 2, 2]
+    assert systems[-1].box[2] < 1000
+
+
+def test_layout_does_not_take_lines_of_text_for_a_staff():
+    import numpy as np
+    from PIL import Image
+    from haptune.ai.layout import binarize, find_systems
+    a = np.full((1500, 2400), 255, dtype=np.uint8)
+    _draw_system(a, 100, x1=2300, staves=2)
+    _draw_system(a, 600, x1=2300, staves=2)
+    for k in range(5):                                          # five evenly spaced lines of words below
+        y = 1050 + 48 * k
+        for x in range(208, 1400, 45):
+            a[y:y + 16, x:x + 30] = 0
+    systems = find_systems(binarize(Image.fromarray(a)))
+    assert [len(s.staves) for s in systems] == [2, 2]
 
 
 def test_reader_end_to_end_with_a_fake_model(minuet):

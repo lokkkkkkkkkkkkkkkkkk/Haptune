@@ -332,13 +332,18 @@ def write_musicxml(doc: ReadDoc) -> str:
             if attrs:
                 out.append("<attributes>" + "".join(attrs) + "</attributes>")
             if bi == 0 and pi == 0 and (doc.tempo_text or doc.tempo_bpm):
+                # the page overview's tempo, unless the reader already marked it on a note of the first bar
+                marked = [e for p in bar.parts for st in p for v in st.voices for e in v]
+                text = "" if any(e.tempo_text for e in marked) else doc.tempo_text
+                bpm = None if any(e.bpm for e in marked) else doc.tempo_bpm
                 inner = ""
-                if doc.tempo_text:
-                    inner += f'<direction-type><words font-weight="bold">{escape(doc.tempo_text)}</words></direction-type>'
-                if doc.tempo_bpm:
-                    inner += f'<direction-type><metronome parentheses="no"><beat-unit>quarter</beat-unit><per-minute>{round(doc.tempo_bpm)}</per-minute></metronome></direction-type>'
-                snd = f'<sound tempo="{round(doc.tempo_bpm, 2)}"/>' if doc.tempo_bpm else ""
-                out.append(_direction(inner, "above", 1 if part.staves > 1 else None, snd))
+                if text:
+                    inner += f'<direction-type><words font-weight="bold">{escape(text)}</words></direction-type>'
+                if bpm:
+                    inner += f'<direction-type><metronome parentheses="no"><beat-unit>quarter</beat-unit><per-minute>{round(bpm)}</per-minute></metronome></direction-type>'
+                snd = f'<sound tempo="{round(bpm, 2)}"/>' if bpm else ""
+                if inner:
+                    out.append(_direction(inner, "above", 1 if part.staves > 1 else None, snd))
 
             cursor = Fraction(0)
             first_voice = True

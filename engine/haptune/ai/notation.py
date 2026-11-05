@@ -59,6 +59,7 @@ _EVENT = re.compile(
     r"(?P<ann>!.*)?$"
 )
 _ONE_PITCH = re.compile(r"^(?P<step>[A-G])(?P<acc>##|bb|#|b|n)?(?P<oct>-?\d)$")
+_ACC_FIRST = re.compile(r"(?<![A-Ga-g])(##|bb|#|b|n)([A-G])(-?\d)")     # bC5, #F4: the order they are printed in
 _TUPLET_OPEN = re.compile(r"^(?P<a>\d+)(?::(?P<n>\d+))?\($")
 
 
@@ -232,6 +233,10 @@ def parse_voice(text: str) -> tuple[list[Ev], list[str]]:
         m = _EVENT.match(tok)
         if not m and tok[:1].islower() and tok[:1] in "abcdefg":
             m = _EVENT.match(tok[:1].upper() + tok[1:])
+        if not m:                                   # accidental written before the letter: bC5 -> Cb5
+            cut = min([i for i in (tok.find("/"), tok.find("!")) if i >= 0] or [len(tok)])
+            fixed = _ACC_FIRST.sub(r"\2\1\3", tok[:cut]) + tok[cut:]
+            m = _EVENT.match(fixed) if fixed != tok else None
         if not m:
             errors.append(f"can't read '{tok}'")
             continue

@@ -81,7 +81,7 @@ def render_pdf(path: str, bars_per_line: int = 4, page_width: int = 2100) -> byt
         if num > 1 and (num - 1) % bars_per_line == 0:
             return mm.group(0) + '<print new-system="yes"/>'
         return mm.group(0)
-    xml = re.sub(r"<measure[^>]*>", add_break, xml)
+    xml = re.sub(r"<measure\s[^>]*>", add_break, xml)          # not <measure-numbering>, <measure-style>...
     tk = verovio.toolkit()
     tk.setOptions({"pageWidth": page_width, "pageHeight": 2970, "scale": 40, "breaks": "encoded",
                    "adjustPageHeight": False, "footer": "none"})
@@ -105,6 +105,9 @@ class FakeStream:
 
     def __exit__(self, *a):
         return False
+
+    def __iter__(self):                          # the reader may read the stream event by event
+        yield SimpleNamespace(type="message_start")
 
     def get_final_message(self):
         return SimpleNamespace(stop_reason="end_turn", content=[SimpleNamespace(type="text", text=json.dumps(self.payload))],

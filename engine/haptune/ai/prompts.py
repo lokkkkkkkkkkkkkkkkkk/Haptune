@@ -12,7 +12,7 @@ READER_SYSTEM = """You transcribe printed or handwritten sheet music into a comp
 ## Bar notation
 Each voice of each bar is one string of space-separated tokens.
 
-Notes: letter + accidental PRINTED in front of the note (if any) + octave, then "/" and the note value.
+Notes: letter + accidental PRINTED in front of the note (if any) + octave, then "/" and the note value, e.g. F#4/8, Bb3/4, Cn5/16 (the letter always comes first).
 - Middle C is C4. Treble clef: bottom line E4, top line F5. Bass clef: bottom line G2, top line A3. Alto clef: middle line C4. Tenor clef: second line from the top is C4.
 - Write an accidental only when it is printed directly before that note (# ## b bb n). Do not add accidentals implied by the key signature or by an earlier note in the bar - those are applied automatically.
 - For an octave clef (a small 8 under or over the clef), write notes as they read in the plain clef; the octave is adjusted automatically.

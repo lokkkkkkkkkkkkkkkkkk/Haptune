@@ -10,6 +10,7 @@ takes about as long as its slowest line.
 from __future__ import annotations
 
 import re
+import threading
 import time as _time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
@@ -60,6 +61,27 @@ class _RawBar:
     staff_count: int
     clefs: list[str]
     key: int
+
+
+class _CacheGate:
+    """Lets the first of several parallel requests with the same instructions go ahead and holds the others
+    until its answer starts arriving (or it fails). A prompt-cache entry can be read only once the request
+    writing it has started answering, so without this every parallel request pays to write the cache."""
+
+    def __init__(self, timeout: float = 30.0):
+        self._first = threading.Event()
+        self._lock = threading.Lock()
+        self._claimed = False
+        self.timeout = timeout
+
+    def enter(self) -> threading.Event | None:
+        """The first caller gets the event to set once its answer starts; the others wait for it, get None."""
+        with self._lock:
+            if not self._claimed:
+                self._claimed = True
+                return self._first
+        self._first.wait(self.timeout)
+        return None
 
 
 @dataclass
@@ -119,8 +141,17 @@ class Reader:
         say("reading", 0.06, f"Reading {len(jobs)} line{'s' if len(jobs) != 1 else ''} of music")
 
         done = [0]
+        first_line = _CacheGate()
 
         def run_system(job: _Job):
+            gate = first_line.enter()
+            try:
+                _read_system(job, gate)
+            finally:
+                if gate is not None:
+                    gate.set()
+
+        def _read_system(job: _Job, gate: threading.Event | None):
             pg = pages[job.page]
             img = pg.image.crop(job.box)
             png = encode_png(img, min_space=22, space=job.space or None)
@@ -136,7 +167,7 @@ class Reader:
             for attempt in range(2):
                 try:
                     job.result = self.ai.ask_json(READER_SYSTEM, [image_block(png), text_block(prompt)], SYSTEM_SCHEMA,
-                                                  effort="medium", max_tokens=32000)
+                                                  effort="medium", max_tokens=32000, started=gate)
                     job.error = None
                     break
                 except AIError as e:
@@ -399,8 +430,17 @@ class Reader:
             time_at[bi] = t
         flags_before = self._validate(doc)
         done = [0]
+        first_reread = _CacheGate()
 
         def one(bi: int):
+            gate = first_reread.enter()
+            try:
+                return _one(bi, gate)
+            finally:
+                if gate is not None:
+                    gate.set()
+
+        def _one(bi: int, gate: threading.Event | None):
             raw = raws[bi]
             job = raw.job
             pg = pages[job.page]
@@ -429,7 +469,7 @@ class Reader:
                                                target=target, count_text="exactly one bar in measures")
             try:
                 res = self.ai.ask_json(READER_SYSTEM, [image_block(png), text_block(prompt)], REREAD_SCHEMA,
-                                       effort="high", max_tokens=16000)
+                                       effort="high", max_tokens=16000, started=gate)
             except AIError:
                 res = None
             done[0] += 1

@@ -38,6 +38,7 @@ class Usage:
     input_tokens: int = 0
     output_tokens: int = 0
     cache_read_tokens: int = 0
+    cache_write_tokens: int = 0
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     def add(self, u) -> None:
@@ -48,10 +49,11 @@ class Usage:
             self.input_tokens += int(getattr(u, "input_tokens", 0) or 0)
             self.output_tokens += int(getattr(u, "output_tokens", 0) or 0)
             self.cache_read_tokens += int(getattr(u, "cache_read_input_tokens", 0) or 0)
+            self.cache_write_tokens += int(getattr(u, "cache_creation_input_tokens", 0) or 0)
 
     def to_json(self) -> dict:
         return {"calls": self.calls, "input_tokens": self.input_tokens, "output_tokens": self.output_tokens,
-                "cache_read_tokens": self.cache_read_tokens}
+                "cache_read_tokens": self.cache_read_tokens, "cache_write_tokens": self.cache_write_tokens}
 
 
 class Claude:
@@ -70,8 +72,10 @@ class Claude:
         return self._client
 
     def ask_json(self, system: str, content: list, schema: dict, *, effort: str = "medium",
-                 max_tokens: int = 32000) -> dict:
-        """One request whose answer must match `schema`. Streams, so long answers don't time out."""
+                 max_tokens: int = 32000, started: threading.Event | None = None) -> dict:
+        """One request whose answer must match `schema`. Streams, so long answers don't time out.
+        `started` is set when the answer starts arriving: by then the instructions are in the prompt cache,
+        so requests sent after it read them from the cache instead of each paying to write them."""
         try:
             with self.client.beta.messages.stream(
                 model=self.model,
@@ -82,6 +86,9 @@ class Claude:
                 betas=[FALLBACK_BETA],
                 fallbacks="default",
             ) as stream:
+                if started is not None:
+                    for _ in stream:
+                        started.set()
                 msg = stream.get_final_message()
         except AIError:
             raise

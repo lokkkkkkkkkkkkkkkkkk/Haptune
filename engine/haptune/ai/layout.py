@@ -108,12 +108,12 @@ def estimate_skew(dark: np.ndarray, max_deg: float = 4.0) -> float:
     return best
 
 
-def _lines(dark: np.ndarray) -> list[tuple[float, int]]:
+def _lines(dark: np.ndarray, floor: float = 0.22) -> list[tuple[float, int]]:
     """Candidate staff-line rows: (y centre, thickness)."""
     h, w = dark.shape
     prof = dark.sum(axis=1) / max(1, w)
     top = float(np.percentile(prof, 99.5))
-    thr = max(0.22, 0.5 * top)
+    thr = max(floor, 0.5 * top)
     cand = prof > thr
     out, y = [], 0
     while y < h:
@@ -127,8 +127,9 @@ def _lines(dark: np.ndarray) -> list[tuple[float, int]]:
     return out
 
 
-def find_staves(dark: np.ndarray) -> list[Staff]:
-    lines = _lines(dark)
+def _staves_from(dark: np.ndarray, lines: list[tuple[float, int]], strict: bool = False) -> list[Staff]:
+    """Five evenly spaced candidate lines make a staff. `strict` also asks for what text and beams lack:
+    thin lines that run unbroken across the staff for at least six staff spaces."""
     staves: list[Staff] = []
     i = 0
     while i + 4 < len(lines):
@@ -142,7 +143,13 @@ def find_staves(dark: np.ndarray) -> list[Staff]:
                 band = dark[max(0, r - 1):r + 2].any(axis=0)
                 cols += band
             on = np.where(cols >= 4)[0]
-            if len(on):
+            ok = len(on) > 0
+            if ok and strict:
+                x0, x1 = int(on[0]), int(on[-1])
+                ok = (x1 - x0 >= 6 * med
+                      and all(lines[i + k][1] <= max(3.0, 0.3 * med) for k in range(5))
+                      and all(dark[max(0, r - 1):r + 2, x0:x1 + 1].any(axis=0).mean() >= 0.75 for r in rows))
+            if ok:
                 x0, x1 = int(on[0]), int(on[-1])
                 staves.append(Staff(top=ys[0], bottom=ys[4], space=med, x0=x0, x1=x1, lines=ys))
                 i += 5
@@ -151,11 +158,44 @@ def find_staves(dark: np.ndarray) -> list[Staff]:
     return staves
 
 
+def find_staves(dark: np.ndarray) -> list[Staff]:
+    staves = _staves_from(dark, _lines(dark))
+    if not staves:
+        return staves
+    # A short system (a piece often ends with a line that stops part-way across the page) has staff lines
+    # too short to stand out in a whole-page profile. Look again in each band of the page without staves,
+    # measuring the lines against that band's own width.
+    h = dark.shape[0]
+    sp = float(np.median([s.space for s in staves]))
+    covered = sorted((s.top - 4 * sp, s.bottom + 4 * sp) for s in staves)
+    bands, y = [], 0.0
+    for a, b in covered:
+        if a - y >= 6 * sp:
+            bands.append((int(y), int(a)))
+        y = max(y, b)
+    if h - y >= 6 * sp:
+        bands.append((int(y), h))
+    found = []
+    for y0, y1 in bands:
+        band = dark[y0:y1]
+        xs = np.where(band.any(axis=0))[0]
+        if len(xs) == 0 or xs[-1] - xs[0] < 8 * sp:
+            continue
+        sub = band[:, xs[0]:xs[-1] + 1]
+        for s in _staves_from(sub, _lines(sub, floor=0.05), strict=True):
+            found.append(Staff(top=s.top + y0, bottom=s.bottom + y0, space=s.space, x0=s.x0 + int(xs[0]),
+                               x1=s.x1 + int(xs[0]), lines=[v + y0 for v in s.lines]))
+    return sorted(staves + found, key=lambda s: s.top)
+
+
 def _connected(dark: np.ndarray, a: Staff, b: Staff) -> bool:
     """True if staff a and staff b (below it) are joined at the left by a barline or brace."""
-    x = min(a.x0, b.x0)
     sp = (a.space + b.space) / 2
-    x_lo, x_hi = max(0, int(x - 2.5 * sp)), min(dark.shape[1], int(x + 0.6 * sp) + 1)
+    # A piano brace touches the staff lines, so a braced staff seems to start further left than the staff
+    # above it. The system barline is at the start of the staff lines: search from the leftmost start
+    # (braces, brackets) to just past the rightmost one (the barline).
+    x_lo = max(0, int(min(a.x0, b.x0) - 2.5 * sp))
+    x_hi = min(dark.shape[1], int(max(a.x0, b.x0) + 0.6 * sp) + 1)
     y_lo, y_hi = int(a.bottom) + 2, int(b.top) - 1
     if y_hi <= y_lo:
         return True
@@ -163,6 +203,31 @@ def _connected(dark: np.ndarray, a: Staff, b: Staff) -> bool:
     if band.size == 0:
         return False
     return float(band.any(axis=1).mean()) >= 0.85
+
+
+def _join_split_systems(groups: list[list[Staff]]) -> list[list[Staff]]:
+    """Printed music keeps the same number of staves in most systems of a page. If a system's left barline
+    is missed (faint in a photo, broken by a scan), the system shows up as two short ones; reading those
+    separately would put the parts of the same bars in different bars. So when most systems have N staves,
+    neighbouring shorter groups that add up to exactly N are joined back into one system."""
+    counts = [len(g) for g in groups]
+    common = max(set(counts), key=lambda c: (counts.count(c), c))
+    if len(groups) < 3 or common < 2 or counts.count(common) * 2 < len(counts):
+        return groups
+    out: list[list[Staff]] = []
+    i = 0
+    while i < len(groups):
+        j, total = i, 0
+        while j < len(groups) and len(groups[j]) < common and total + len(groups[j]) <= common:
+            total += len(groups[j])
+            j += 1
+        if j - i > 1 and total == common:
+            out.append([s for g in groups[i:j] for s in g])
+            i = j
+        else:
+            out.append(groups[i])
+            i += 1
+    return out
 
 
 def find_systems(dark: np.ndarray) -> list[System]:
@@ -175,6 +240,7 @@ def find_systems(dark: np.ndarray) -> list[System]:
             groups[-1].append(s)
         else:
             groups.append([s])
+    groups = _join_split_systems(groups)
     h, w = dark.shape
     systems = []
     for gi, g in enumerate(groups):
@@ -200,8 +266,7 @@ def analyse_page(img: Image.Image, index: int = 0) -> Page:
     if abs(skew) >= 0.25:
         img = img.rotate(skew, resample=Image.BICUBIC, expand=False, fillcolor=255)
         dark = binarize(img)
-    systems = find_systems(dark)
-    # sanity: systems should have consistent staff counts on printed music
+    systems = find_systems(dark)          # systems split by a missed barline are joined in find_systems
     return Page(index=index, image=img, systems=systems, skew=skew)
 
 
