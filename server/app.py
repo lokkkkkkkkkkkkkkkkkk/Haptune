@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -219,9 +220,10 @@ DAY = 24 * 3600
 
 
 # Whole-server daily caps, so many devices or addresses together can't run up the AI bill either.
-ALL_PER_DAY = {"read": int(os.environ.get("HAPTUNE_READS_ALL_PER_DAY", "150")),
-               "find": int(os.environ.get("HAPTUNE_FINDS_ALL_PER_DAY", "300")),
-               "tutor": int(os.environ.get("HAPTUNE_TUTOR_ALL_PER_DAY", "600"))}
+# Measured: a page read costs about $0.17-0.65, a song search $0.30-1.00, a tutor answer about $0.01.
+ALL_PER_DAY = {"read": int(os.environ.get("HAPTUNE_READS_ALL_PER_DAY", "60")),
+               "find": int(os.environ.get("HAPTUNE_FINDS_ALL_PER_DAY", "40")),
+               "tutor": int(os.environ.get("HAPTUNE_TUTOR_ALL_PER_DAY", "300"))}
 
 
 def _client_ip(request: Request) -> str:
@@ -431,7 +433,8 @@ LANG_NAMES = {"en": "English", "ms": "Bahasa Melayu", "zh-Hans": "Simplified Chi
 TUTOR_SYSTEM = (
     "You are Hapi, the friendly music tutor inside Haptune, a practice app for students of every age. "
     "Answer warmly and clearly in under 170 words. Use note names (C, D, E...) rather than jargon where you can, "
-    "give one concrete exercise when it helps, and never use Markdown headings or tables. "
+    "and give one concrete exercise when it helps. The app shows your answer as plain text, so write plain "
+    "sentences and short paragraphs: no Markdown (no **bold**, headings, tables or bullet lists). "
     "If a question is not about music or practising, gently steer back to music."
 )
 
@@ -452,9 +455,15 @@ def ai_tutor(body: TutorRequest, request: Request):
     who = f"The student plays {body.instrument or 'an instrument'} and is at Academy level {body.level}."
     prompt = f"{who} Answer in {LANG_NAMES.get(body.lang, 'English')}.\n\nQuestion: {body.question.strip()}"
     try:
-        return {"answer": Claude().ask_text(TUTOR_SYSTEM, prompt, effort="low", max_tokens=4000)}
+        return {"answer": _plain(Claude().ask_text(TUTOR_SYSTEM, prompt, effort="low", max_tokens=4000))}
     except AIError as e:
         raise HTTPException(502, str(e))
+
+
+def _plain(text: str) -> str:
+    """The apps show the tutor's answer as plain text: drop Markdown bold and heading marks if any slip in."""
+    text = re.sub(r"\*\*(.+?)\*\*|__(.+?)__", lambda m: m.group(1) or m.group(2), text)
+    return re.sub(r"(?m)^#{1,6}\s+", "", text)
 
 
 @app.get("/ai/fetch")

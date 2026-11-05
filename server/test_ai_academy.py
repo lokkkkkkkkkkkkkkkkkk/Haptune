@@ -89,6 +89,11 @@ def test_ai_read_is_rate_limited(monkeypatch):
     assert client.post("/ai/read", files={"file": ("a.pdf", b"%PDF", "application/pdf")}, headers=h).status_code == 429
 
 
+def test_tutor_answer_is_plain_text():
+    assert app_module._plain("**Slow down:** count aloud.\n## Try this\nPlay __C D E__.") == \
+        "Slow down: count aloud.\nTry this\nPlay C D E."
+
+
 def test_ai_limits_ignore_a_made_up_forwarded_address(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     monkeypatch.setattr(app_module, "READS_PER_DAY", 1)              # 3 a day per address
