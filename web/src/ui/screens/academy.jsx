@@ -8,6 +8,7 @@ import { audioContext, note, playNow, click, Transport, startDrone, stopDrone, l
 import { VOICE_RANGES } from '../../core/analysis.js';
 import { spellMidi, pitchName } from '../../core/pitch.js';
 import { ClassesSection } from './classes.jsx';
+import { hasServer, aiStatus, askTutor } from '../api.js';
 import { Mascot } from '../mascot.jsx';
 
 const dateSeed = () => { const d = new Date(); return d.getFullYear() * 400 + d.getMonth() * 32 + d.getDate(); };
@@ -94,8 +95,9 @@ function Tutor() {
   useEffect(() => {
     let alive = true;
     const c = globalThis.claude;
-    if (!c?.use) { setSample(null); return undefined; }
-    c.use('sample').then((fn) => { if (alive) setSample(fn || null); }).catch(() => alive && setSample(null));
+    const viaServer = () => (hasServer() ? aiStatus().then((st) => alive && setSample(st.ai ? 'server' : null)) : setSample(null));
+    if (!c?.use) { viaServer(); return () => { alive = false; }; }
+    c.use('sample').then((fn) => { if (!alive) return; if (fn) setSample(() => fn); else viaServer(); }).catch(() => alive && viaServer());
     return () => { alive = false; };
   }, []);
   const ask = async () => {
@@ -105,6 +107,15 @@ function Tutor() {
     ctl.current?.abort();
     ctl.current = new AbortController();
     setBusy(true); setAnswer(t('thinking'));
+    if (sample === 'server') {
+      try {
+        const r = await askTutor({ question: qtext.trim(), instrument: instrumentName(s.settings.instrument), level: levelFor(s.progress.xp).level, lang });
+        setAnswer(r.answer);
+        addXP(5);
+      } catch (e) { setAnswer(e.message); }
+      setBusy(false);
+      return;
+    }
     const langName = { en: 'English', ms: 'Bahasa Melayu', 'zh-Hans': 'Simplified Chinese', 'zh-Hant': 'Traditional Chinese' }[lang];
     const prompt = `You are the music tutor inside Haptune, a practice app. The student plays ${instrumentName(s.settings.instrument)} and is at Academy level ${levelFor(s.progress.xp).level}. Answer in ${langName}, warmly and clearly, in under 170 words. Use note names (C, D, E...), give one concrete exercise when it helps, and do not use Markdown headings.\n\nQuestion: ${qtext.trim()}`;
     try {

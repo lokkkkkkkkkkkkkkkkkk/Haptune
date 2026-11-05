@@ -98,6 +98,25 @@ class Claude:
         except json.JSONDecodeError as e:
             raise AIError(f"Unexpected answer from the reader: {e}") from e
 
+    def ask_text(self, system: str, prompt: str, *, effort: str = "low", max_tokens: int = 4000) -> str:
+        """A short plain-text answer (the Academy tutor)."""
+        try:
+            msg = self.client.beta.messages.create(
+                model=self.model, max_tokens=max_tokens,
+                system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
+                messages=[{"role": "user", "content": prompt}],
+                output_config={"effort": effort}, betas=[FALLBACK_BETA], fallbacks="default",
+            )
+        except Exception as e:
+            raise _translate(e) from e
+        self.usage.add(getattr(msg, "usage", None))
+        if msg.stop_reason == "refusal":
+            raise AIError("The tutor can't help with that one.")
+        text = "".join(getattr(b, "text", "") for b in msg.content if getattr(b, "type", "") == "text").strip()
+        if not text:
+            raise AIError("The tutor had no answer. Please try again.")
+        return text
+
     def run_tools(self, system: str, user_text: str, tools: list, *, final_tool: str, effort: str = "medium",
                   max_tokens: int = 16000, max_rounds: int = 6) -> dict | None:
         """Lets the model use server tools (web search/fetch) and finish by calling `final_tool`.

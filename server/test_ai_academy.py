@@ -36,6 +36,24 @@ def test_ai_status_and_read_need_a_key(monkeypatch):
     assert r.status_code == 503
 
 
+def test_tutor_answers_in_the_app_language(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    assert client.post("/ai/tutor", json={"question": "Why scales?"}).status_code == 503
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    seen = {}
+
+    def fake_ask_text(self, system, prompt, **kw):
+        seen.update(system=system, prompt=prompt, **kw)
+        return "Scales train your fingers. Try G major slowly, 4 times."
+
+    from haptune.ai import claude as claude_mod
+    monkeypatch.setattr(claude_mod.Claude, "ask_text", fake_ask_text)
+    r = client.post("/ai/tutor", json={"question": "Why scales?", "instrument": "violin", "level": 3, "lang": "ms"})
+    assert r.status_code == 200 and r.json()["answer"].startswith("Scales")
+    assert "violin" in seen["prompt"] and "Bahasa Melayu" in seen["prompt"] and seen["effort"] == "low"
+    assert client.post("/ai/tutor", json={"question": ""}).status_code == 422
+
+
 def test_ai_read_job_with_fake_model(monkeypatch):
     from ai_fixtures import FakeReaderClient, render_pdf, score_to_bars
     from haptune.ai import reader as reader_mod

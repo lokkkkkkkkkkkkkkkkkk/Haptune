@@ -95,6 +95,9 @@ export async function fetchMusicFile(url) {
   return new File([blob], name, { type: blob.type });
 }
 
+/** Hapi the tutor answers a music question (needs the server's AI). */
+export const askTutor = (body) => call('/ai/tutor', { method: 'POST', json: body, timeout: 90000 });
+
 /** The YouTube id in a link, or null. */
 export function youtubeId(text) {
   const m = /https?:\/\/\S+/.exec(text || '');

@@ -36,7 +36,7 @@ from collections import defaultdict, deque
 from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "engine"))
 
@@ -311,7 +311,7 @@ MAX_READ_PAGES = int(os.environ.get("HAPTUNE_MAX_READ_PAGES", "12"))
 def ai_status():
     from haptune.ai.claude import DEFAULT_MODEL, ai_configured
     return {"ai": ai_configured(), "model": os.environ.get("HAPTUNE_AI_MODEL", DEFAULT_MODEL),
-            "reads_per_day": READS_PER_DAY, "finds_per_day": FINDS_PER_DAY, "max_pages": MAX_READ_PAGES}
+            "reads_per_day": READS_PER_DAY, "finds_per_day": FINDS_PER_DAY, "max_pages": MAX_READ_PAGES, "tutor": True}
 
 
 def _pages_arg(s: str) -> list[int] | None:
@@ -408,6 +408,37 @@ def ai_find(body: FindRequest, request: Request):
         return find_music(query=body.query[:200], link=body.link[:500], instrument=body.instrument[:40])
     except ValueError as e:
         raise HTTPException(400, str(e))
+    except AIError as e:
+        raise HTTPException(502, str(e))
+
+
+TUTOR_PER_DAY = int(os.environ.get("HAPTUNE_TUTOR_PER_DAY", "60"))
+LANG_NAMES = {"en": "English", "ms": "Bahasa Melayu", "zh-Hans": "Simplified Chinese", "zh-Hant": "Traditional Chinese"}
+TUTOR_SYSTEM = (
+    "You are Hapi, the friendly music tutor inside Haptune, a practice app for students of every age. "
+    "Answer warmly and clearly in under 170 words. Use note names (C, D, E...) rather than jargon where you can, "
+    "give one concrete exercise when it helps, and never use Markdown headings or tables. "
+    "If a question is not about music or practising, gently steer back to music."
+)
+
+
+class TutorRequest(BaseModel):
+    question: str = Field(..., min_length=1, max_length=1000)
+    instrument: str = Field("", max_length=40)
+    level: int = Field(1, ge=1, le=200)
+    lang: str = Field("en", max_length=10)
+
+
+@app.post("/ai/tutor")
+def ai_tutor(body: TutorRequest, request: Request):
+    from haptune.ai.claude import AIError, Claude, ai_configured
+    if not ai_configured():
+        raise HTTPException(503, "The tutor is not switched on for this server yet.")
+    _limit(request, "tutor", TUTOR_PER_DAY)
+    who = f"The student plays {body.instrument or 'an instrument'} and is at Academy level {body.level}."
+    prompt = f"{who} Answer in {LANG_NAMES.get(body.lang, 'English')}.\n\nQuestion: {body.question.strip()}"
+    try:
+        return {"answer": Claude().ask_text(TUTOR_SYSTEM, prompt, effort="low", max_tokens=4000)}
     except AIError as e:
         raise HTTPException(502, str(e))
 
