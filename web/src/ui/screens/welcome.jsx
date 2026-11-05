@@ -36,7 +36,7 @@ export function WelcomeSheet() {
         <p class="fade-up d2" style={{ fontSize: 17, color: 'var(--ink2)', maxWidth: 420, lineHeight: 1.45 }}>{sl.body}</p>
         {i === 0 && (
           <div class="fade-up d3" style={{ width: '100%', maxWidth: 460, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <input class="field" type="text" placeholder={t('yourName')} value={s.settings.name === 'Alex' ? '' : s.settings.name} onInput={(e) => updateSettings({ name: e.currentTarget.value || 'Alex' })} aria-label={t('yourName')} style={{ textAlign: 'center' }} />
+            <input class="field" type="text" placeholder={t('yourName')} value={s.settings.name || ''} onInput={(e) => updateSettings({ name: e.currentTarget.value })} aria-label={t('yourName')} style={{ textAlign: 'center' }} />
             <strong style={{ fontSize: 16 }}>{t('whatDoYouPlay')}</strong>
             <div class="choice-chips" style={{ justifyContent: 'center' }}>
               {PICK.map((k) => <Chip key={k} on={s.settings.instrument === k} color="purple" onClick={() => updateSettings({ instrument: k })}>{instrumentName(k)}</Chip>)}

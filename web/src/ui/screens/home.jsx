@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
-import { useApp, push, go, openSheet, minutesOn, streakDays } from '../state.js';
+import { useApp, push, go, openSheet, minutesOn, streakDays, clearExamples } from '../state.js';
 import { t, getLang } from '../../core/i18n.js';
 import { Card, Section, Icon, Button, List, Row } from '../components.jsx';
 import { Avatar } from './common.jsx';
@@ -112,7 +112,9 @@ export function HomeView({ active }) {
         <Card class="fade-up d3">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
             <strong>{todayMin >= goal ? t('goalDone') : t('todayGoal', { n: todayMin, g: goal })}</strong>
-            <span class="sub">{t('levelN', { n: lv.level })} · {s.progress.xp} {t('xp')}</span>
+            {s.examples
+              ? <button type="button" class="sub" onClick={clearExamples} aria-label={t('removeExamples')}><span class="example-tag">{t('exampleData')}</span> ✕</button>
+              : <span class="sub">{t('levelN', { n: lv.level })} · {s.progress.xp} {t('xp')}</span>}
           </div>
           <div class="goal-bar" role="progressbar" aria-valuemin="0" aria-valuemax={goal} aria-valuenow={Math.min(goal, todayMin)}>
             <span style={{ width: `${Math.min(100, (todayMin / goal) * 100)}%` }} />

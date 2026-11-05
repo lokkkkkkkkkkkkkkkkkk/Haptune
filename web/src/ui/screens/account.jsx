@@ -25,7 +25,7 @@ export function AccountSheet() {
     <SheetFrame title={t('account')} left={false} right={t('done')} onRight={closeSheet}>
       <Section title={t('profile')}>
         <List>
-          <Row title={t('yourName')} right={<input type="text" id="acc-name" value={st.name} onInput={(e) => updateSettings({ name: e.currentTarget.value })} aria-label={t('yourName')} />} />
+          <Row title={t('yourName')} right={<input type="text" id="acc-name" value={st.name} placeholder={t('yourName')} onInput={(e) => updateSettings({ name: e.currentTarget.value })} aria-label={t('yourName')} />} />
           <Row title={t('instrument')} right={<select id="acc-inst" value={st.instrument} onChange={(e) => updateSettings({ instrument: e.currentTarget.value })}>{INSTRUMENTS.map((k) => <option key={k} value={k}>{instrumentName(k)}</option>)}</select>} />
           <Row title={t('voiceType')} right={<select id="acc-voice" value={st.voice} onChange={(e) => updateSettings({ voice: e.currentTarget.value, voiceRange: null })}>{['soprano', 'mezzo', 'alto', 'tenor', 'baritone', 'bass'].map((v) => <option key={v} value={v}>{t(v === 'bass' ? 'bassVoice' : v)}</option>)}</select>} />
         </List>
