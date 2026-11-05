@@ -392,3 +392,6 @@ export async function listen(onPitch) {
   loop();
   return () => { running = false; stream.getTracks().forEach((t) => t.stop()); src.disconnect(); };
 }
+
+// read-only state for automated checks (smoke tests)
+globalThis.__haptuneAudio = () => ({ state: ctx?.state || 'none', gain: out ? out.gain.value : null });

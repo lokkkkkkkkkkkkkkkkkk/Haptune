@@ -537,3 +537,39 @@ export function divisionsFor(part, measures) {
 }
 
 export { STEPS, iv };
+
+/**
+ * One part of a score (or one staff of a piano part: staff 1 = right hand, 2 = left hand) as its own score,
+ * for showing and exporting just what a player plays. Shares notes' fractions; never mutates `score`.
+ */
+export function extractPart(score, pi, staff = null) {
+  const part = score.parts[pi];
+  if (!part) return score;
+  const onStaff = (x) => (x.staff || 1) === staff;
+  const one = {
+    ...part,
+    staves: staff ? 1 : part.staves,
+    measures: part.measures.map((pm) => (!staff ? pm : {
+      ...pm,
+      notes: pm.notes.filter(onStaff).map((n) => ({ ...n, staff: 1 })),
+      clefs: pm.clefs.filter(onStaff).map((c) => ({ ...c, staff: 1 })),
+      directions: pm.directions.filter((d) => (d.staff || 1) === staff).map((d) => ({ ...d, staff: 1, xml: d.xml.replace(/<staff>\d+<\/staff>/g, '<staff>1</staff>') })),
+      harmonies: staff === 1 ? pm.harmonies : [],
+    })),
+  };
+  return { ...score, parts: [one] };
+}
+
+/** Which parts a player can pick: every instrument, and the two hands of a piano part. */
+export function partChoices(score) {
+  if (!score) return [];
+  const out = [];
+  score.parts.forEach((p, pi) => {
+    const name = p.name || `Part ${pi + 1}`;
+    if (p.staves > 1) {
+      out.push({ id: `${pi}:1`, pi, staff: 1, hand: 'right', name });
+      out.push({ id: `${pi}:2`, pi, staff: 2, hand: 'left', name });
+    } else out.push({ id: `${pi}`, pi, staff: null, name });
+  });
+  return out.length > 1 ? out : [];
+}

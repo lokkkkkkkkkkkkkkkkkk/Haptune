@@ -10,7 +10,7 @@ import { AddSheet, ImportWizardSheet, FinderSheet } from './screens/addmusic.jsx
 import { WelcomeSheet } from './screens/welcome.jsx';
 import { Aurora } from './mascot.jsx';
 import { local } from './storage.js';
-import { PieceView, ChordSheet, FindKeySheet, ExportSheet } from './screens/piece.jsx';
+import { PieceView, ChordSheet, FindKeySheet, ExportSheet, PlayAlongSheet, KeySheet, DetailsSheet } from './screens/piece.jsx';
 import { ImproviseView } from './screens/improvise.jsx';
 import { AcademyView, CourseView, LessonSheet, ChallengeSheet } from './screens/academy.jsx';
 import { ToolsView, ToolView } from './screens/tools.jsx';
@@ -28,7 +28,7 @@ const VIEWS = { piece: PieceView, songbook: SongbookView, course: CourseView, to
 const SHEETS = {
   add: AddSheet, paste: PasteSheet, findSong: FindSongSheet, scale: ScaleSheet, report: ImportReportSheet, chord: ChordSheet, findKey: FindKeySheet,
   export: ExportSheet, lesson: LessonSheet, challenge: ChallengeSheet, account: AccountSheet, paywall: PaywallSheet,
-  importWizard: ImportWizardSheet, finder: FinderSheet, welcome: WelcomeSheet,
+  importWizard: ImportWizardSheet, finder: FinderSheet, welcome: WelcomeSheet, playAlong: PlayAlongSheet, keySheet: KeySheet, details: DetailsSheet,
 };
 
 function Stack({ tab, active }) {
