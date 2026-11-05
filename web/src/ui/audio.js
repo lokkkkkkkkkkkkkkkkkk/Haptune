@@ -3,6 +3,8 @@
 
 let ctx = null, out = null, verb = null, noiseBuf = null;
 const waves = {};
+const MASTER = 0.75;          // output volume; stop() ducks to silence and always comes back to this
+let unmuteAt = 0;
 
 export function audioContext() {
   if (!ctx) {
@@ -12,7 +14,9 @@ export function audioContext() {
     ctx = new AC({ latencyHint: 'interactive' });
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -14; comp.knee.value = 12; comp.ratio.value = 3; comp.attack.value = 0.005; comp.release.value = 0.2;
-    out = ctx.createGain(); out.gain.value = 0.75;
+    out = ctx.createGain(); out.gain.value = MASTER;
+    // iOS pauses audio after a call, Siri or another app ("interrupted"); wake it on the next tap
+    ctx.onstatechange = () => { if (ctx.state === 'interrupted') ctx.resume().catch(() => {}); };
     out.connect(comp); comp.connect(ctx.destination);
     // small room reverb
     verb = ctx.createConvolver();
@@ -35,7 +39,7 @@ export function audioContext() {
     waves.flute = pw([1, 0.22, 0.06, 0.02]);
     waves.clar = pw([1, 0, 0.5, 0, 0.3, 0, 0.18, 0, 0.1]);
   }
-  if (ctx.state === 'suspended') ctx.resume();
+  if (ctx.state !== 'running') ctx.resume().catch(() => {});
   return ctx;
 }
 
@@ -213,6 +217,20 @@ export function playNow(items, { gap = 0.7, dur = 0.9, inst = 'piano', arpeggio 
  * A transport that plays timed events: [{time (s), dur (s), midi, vel, inst, drum, click, accent}].
  * Calls onTime(seconds) on every animation frame while playing.
  */
+/** Silences notes that were already scheduled (up to the 150 ms look-ahead), then returns to full volume.
+ *  The volume always comes back to MASTER, so stopping and starting quickly can never leave the app silent. */
+function duck() {
+  if (!ctx || !out) return;
+  const now = ctx.currentTime;
+  const g = out.gain;
+  g.cancelScheduledValues(now);
+  g.setValueAtTime(Math.max(0.0001, g.value), now);
+  g.linearRampToValueAtTime(0.0001, now + 0.03);
+  g.setValueAtTime(0.0001, now + 0.17);
+  g.linearRampToValueAtTime(MASTER, now + 0.19);
+  unmuteAt = now + 0.19;
+}
+
 export class Transport {
   constructor() { this.events = []; this.length = 0; this.playing = false; this.loop = null; this.timer = null; this.raf = null; this.onTime = null; this.onEnd = null; }
   load(events, length) { this.events = [...events].sort((a, b) => a.time - b.time); this.length = length; }
@@ -226,7 +244,7 @@ export class Transport {
     this.stop(false);
     this.playing = true;
     this.offset = from;
-    this.startedAt = ctx.currentTime + 0.08;
+    this.startedAt = Math.max(ctx.currentTime + 0.08, unmuteAt);
     this.cursor = from;
     this.idx = this.events.findIndex((e) => e.time >= from - 1e-6);
     if (this.idx < 0) this.idx = this.events.length;
@@ -277,17 +295,13 @@ export class Transport {
     e.onFire?.(at);
   }
   stop(resetPos = true) {
+    const was = this.playing;
     if (this.playing) this.pos = this.position();
     this.playing = false;
     clearInterval(this.timer); this.timer = null;
     if (this.raf) cancelAnimationFrame(this.raf);
     if (resetPos) this.pos = 0;
-    // silence quickly
-    if (ctx && out) {
-      const g = out.gain.value;
-      out.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.02);
-      setTimeout(() => { if (out) out.gain.setTargetAtTime(g || 0.75, ctx.currentTime, 0.01); }, 120);
-    }
+    if (was) duck();
   }
 }
 
