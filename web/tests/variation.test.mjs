@@ -39,6 +39,45 @@ for (const [name, abc] of [['Ode to Joy', ODE], ['Minuet', MINUET]]) {
   }
 }
 
+const CANON = `X:1\nT:Canon\nM:4/4\nL:1/4\nK:D\n|:"D"f2 "A"e2|"Bm"d2 "F#m"c2|"G"B2 "D"A2|"G"B2 "A"c2:|\n"D"d4|]\n`;
+
+test('a tune of long strong-beat notes still gets varied, and every main note stays', () => {
+  const sc = parseABC(CANON);
+  for (const amount of ['light', 'balanced', 'free']) {
+    let changed = 0;
+    for (let seed = 1; seed <= 5; seed++) {
+      const v = varyMelody(sc, { amount, seed });
+      changed += v.changed;
+      const after = notesOf(v.score);
+      for (const n of notesOf(sc)) assert.ok(after.some((x) => x.mi === n.mi && x.off.eq(n.off) && x.midi === n.midi), `${amount} bar ${n.mi + 1}`);
+      const last = after.filter((x) => x.mi === sc.measures.length - 1);
+      assert.equal(last.length, 1, 'the final note stays long');
+    }
+    assert.ok(changed > 0, `${amount} changed nothing`);
+  }
+});
+
+test("arpeggios use the song's own chords", () => {
+  const sc = parseABC(`X:1\nT:Arp\nM:4/4\nL:1/4\nK:C\n"C"c4|"F"c4|"G"d4|"C"c4|]\n`);
+  const want = [[0, 4, 7], null, [7, 11, 2]];
+  let seen = 0;
+  for (let seed = 1; seed <= 40; seed++) {
+    const v = varyMelody(sc, { amount: 'free', seed });
+    v.score.parts[0].measures.forEach((pm, mi) => {
+      const ns = pm.notes.filter((n) => !n.rest);
+      if (ns.length !== 8 || !want[mi]) return;           // eight eighths = an arpeggio over the whole bar
+      seen++;
+      for (const n of ns) assert.ok(want[mi].includes(midiOf(n.pitch) % 12), `bar ${mi + 1}: ${n.pitch.step}${n.pitch.octave}`);
+    });
+  }
+  assert.ok(seen > 0, 'no arpeggio in 40 tries');
+});
+
+test('light never comes back empty when there is something to vary', () => {
+  const sc = parseABC(CANON);
+  for (let seed = 1; seed <= 12; seed++) assert.ok(varyMelody(sc, { amount: 'light', seed }).changed > 0, `seed ${seed}`);
+});
+
 test('more change = less like the original, on average', () => {
   const sc = parseABC(MINUET);
   const avg = (amount) => { let s = 0; for (let seed = 1; seed <= 20; seed++) s += varyMelody(sc, { amount, seed }).similarity; return s / 20; };
