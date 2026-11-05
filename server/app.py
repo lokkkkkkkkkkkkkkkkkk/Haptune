@@ -11,6 +11,12 @@ server only for:
   GET  /jobs/{id}/files/stems/<part>.m4a                                       practice stems
   POST /analyze           a take + score                                       -> full report
   GET  /exercise/scale    scale / arpeggio generator                           -> score
+AI (needs ANTHROPIC_API_KEY on the server; app users never type a key or a server address):
+  GET  /ai/status         is AI reading available?
+  POST /ai/read           PDF / photo -> background job: notes, dynamics, articulations -> MusicXML + bars to check
+  POST /ai/find           song name or YouTube/Spotify/Apple Music link -> sheet music found online
+  GET  /ai/fetch?url=     download one found file for the app (public web only)
+Academy (classes for teachers and students): see academy.py, mounted under /academy.
 All score responses carry the canonical score JSON ("haptune.score/1") plus MusicXML for display.
 """
 from __future__ import annotations
@@ -25,8 +31,12 @@ import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 
-from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from collections import defaultdict, deque
+
+from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
+from pydantic import BaseModel
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "engine"))
 
@@ -46,6 +56,15 @@ MAX_RECORDING = 300 * 1024 * 1024        # band recordings may arrive as videos
 JOBS_DIR = os.environ.get("HAPTUNE_JOBS", os.path.join(tempfile.gettempdir(), "haptune-jobs"))
 JOB_TTL = 24 * 3600
 app = FastAPI(title="Haptune engine", version=__version__)
+# The web app (GitHub Pages, the Claude preview, local dev) calls the server from the browser. No cookies
+# are used, so allowing these origins only lets those pages call the rate-limited endpoints.
+DEFAULT_ORIGINS = (r"https?://(localhost|127\.0\.0\.1)(:\d+)?|https://[\w-]+\.github\.io|capacitor://localhost"
+                   r"|https://([\w-]+\.)*claude\.ai|https://([\w-]+\.)*claudeusercontent\.com|null")
+app.add_middleware(CORSMiddleware, allow_origin_regex=os.environ.get("HAPTUNE_CORS_ORIGINS", DEFAULT_ORIGINS),
+                   allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"], allow_headers=["*"], max_age=86400)
+from academy import router as academy_router  # noqa: E402  (classes for teachers and students)
+
+app.include_router(academy_router)
 _jobs: dict[str, dict] = {}
 _lock = threading.Lock()
 _pool = ThreadPoolExecutor(max_workers=int(os.environ.get("HAPTUNE_WORKERS", "1")))
@@ -176,6 +195,39 @@ async def start_split(file: UploadFile = File(...), instruments: str = Form(""),
     return {"id": jid}
 
 
+class _Limiter:
+    """Sliding-window limits per device and per IP address, so nobody needs an account or a key."""
+
+    def __init__(self):
+        self.hits: dict[str, deque] = defaultdict(deque)
+        self.lock = threading.Lock()
+
+    def allow(self, key: str, limit: int, window: float) -> bool:
+        now = time.time()
+        with self.lock:
+            q = self.hits[key]
+            while q and now - q[0] > window:
+                q.popleft()
+            if len(q) >= limit:
+                return False
+            q.append(now)
+            return True
+
+
+_limiter = _Limiter()
+DAY = 24 * 3600
+
+
+def _limit(request: Request, kind: str, per_day: int) -> None:
+    device = (request.headers.get("x-haptune-device") or "").strip()[:64]
+    ip = (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "?")).split(",")[0].strip()
+    ok = _limiter.allow(f"{kind}:ip:{ip}", per_day * 3, DAY)
+    if ok and device:
+        ok = _limiter.allow(f"{kind}:dev:{device}", per_day, DAY)
+    if not ok:
+        raise HTTPException(429, "You've used today's free AI reads. Please try again tomorrow.")
+
+
 def _job(jid: str) -> dict:
     with _lock:
         j = _jobs.get(jid)
@@ -187,7 +239,7 @@ def _job(jid: str) -> dict:
 @app.get("/jobs/{jid}")
 def job_status(jid: str):
     j = _job(jid)
-    return {k: j[k] for k in ("id", "status", "stage", "progress", "message")}
+    return {k: j.get(k) for k in ("id", "kind", "status", "stage", "progress", "message")}
 
 
 @app.get("/jobs/{jid}/result")
@@ -195,7 +247,7 @@ def job_result(jid: str):
     j = _job(jid)
     if j["status"] != "done":
         raise HTTPException(409, f"job is {j['status']}")
-    return FileResponse(os.path.join(j["dir"], "out", "split.json"), media_type="application/json")
+    return FileResponse(j.get("result") or os.path.join(j["dir"], "out", "split.json"), media_type="application/json")
 
 
 @app.get("/jobs/{jid}/files/{rel:path}")
@@ -245,3 +297,130 @@ def exercise(tonic: str = "C", kind: str = Query("major", description="one of: "
     with tempfile.TemporaryDirectory() as d:
         xml = write_musicxml(sc, os.path.join(d, "scale.musicxml"))
         return JSONResponse(_payload(sc, xml))
+
+
+# ---------------------------------------------------------------------------
+# AI: read sheet music, find sheet music online
+# ---------------------------------------------------------------------------
+READS_PER_DAY = int(os.environ.get("HAPTUNE_READS_PER_DAY", "20"))
+FINDS_PER_DAY = int(os.environ.get("HAPTUNE_FINDS_PER_DAY", "40"))
+MAX_READ_PAGES = int(os.environ.get("HAPTUNE_MAX_READ_PAGES", "12"))
+
+
+@app.get("/ai/status")
+def ai_status():
+    from haptune.ai.claude import DEFAULT_MODEL, ai_configured
+    return {"ai": ai_configured(), "model": os.environ.get("HAPTUNE_AI_MODEL", DEFAULT_MODEL),
+            "reads_per_day": READS_PER_DAY, "finds_per_day": FINDS_PER_DAY, "max_pages": MAX_READ_PAGES}
+
+
+def _pages_arg(s: str) -> list[int] | None:
+    out: list[int] = []
+    for part in (s or "").replace(" ", "").split(","):
+        if not part:
+            continue
+        a, _, b = part.partition("-")
+        try:
+            lo, hi = int(a), int(b or a)
+        except ValueError:
+            continue
+        out.extend(range(lo, min(hi, lo + MAX_READ_PAGES) + 1))
+    return sorted(set(out))[:MAX_READ_PAGES] or None
+
+
+def _run_read(jid: str, path: str, filename: str, hints):
+    from haptune.ai.claude import AIError
+    from haptune.ai.reader import Reader
+    from haptune.score import load_musicxml
+
+    def progress(stage: str, frac: float, message: str = ""):
+        with _lock:
+            _jobs[jid].update(status="running", stage=stage, progress=round(float(frac), 3), message=message)
+
+    try:
+        with open(path, "rb") as f:
+            data = f.read()
+        res = Reader(max_pages=MAX_READ_PAGES).read(data, filename, hints, progress=progress)
+        payload = {"musicxml": res.musicxml, "flags": res.flags, "report": res.report}
+        try:
+            payload["score"] = load_musicxml(res.musicxml.encode("utf-8")).to_json()
+        except Exception as e:                                  # the app can still use the MusicXML
+            payload["score_error"] = str(e)
+        out = os.path.join(_jobs[jid]["dir"], "result.json")
+        with open(out, "w", encoding="utf-8") as f:
+            json.dump(payload, f)
+        with _lock:
+            _jobs[jid].update(status="done", stage="done", progress=1.0, result=out, message="Done")
+    except AIError as e:
+        with _lock:
+            _jobs[jid].update(status="error", message=str(e))
+    except Exception as e:                                       # report any failure to the app
+        with _lock:
+            _jobs[jid].update(status="error", message=f"The music could not be read ({type(e).__name__}: {e}).")
+
+
+@app.post("/ai/read")
+async def ai_read(request: Request, file: UploadFile = File(...), title: str = Form(""), instrument: str = Form(""),
+                  description: str = Form(""), handwritten: bool = Form(False), pages: str = Form("")):
+    from haptune.ai.claude import ai_configured
+    from haptune.ai.reader import Hints
+    if not ai_configured():
+        raise HTTPException(503, "AI reading is not switched on for this server yet.")
+    _limit(request, "read", READS_PER_DAY)
+    _cleanup_old_jobs()
+    jid = uuid.uuid4().hex[:16]
+    d = os.path.join(JOBS_DIR, jid)
+    os.makedirs(d, exist_ok=True)
+    path = await _save(file, d)
+    hints = Hints(title=title.strip()[:200], instrument=instrument.strip()[:40], description=description.strip()[:300],
+                  handwritten=handwritten, pages=_pages_arg(pages))
+    with _lock:
+        _jobs[jid] = {"id": jid, "kind": "read", "status": "queued", "stage": "queued", "progress": 0.0,
+                      "message": "Waiting to start", "dir": d, "created": time.time()}
+    threading.Thread(target=_run_read, args=(jid, path, file.filename or "upload", hints), daemon=True).start()
+    return {"id": jid}
+
+
+class FindRequest(BaseModel):
+    query: str = ""
+    link: str = ""
+    instrument: str = ""
+
+
+@app.post("/ai/find")
+def ai_find(body: FindRequest, request: Request):
+    from haptune.ai.claude import AIError, ai_configured
+    from haptune.ai.finder import find_music
+    if not (body.query.strip() or body.link.strip()):
+        raise HTTPException(400, "Type a song name or paste a link.")
+    if not ai_configured():
+        raise HTTPException(503, "Song search is not switched on for this server yet.")
+    _limit(request, "find", FINDS_PER_DAY)
+    try:
+        return find_music(query=body.query[:200], link=body.link[:500], instrument=body.instrument[:40])
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except AIError as e:
+        raise HTTPException(502, str(e))
+
+
+@app.get("/ai/fetch")
+def ai_fetch(request: Request, url: str = Query(..., max_length=2000)):
+    from haptune.ai.finder import FetchError, safe_fetch, sniff_format
+    _limit(request, "fetch", FINDS_PER_DAY * 4)
+    try:
+        data, ctype, final = safe_fetch(url)
+    except FetchError as e:
+        raise HTTPException(422, str(e))
+    name = os.path.basename(final.split("?")[0]) or "download"
+    fmt = sniff_format(data, name, ctype)
+    if fmt is None:
+        raise HTTPException(415, "That link is a web page, not a sheet music file.")
+    ext = {"musicxml": ".musicxml", "mxl": ".mxl", "midi": ".mid", "pdf": ".pdf", "abc": ".abc"}[fmt]
+    if not name.lower().endswith(ext):
+        name = (os.path.splitext(name)[0] or "download") + ext
+    media = {"pdf": "application/pdf", "midi": "audio/midi", "mxl": "application/vnd.recordare.musicxml",
+             "musicxml": "application/vnd.recordare.musicxml+xml", "abc": "text/plain"}[fmt]
+    return Response(content=data, media_type=media,
+                    headers={"Content-Disposition": f'attachment; filename="{name}"', "X-Haptune-Format": fmt,
+                             "Access-Control-Expose-Headers": "Content-Disposition, X-Haptune-Format"})
