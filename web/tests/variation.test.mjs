@@ -51,3 +51,31 @@ test('scale steps follow the key', () => {
   assert.deepEqual(scaleStep({ step: 'E', alter: 0, octave: 5 }, 1, 1), { step: 'F', alter: 1, octave: 5 });   // G major
   assert.deepEqual(scaleStep({ step: 'C', alter: 0, octave: 5 }, -1, -1), { step: 'B', alter: -1, octave: 4 }); // F major
 });
+
+const PIANO = `<?xml version="1.0"?><score-partwise version="4.0"><part-list><score-part id="P1"><part-name>Piano</part-name></score-part></part-list>
+<part id="P1"><measure number="1"><attributes><divisions>1</divisions><key><fifths>1</fifths></key><time><beats>3</beats><beat-type>4</beat-type></time><staves>2</staves>
+<clef number="1"><sign>G</sign><line>2</line></clef><clef number="2"><sign>F</sign><line>4</line></clef></attributes>
+<direction placement="below"><direction-type><dynamics><p/></dynamics></direction-type><staff>2</staff></direction>
+<note><pitch><step>D</step><octave>5</octave></pitch><duration>1</duration><voice>1</voice><type>quarter</type><staff>1</staff></note>
+<note><pitch><step>G</step><octave>4</octave></pitch><duration>1</duration><voice>1</voice><type>quarter</type><staff>1</staff></note>
+<note><pitch><step>A</step><octave>4</octave></pitch><duration>1</duration><voice>1</voice><type>quarter</type><staff>1</staff></note>
+<backup><duration>3</duration></backup>
+<note><pitch><step>G</step><octave>3</octave></pitch><duration>2</duration><voice>5</voice><type>half</type><staff>2</staff></note>
+<note><pitch><step>A</step><octave>3</octave></pitch><duration>1</duration><voice>5</voice><type>quarter</type><staff>2</staff></note>
+</measure></part></score-partwise>`;
+
+test('a piano part splits into right and left hand', async () => {
+  const { extractPart, partChoices } = await import('../src/core/score.js');
+  const sc = parseMusicXML(PIANO, { DOMParser, XMLSerializer });
+  assert.equal(sc.parts[0].staves, 2);
+  assert.deepEqual(partChoices(sc).map((c) => c.hand), ['right', 'left']);
+  const pitches = (s) => s.parts[0].measures[0].notes.filter((x) => !x.rest).map((x) => midiOf(x.pitch));
+  assert.deepEqual(pitches(extractPart(sc, 0, 1)), [74, 67, 69]);
+  assert.deepEqual(pitches(extractPart(sc, 0, 2)), [55, 57]);
+  const lh = extractPart(sc, 0, 2);
+  const xml = writeMusicXML(lh);
+  assert.ok(!xml.includes('<staves>') && xml.includes('<sign>F</sign>') && xml.includes('<p/>'));
+  const back = parseMusicXML(xml, { DOMParser, XMLSerializer });
+  assert.deepEqual(pitches(back), [55, 57]);
+  assert.equal(pitches(sc).length, 5);                          // the original is untouched
+});

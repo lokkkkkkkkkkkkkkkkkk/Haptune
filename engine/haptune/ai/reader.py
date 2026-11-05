@@ -90,12 +90,18 @@ class Reader:
         self.max_pages = max_pages
 
     # ------------------------------------------------------------------ main entry
-    def read(self, data: bytes, filename: str = "", hints: Hints | None = None, progress: Progress | None = None) -> ReadResult:
+    def read(self, data: bytes | list[tuple[bytes, str]], filename: str = "", hints: Hints | None = None,
+             progress: Progress | None = None) -> ReadResult:
         hints = hints or Hints()
         say = progress or (lambda stage, frac, msg: None)
         t0 = _time.time()
         say("pages", 0.02, "Opening your pages")
-        images = load_pages(data, filename, max_pages=self.max_pages)
+        sources = data if isinstance(data, list) else [(data, filename)]      # several photos = several pages
+        images = []
+        for blob, name in sources:
+            images.extend(load_pages(blob, name, max_pages=self.max_pages - len(images)))
+            if len(images) >= self.max_pages:
+                break
         if hints.pages:
             images = [images[p - 1] for p in hints.pages if 0 < p <= len(images)] or images
         if not images:

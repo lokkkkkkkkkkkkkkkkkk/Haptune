@@ -328,7 +328,7 @@ def _pages_arg(s: str) -> list[int] | None:
     return sorted(set(out))[:MAX_READ_PAGES] or None
 
 
-def _run_read(jid: str, path: str, filename: str, hints):
+def _run_read(jid: str, paths: list[tuple[str, str]], hints):
     from haptune.ai.claude import AIError
     from haptune.ai.reader import Reader
     from haptune.score import load_musicxml
@@ -338,9 +338,11 @@ def _run_read(jid: str, path: str, filename: str, hints):
             _jobs[jid].update(status="running", stage=stage, progress=round(float(frac), 3), message=message)
 
     try:
-        with open(path, "rb") as f:
-            data = f.read()
-        res = Reader(max_pages=MAX_READ_PAGES).read(data, filename, hints, progress=progress)
+        data = []
+        for path, name in paths:
+            with open(path, "rb") as f:
+                data.append((f.read(), name))
+        res = Reader(max_pages=MAX_READ_PAGES).read(data, "", hints, progress=progress)
         payload = {"musicxml": res.musicxml, "flags": res.flags, "report": res.report}
         try:
             payload["score"] = load_musicxml(res.musicxml.encode("utf-8")).to_json()
@@ -360,8 +362,9 @@ def _run_read(jid: str, path: str, filename: str, hints):
 
 
 @app.post("/ai/read")
-async def ai_read(request: Request, file: UploadFile = File(...), title: str = Form(""), instrument: str = Form(""),
-                  description: str = Form(""), handwritten: bool = Form(False), pages: str = Form("")):
+async def ai_read(request: Request, file: UploadFile = File(...), more: list[UploadFile] | None = File(None),
+                  title: str = Form(""), instrument: str = Form(""), description: str = Form(""),
+                  handwritten: bool = Form(False), pages: str = Form("")):
     from haptune.ai.claude import ai_configured
     from haptune.ai.reader import Hints
     if not ai_configured():
@@ -371,13 +374,18 @@ async def ai_read(request: Request, file: UploadFile = File(...), title: str = F
     jid = uuid.uuid4().hex[:16]
     d = os.path.join(JOBS_DIR, jid)
     os.makedirs(d, exist_ok=True)
-    path = await _save(file, d)
+    uploads = [file] + list(more or [])[:MAX_READ_PAGES - 1]
+    paths = []
+    for i, up in enumerate(uploads):
+        sub = os.path.join(d, f"in{i:02d}")
+        os.makedirs(sub, exist_ok=True)
+        paths.append((await _save(up, sub), up.filename or f"page{i + 1}"))
     hints = Hints(title=title.strip()[:200], instrument=instrument.strip()[:40], description=description.strip()[:300],
                   handwritten=handwritten, pages=_pages_arg(pages))
     with _lock:
         _jobs[jid] = {"id": jid, "kind": "read", "status": "queued", "stage": "queued", "progress": 0.0,
                       "message": "Waiting to start", "dir": d, "created": time.time()}
-    threading.Thread(target=_run_read, args=(jid, path, file.filename or "upload", hints), daemon=True).start()
+    threading.Thread(target=_run_read, args=(jid, paths, hints), daemon=True).start()
     return {"id": jid}
 
 
