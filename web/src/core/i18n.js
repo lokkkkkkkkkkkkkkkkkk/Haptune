@@ -229,6 +229,7 @@ const S = {
   showOnPage: ['See on the page', 'Lihat pada halaman', '在原页上看', '在原頁上看'],
   hearBar: ['Hear it', 'Dengar', '听一听', '聽一聽'],
   saveToLibrary: ['Save to Library', 'Simpan ke Pustaka', '保存到曲库', '儲存到曲庫'],
+  aiUnreachable: ["Couldn't reach Haptune online. It may be waking up: try again in a moment. The PDF is kept so you can view it.", 'Tidak dapat menghubungi Haptune dalam talian. Ia mungkin sedang bangun: cuba lagi sebentar lagi. PDF disimpan supaya anda boleh melihatnya.', '暂时连不上 Haptune 在线服务，可能正在启动，请稍后再试。PDF 已保存，可以查看。', '暫時連不上 Haptune 線上服務，可能正在啟動，請稍後再試。PDF 已儲存，可以查看。'],
   aiOff: ["AI reading isn't available in this version yet. The PDF is kept so you can view it.", 'Bacaan AI belum tersedia dalam versi ini. PDF disimpan supaya anda boleh melihatnya.', '此版本暂不支持 AI 识谱。PDF 已保存，可以查看。', '此版本暫不支援 AI 識譜。PDF 已儲存，可以查看。'],
   readFailed: ["Couldn't read this one", 'Tidak dapat membaca ini', '这份没能读出来', '這份沒能讀出來'],
   tryClearer: ['Try a clearer photo: straight on, flat, in good light.', 'Cuba foto yang lebih jelas: lurus, rata, dalam cahaya yang baik.', '请把乐谱放平，在光线充足处正对拍清楚。', '請把樂譜放平，在光線充足處正對拍清楚。'],

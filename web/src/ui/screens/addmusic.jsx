@@ -273,7 +273,8 @@ export function ImportWizardSheet({ files: initial = [], title = '', youtube = n
   if (ai && !ai.ai && phase === 'setup') {
     return (
       <SheetFrame title={t('readMusic')}>
-        <div class="reading"><Mascot mood="sleep" size={110} /><p class="note-text">{t('aiOff')}</p></div>
+        <div class="reading"><Mascot mood="sleep" size={110} /><p class="note-text">{t(ai.unreachable ? 'aiUnreachable' : 'aiOff')}</p></div>
+        {ai.unreachable && <Button kind="brand" full icon="sparkles" onClick={() => { setAi(null); aiStatus({ fresh: true }).then(setAi); }}>{t('tryAgain')}</Button>}
         {files.some(isPdf) ? <Button onClick={keepPdf} full icon="doc">{t('keepAsPdf')}</Button> : <Button kind="secondary" onClick={closeSheet} full>{t('close')}</Button>}
       </SheetFrame>
     );
