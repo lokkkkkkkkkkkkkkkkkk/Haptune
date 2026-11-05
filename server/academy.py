@@ -477,6 +477,7 @@ class SubmissionIn(BaseModel):
     tempo_pct: int | None = Field(None, ge=10, le=300)
     seconds: int = Field(0, ge=0, le=6 * 3600)
     bars: list[float] = Field(default_factory=list, max_length=2000)
+    bar_numbers: list[int] = Field(default_factory=list, max_length=2000)   # the bar each accuracy belongs to
     note: str = Field("", max_length=1000)
     recording_b64: str | None = None
     recording_type: str | None = Field(None, max_length=40)
@@ -509,8 +510,11 @@ def submit(aid: str, body: SubmissionIn, me: dict = Depends(current_user)):
         if late:
             points //= 2
         sid = str(uuid.uuid4())
+        bars = [round(float(x), 3) for x in body.bars]
+        if body.bar_numbers and len(body.bar_numbers) == len(bars):
+            bars = [[int(n), a] for n, a in zip(body.bar_numbers, bars)]                   # [[bar, accuracy], ...]
         c.execute(insert(submissions).values(id=sid, assignment_id=aid, user_id=me["id"], accuracy=body.accuracy, timing=body.timing,
-                                             tempo_pct=body.tempo_pct, seconds=body.seconds, bars=[round(float(x), 3) for x in body.bars],
+                                             tempo_pct=body.tempo_pct, seconds=body.seconds, bars=bars,
                                              note=body.note.strip(), recording=rec, recording_type=body.recording_type if rec else None,
                                              late=late, points=points, created=now))
     return {"submission": {"id": sid, "reached_goal": reached, "late": late, "points": points}}

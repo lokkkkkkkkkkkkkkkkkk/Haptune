@@ -155,7 +155,7 @@ def test_academy_class_flow():
     detail = client.get(f"/academy/assignments/{a['id']}", headers=alice).json()
     assert detail["musicxml"].startswith("<?xml") and detail["submissions"] == []
     # two tries: below the goal, then reaching it
-    r1 = client.post(f"/academy/assignments/{a['id']}/submissions", json={"accuracy": 0.6, "seconds": 120, "bars": [1, 0.5]}, headers=alice).json()
+    r1 = client.post(f"/academy/assignments/{a['id']}/submissions", json={"accuracy": 0.6, "seconds": 120, "bars": [1, 0.5], "bar_numbers": [3, 4]}, headers=alice).json()
     assert r1["submission"]["points"] == 30 and not r1["submission"]["reached_goal"]
     import base64
     rec = base64.b64encode(b"\x00\x01fake-audio").decode()
@@ -169,6 +169,7 @@ def test_academy_class_flow():
     assert over["role"] == "teacher" and over["to_review"] == 2 and over["students"] == 2
     td = client.get(f"/academy/assignments/{a['id']}", headers=teacher).json()
     assert len(td["submissions"]) == 2 and td["submissions"][0]["has_recording"]
+    assert td["submissions"][1]["bars"] == [[3, 1.0], [4, 0.5]]                   # each accuracy keeps its bar number
     sid = td["submissions"][0]["id"]
     assert client.get(f"/academy/submissions/{sid}/recording", headers=teacher).content == b"\x00\x01fake-audio"
     assert client.get(f"/academy/submissions/{sid}/recording", headers=bob).status_code == 403

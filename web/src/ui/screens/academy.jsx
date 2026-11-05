@@ -7,10 +7,12 @@ import { COURSES, findLesson, makeQuiz, tx, levelFor, BADGES, makeChallengeCode,
 import { audioContext, note, playNow, click, Transport, startDrone, stopDrone, listen, drum } from '../audio.js';
 import { VOICE_RANGES } from '../../core/analysis.js';
 import { spellMidi, pitchName } from '../../core/pitch.js';
+import { ClassesSection } from './classes.jsx';
+import { Mascot } from '../mascot.jsx';
 
 const dateSeed = () => { const d = new Date(); return d.getFullYear() * 400 + d.getMonth() * 32 + d.getDate(); };
 
-export function AcademyView() {
+export function AcademyView({ active }) {
   const s = useApp();
   const lang = getLang();
   const lv = levelFor(s.progress.xp);
@@ -28,7 +30,10 @@ export function AcademyView() {
               <p><Icon name="flame" size={15} /> {streak} {streak === 1 ? t('day') : t('days')} · <Icon name="trophy" size={15} /> {s.progress.badges.length} {t('badges').toLowerCase()}</p>
             </div>
           </div>
+          <span class="mascot-peek"><Mascot mood="cheer" size={86} /></span>
         </div>
+
+        <ClassesSection active={active} />
 
         <div class="grid two">
           <Card onClick={() => openSheet('lesson', { lessonId: 'ear2', seed: dateSeed(), daily: true })}>

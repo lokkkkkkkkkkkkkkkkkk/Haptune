@@ -13,6 +13,7 @@ import { local } from './storage.js';
 import { PieceView, ChordSheet, FindKeySheet, ExportSheet, PlayAlongSheet, KeySheet, DetailsSheet } from './screens/piece.jsx';
 import { ImproviseView } from './screens/improvise.jsx';
 import { AcademyView, CourseView, LessonSheet, ChallengeSheet } from './screens/academy.jsx';
+import { ClassView, AssignmentView, JoinClassSheet, NewClassSheet, NewAssignmentSheet, ReviewSheet } from './screens/classes.jsx';
 import { ToolsView, ToolView } from './screens/tools.jsx';
 import { AccountSheet, PaywallSheet } from './screens/account.jsx';
 
@@ -24,11 +25,12 @@ export const TABS = [
   { id: 'tools', icon: 'tools', color: 'teal' },
 ];
 const ROOTS = { summary: HomeView, library: LibraryView, improvise: ImproviseView, academy: AcademyView, tools: ToolsView };
-const VIEWS = { piece: PieceView, songbook: SongbookView, course: CourseView, tool: ToolView, history: HistoryView };
+const VIEWS = { piece: PieceView, songbook: SongbookView, course: CourseView, tool: ToolView, history: HistoryView, classView: ClassView, assignment: AssignmentView };
 const SHEETS = {
   add: AddSheet, paste: PasteSheet, findSong: FindSongSheet, scale: ScaleSheet, report: ImportReportSheet, chord: ChordSheet, findKey: FindKeySheet,
   export: ExportSheet, lesson: LessonSheet, challenge: ChallengeSheet, account: AccountSheet, paywall: PaywallSheet,
   importWizard: ImportWizardSheet, finder: FinderSheet, welcome: WelcomeSheet, playAlong: PlayAlongSheet, keySheet: KeySheet, details: DetailsSheet,
+  joinClass: JoinClassSheet, newClass: NewClassSheet, newAssignment: NewAssignmentSheet, review: ReviewSheet,
 };
 
 function Stack({ tab, active }) {

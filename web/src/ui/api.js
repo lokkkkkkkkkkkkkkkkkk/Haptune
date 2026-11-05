@@ -122,7 +122,9 @@ export async function academyMe(name) {
     local.set('academyToken', token);
   }
   try {
-    return await call('/academy/me', { token });
+    const r = await call('/academy/me', { token });
+    local.set('academyUser', r.user);
+    return r;
   } catch (e) {
     if (e.status === 401) { local.set('academyToken', ''); return academyMe(name); }
     throw e;
@@ -130,7 +132,7 @@ export async function academyMe(name) {
 }
 export const academy = {
   rename: (name) => call('/academy/me', { method: 'PATCH', json: { name }, token: academyToken() }),
-  createClass: (name, description = '') => call('/academy/classes', { method: 'POST', json: { name, description }, token: academyToken() }),
+  createClass: (name, description = '', color = 'orange') => call('/academy/classes', { method: 'POST', json: { name, description, color }, token: academyToken() }),
   join: (code) => call('/academy/join', { method: 'POST', json: { code }, token: academyToken() }),
   classDetail: (id) => call(`/academy/classes/${id}`, { token: academyToken() }),
   leave: (cid, uid) => call(`/academy/classes/${cid}/members/${uid}`, { method: 'DELETE', token: academyToken() }),

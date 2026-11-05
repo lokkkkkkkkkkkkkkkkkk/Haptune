@@ -18,6 +18,7 @@ import { expectedNotes, Follower, trickyBars } from '../../core/follow.js';
 import { q, Q, ZERO } from '../../core/q.js';
 import { Mascot, Confetti } from '../mascot.jsx';
 import { academy } from '../api.js';
+import { dueText } from './classes.jsx';
 
 export const SOUND = { violin: 'strings', viola: 'strings', cello: 'strings', erhu: 'strings', doublebass: 'bass', voice: 'piano', flute: 'flute', recorder: 'flute', dizi: 'flute',
   clarinet: 'clarinet', sax: 'clarinet', trumpet: 'flute', piano: 'piano', keyboard: 'piano', organ: 'organ', guitar: 'guitar', ukulele: 'guitar', bassguitar: 'bass', harp: 'piano', guzheng: 'guitar' };
@@ -358,7 +359,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
     if (!tScore) return;
     stop(true);
     openSheet('playAlong', {
-      choices, part: defaultPracticePart(), mode: assignment?.mode === 'tempo' ? 'beat' : 'wait', speed, countIn,
+      choices, part: defaultPracticePart(), mode: assignment?.mode === 'tempo' ? 'beat' : 'wait', speed, countIn, mission: assignment || null,
       instrument: tScore.parts[0]?.instrument, onStart: (o) => { closeSheet(); startPractice(o); },
     });
   };
@@ -513,6 +514,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
       const r = await academy.submit(assignment.id, {
         accuracy: Math.round(result.accuracy * 1000) / 1000, timing: result.inTune ?? null, tempo_pct: Math.round(result.speed * 100),
         seconds: result.seconds || 0, bars: result.barsList.map((b) => Math.round(b.accuracy * 100) / 100),
+        bar_numbers: result.barsList.map((b) => Number(b.bar) || 0),
       });
       toast(t('sentToTeacher'));
       if (r.submission?.reached_goal) addXP(30);
@@ -557,11 +559,20 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
 
   return (
     <div class={`scroll${showPlayer ? ' has-player' : ''}`}>
-      <NavBar title={meta.title} backLabel={t('library')} actions={<>
+      <NavBar title={meta.title} backLabel={assignment ? t('back') : t('library')} actions={<>
         <button type="button" onClick={() => updatePiece(meta.id, { favorite: !meta.favorite })} aria-label={t('favourite')} class={meta.favorite ? 't-yellow' : ''}><Icon name="star" size={22} fill={meta.favorite} /></button>
         <button type="button" onClick={() => openSheet('export', { pieceId: meta.id, semis, title: meta.title, part: sel.pi !== null ? sel : null, partLabel: sel.pi !== null ? handLabel(sel) : '' })} aria-label={t('export')}><Icon name="share" size={22} /></button>
       </>} />
       <div class="wrap" style={{ paddingTop: 12 }}>
+        {assignment && (
+          <div class="mission-banner">
+            <Badge icon="flag" color="orange" size={32} />
+            <div>
+              <strong>{assignment.title}</strong>
+              <span>{assignment.bars_from ? `${t('barsRange')} ${assignment.bars_from}–${assignment.bars_to || assignment.bars_from} · ` : ''}{t('goalT')} {assignment.goal ?? 80}%{assignment.due_at ? ` · ${dueText(assignment)}` : ''}</span>
+            </div>
+          </div>
+        )}
         <div class="piece-head">
           <h1>{meta.title}</h1>
           {meta.composer && <span class="sub">{meta.composer}</span>}
@@ -1092,7 +1103,7 @@ export function ExportSheet({ pieceId, semis, title, part = null, partLabel = ''
   );
 }
 
-export function PlayAlongSheet({ choices = [], part, mode = 'wait', speed = 1, countIn = true, onStart }) {
+export function PlayAlongSheet({ choices = [], part, mode = 'wait', speed = 1, countIn = true, onStart, mission = null }) {
   const [p, setP] = useState(part);
   const [m, setM] = useState(mode);
   const [sp, setSp] = useState(speed);
@@ -1100,7 +1111,7 @@ export function PlayAlongSheet({ choices = [], part, mode = 'wait', speed = 1, c
   const label = (c) => (c.hand === 'right' ? t('rightHand') : c.hand === 'left' ? t('leftHand') : c.name);
   return (
     <SheetFrame title={t('playAlong')}>
-      <div class="with-mascot"><Mascot mood="listen" size={56} /><div class="bubble left">{t('playAlongSub')}</div></div>
+      <div class="with-mascot"><Mascot mood="listen" size={56} /><div class="bubble left">{mission ? `${mission.title} · ${t('goalT')} ${mission.goal ?? 80}%` : t('playAlongSub')}</div></div>
       {choices.length > 0 && (
         <Section title={t('youPlay')}>
           <div class="choice-chips">{choices.map((c) => <Chip key={c.id} on={p === c.id} color="pink" onClick={() => setP(c.id)}>{label(c)}</Chip>)}</div>
