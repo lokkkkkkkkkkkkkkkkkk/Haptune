@@ -1,7 +1,7 @@
 # Fly.io config for the Haptune server (server/ + engine/). Deployed by .github/workflows/server.yml
 # once the FLY_API_TOKEN secret is set. Change `app` if the name is taken; the app's address then becomes
 # https://<app>.fly.dev - put that in the repository variable HAPTUNE_SERVER_URL so both apps use it.
-app = "haptune"
+app = "haptune-lok"
 primary_region = "sin"            # Singapore: closest region to Malaysia
 
 [build]
