@@ -2,6 +2,7 @@
 //   dist/artifact/haptune.html : one self-contained page (libraries from CDNs) for the Claude preview
 //   dist/pages/                : installable PWA for GitHub Pages (offline, libraries vendored)
 import { build } from 'esbuild';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -20,6 +21,12 @@ const result = await build({
 const js = result.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
 const css = fs.readFileSync(path.join(root, 'src/ui/styles.css'), 'utf8');
 const VERSION = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version;
+// The server address is built in (GitHub variable HAPTUNE_SERVER_URL -> HAPTUNE_SERVER), so people never type it.
+const SERVER = (process.env.HAPTUNE_SERVER || '').trim().replace(/\/+$/, '');
+if (SERVER && !/^https?:\/\/[^\s"'<>]+$/.test(SERVER)) throw new Error(`HAPTUNE_SERVER is not a web address: ${SERVER}`);
+// Each build gets its own cache name, so an update reaches phones that have the app saved offline.
+const BUILD = createHash('sha256').update(result.outputFiles[0].text).update(css).update(SERVER).digest('hex').slice(0, 10);
+const CONFIG = (extra) => JSON.stringify({ version: VERSION, build: BUILD, server: SERVER, ...extra });
 
 // ---- artifact page (the publish skeleton adds doctype/head/body) ----
 const artifact = `<title>Haptune</title>
@@ -27,7 +34,7 @@ const artifact = `<title>Haptune</title>
 <meta name="description" content="Music practice coach: exact imports, key change, chords, AI improviser and a teaching academy.">
 <style>${css}</style>
 <div id="haptune"></div>
-<script>window.HAPTUNE_CONFIG={pwa:false,version:${JSON.stringify(VERSION)}};</script>
+<script>window.HAPTUNE_CONFIG=${CONFIG({ pwa: false })};</script>
 <script>${js}</script>
 `;
 fs.writeFileSync(out('artifact', 'haptune.html'), artifact);
@@ -53,8 +60,8 @@ const html = `<!doctype html>
 </head>
 <body>
 <div id="haptune"></div>
-<script>window.HAPTUNE_CONFIG={pwa:true,version:${JSON.stringify(VERSION)},verovio:'vendor/verovio-toolkit-wasm.js',pdfjs:'vendor/pdf.min.js',pdfWorker:'vendor/pdf.worker.min.js'};</script>
-<script src="app.js?v=${VERSION}"></script>
+<script>window.HAPTUNE_CONFIG=${CONFIG({ pwa: true, verovio: 'vendor/verovio-toolkit-wasm.js', pdfjs: 'vendor/pdf.min.js', pdfWorker: 'vendor/pdf.worker.min.js' })};</script>
+<script src="app.js?v=${BUILD}"></script>
 </body>
 </html>
 `;
@@ -69,9 +76,9 @@ fs.writeFileSync(out('pages', 'manifest.webmanifest'), JSON.stringify({
   background_color: '#F2F2F7', theme_color: '#F2F2F7', orientation: 'any',
   icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }, { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' }, { src: 'icons/icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }],
 }, null, 2));
-const cacheList = ['./', 'index.html', `app.js?v=${VERSION}`, 'manifest.webmanifest', 'vendor/verovio-toolkit-wasm.js', 'vendor/pdf.min.js', 'vendor/pdf.worker.min.js', 'icons/apple-touch-icon.png', 'icons/icon-192.png'];
+const cacheList = ['./', 'index.html', `app.js?v=${BUILD}`, 'manifest.webmanifest', 'vendor/verovio-toolkit-wasm.js', 'vendor/pdf.min.js', 'vendor/pdf.worker.min.js', 'icons/apple-touch-icon.png', 'icons/icon-192.png'];
 fs.writeFileSync(out('pages', 'sw.js'), `// Offline cache for Haptune (cache-first for the app shell, network-first for index.html)
-const CACHE = 'haptune-${VERSION}';
+const CACHE = 'haptune-${BUILD}';
 const FILES = ${JSON.stringify(cacheList)};
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
@@ -86,4 +93,4 @@ self.addEventListener('fetch', (e) => {
 });
 `);
 fs.writeFileSync(out('pages', '.nojekyll'), '');
-console.log('artifact', (artifact.length / 1024).toFixed(0), 'KB; app.js', (result.outputFiles[0].text.length / 1024).toFixed(0), 'KB');
+console.log('server', SERVER || '(none)', '| build', BUILD, '| artifact', (artifact.length / 1024).toFixed(0), 'KB; app.js', (result.outputFiles[0].text.length / 1024).toFixed(0), 'KB');

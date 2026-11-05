@@ -51,12 +51,16 @@ async function call(path, { method = 'GET', json, form, token, raw = false, time
 }
 
 let statusCache = null;
-/** {ai, model, reads_per_day, ...} or {ai:false} when there is no server. Cached for the session. */
+/** {ai, model, reads_per_day, ...}; {ai:false, offline:true} when this build has no server;
+ * {ai:false, unreachable:true} when the server didn't answer. Only a real answer is remembered for the session:
+ * the server sleeps when idle and takes a few seconds to wake, so a miss is tried again next time. */
 export async function aiStatus({ fresh = false } = {}) {
   if (!hasServer()) return { ai: false, offline: true };
   if (statusCache && !fresh) return statusCache;
-  try { statusCache = await call('/ai/status', { timeout: 15000 }); } catch { statusCache = { ai: false, offline: true }; }
-  return statusCache;
+  for (const timeout of [25000, 25000]) {
+    try { statusCache = await call('/ai/status', { timeout }); return statusCache; } catch { /* waking up or no signal: try once more */ }
+  }
+  return { ai: false, unreachable: true };
 }
 
 /**
