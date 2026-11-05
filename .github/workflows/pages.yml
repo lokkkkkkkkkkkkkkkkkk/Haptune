@@ -35,6 +35,8 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+        env:
+          HAPTUNE_SERVER: ${{ vars.HAPTUNE_SERVER_URL }}   # the server address, built in so nobody types it
       - uses: actions/upload-pages-artifact@v4
         with:
           path: web/dist/pages

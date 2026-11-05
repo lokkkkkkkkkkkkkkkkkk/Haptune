@@ -89,8 +89,11 @@ cd apple && xcodegen generate && open Haptune.xcodeproj
 
 ## Settings worth knowing
 
-* **Analysis server** (Account → Analysis Server): the URL of `server/`. Needed for scanning, recording → sheet
-  music, Band Split and full reports. Practice, MusicXML, MIDI, jianpu, scales and the tuner work offline.
+* **Online features** (Account → Online Features): the server address is built in at build time from the
+  repository variable `HAPTUNE_SERVER_URL` (see the main README, "Turn on the server"), so nobody types it.
+  It is needed for the AI reader (scans, photos, PDFs), Find a Song, recording → sheet music, Band Split and
+  full reports. A developer can point one device at another server under Advanced. Practice, MusicXML, MIDI,
+  jianpu, scales and the tuner work offline.
 * **Watch screen:** on the Watch set *Settings → General → Return to Clock → Haptune → Return to App*.
 * **Microphone:** the app uses the *measurement* audio mode (no automatic gain). Practising with the band
   playing works best with headphones.

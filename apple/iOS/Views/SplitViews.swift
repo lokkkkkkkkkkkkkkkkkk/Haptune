@@ -175,7 +175,7 @@ struct SplitHomeView: View {
     private func start(_ url: URL, instruments: [String], title: String) {
         pendingFile = nil
         guard let api = settings.api else {
-            error = String(localized: "Band Split runs on your Haptune server. Add its address in Settings > Analysis Server.")
+            error = String(localized: "Band Split uses Haptune's online service, which isn't available right now. Please try again later.")
             return
         }
         router.gate(.bandSplit, store: store) {

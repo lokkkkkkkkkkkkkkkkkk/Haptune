@@ -220,35 +220,48 @@ struct AccountView: View {
 
     private var server: some View {
         Section {
-            TextField("https://your-server.example.com", text: $settings.serverURL)
-                .keyboardType(.URL)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-            Button {
-                Task {
-                    testing = true
-                    serverOK = await settings.api?.health() ?? false
-                    testing = false
-                }
-            } label: {
-                HStack {
-                    Text("Test Connection")
-                    Spacer()
-                    if testing { ProgressView() }
+            LabeledContent("Online features") {
+                if settings.api == nil {
+                    Text("Not available")
+                } else if let ok = serverOK {
+                    Label(ok ? "Working" : "Offline right now", systemImage: ok ? "checkmark.circle.fill" : "wifi.exclamationmark")
+                        .foregroundStyle(ok ? .green : .orange)
+                } else if testing {
+                    ProgressView()
+                } else {
+                    Text("Ready")
                 }
             }
-            .disabled(settings.api == nil || testing)
-            if let ok = serverOK {
-                if ok {
-                    Label("Connected", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
-                } else {
-                    Label("Can't reach the server", systemImage: "xmark.octagon.fill").foregroundStyle(.red)
+            .task {
+                guard settings.api != nil, serverOK == nil else { return }
+                testing = true
+                serverOK = await settings.api?.health() ?? false
+                testing = false
+            }
+            DisclosureGroup("Advanced") {
+                TextField("Custom server (optional)", text: $settings.serverURL)
+                    .keyboardType(.URL)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                Button {
+                    Task {
+                        testing = true
+                        serverOK = await settings.api?.health() ?? false
+                        testing = false
+                    }
+                } label: {
+                    HStack {
+                        Text("Test Connection")
+                        Spacer()
+                        if testing { ProgressView() }
+                    }
                 }
+                .disabled(settings.api == nil || testing)
             }
         } header: {
-            Text("Analysis Server")
+            Text("Online Features")
         } footer: {
-            Text("Needed for scanning printed music, recordings to sheet music, Band Split and full reports. Practice, MusicXML, MIDI and jianpu work offline.")
+            Text("Reading PDFs and photos with AI, finding songs online, recordings to sheet music, Band Split, full reports and Academy classes use the Haptune server. There is nothing to set up. Practice, MusicXML, MIDI and jianpu work offline.")
         }
     }
 

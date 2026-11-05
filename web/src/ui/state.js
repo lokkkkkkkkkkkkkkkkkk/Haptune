@@ -15,7 +15,7 @@ const listeners = new Set();
 let state = {
   ready: false,
   settings: {
-    name: 'Alex', instrument: 'violin', voice: 'tenor', voiceRange: null, lang: detectLang(), theme: 'system', dailyGoal: 20, wifiOnly: true,
+    name: '', instrument: 'violin', voice: 'tenor', voiceRange: null, lang: detectLang(), theme: 'system', dailyGoal: 20, wifiOnly: true,
     server: '', showRoles: true, chordView: 'guitar',
   },
   plus: false,
@@ -85,6 +85,8 @@ function metaOf(rec) {
 
 export async function loadAll() {
   const settings = { ...state.settings, ...local.get('settings', {}) };
+  if (settings.name === 'Alex' && !local.get('nameFixed', false)) settings.name = '';   // the old placeholder, not a real name
+  local.set('nameFixed', true);
   setLang(settings.lang);
   applyTheme(settings.theme);
   const progress = { ...state.progress, ...local.get('progress', {}) };
@@ -216,6 +218,7 @@ function saveProgress(progress) { local.set('progress', progress); setState({ pr
 
 export function logMinutes(seconds) {
   if (seconds < 5) return;
+  if (state.examples) clearExamples();             // the first real practice replaces the example week
   const d = today();
   const p = state.progress;
   const minutes = { ...p.minutes, [d]: (p.minutes[d] || 0) + seconds / 60 };

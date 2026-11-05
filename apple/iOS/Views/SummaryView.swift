@@ -20,6 +20,10 @@ struct SummaryView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
+                    HapiSays(text: library.items.isEmpty ? "Hi, I'm Hapi! Add a song and let's practise together."
+                                                         : "Welcome back! A few minutes today keeps your streak going.",
+                             mood: library.items.isEmpty ? .happy : .cheer)
+                        .padding(.top, 4)
                     if library.items.isEmpty { WelcomeCard() }
                     SectionTitle(title: "Pinned")
                     LazyVGrid(columns: columns, spacing: 12) {
@@ -47,7 +51,7 @@ struct SummaryView: View {
                 .padding(.horizontal)
                 .padding(.bottom, 24)
             }
-            .background(Color(uiColor: .systemGroupedBackground))
+            .background { HaptuneBackground() }
             .navigationTitle("Summary")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) { ProfileButton() }
@@ -173,7 +177,7 @@ struct SummaryView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     private var plusCard: some View {
@@ -252,7 +256,7 @@ struct WelcomeCard: View {
             .controlSize(.large)
         }
         .padding(16)
-        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .padding(.top, 8)
     }
 

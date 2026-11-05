@@ -4,6 +4,7 @@ import { useApp, push, openSheet, closeSheet, toast, addSongbookSong, addScore, 
 import { t, getLang, instrumentName, INSTRUMENTS } from '../../core/i18n.js';
 import { Icon, Badge, List, Row, Chip, Button, Card, Section, Stars, Empty, Segmented } from '../components.jsx';
 import { LargeTitle, NavBar, SheetFrame } from './common.jsx';
+import { Mascot } from '../mascot.jsx';
 import { importFile, importText, ACCEPT } from '../importer.js';
 import { SONGS, songTitle } from '../../data/songs.js';
 import { parseChordSheet, sheetChords } from '../../core/chordsheet.js';
@@ -11,8 +12,8 @@ import { keyName, parseName, nameOf } from '../../core/pitch.js';
 import { scaleScore } from '../../core/exercises.js';
 
 const FILTERS = [
-  { id: 'all', label: 'allPieces', color: 'blue' }, { id: 'favourite', label: 'favourites', color: 'yellow' }, { id: 'songbook', label: 'songbook', color: 'pink' },
-  { id: 'import', label: 'imported', color: 'indigo' }, { id: 'sheet', label: 'chordSheets', color: 'green' }, { id: 'improv', label: 'improvisations', color: 'purple' },
+  { id: 'all', label: 'allPieces', color: 'blue' }, { id: 'favourite', label: 'favourites', color: 'yellow' }, { id: 'import', label: 'imported', color: 'indigo' },
+  { id: 'sheet', label: 'chordSheets', color: 'green' }, { id: 'improv', label: 'improvisations', color: 'purple' }, { id: 'songbook', label: 'sampleSongs', color: 'pink' },
 ];
 
 export function pieceIcon(p) {
@@ -55,6 +56,11 @@ export function LibraryView() {
     <div class="scroll">
       <div class="wrap">
         <LargeTitle title={t('library')} color="blue" actions={<button type="button" class="circle-btn c-blue" onClick={() => openSheet('add')} aria-label={t('add')}><Icon name="plus" size={20} stroke={2.6} /></button>} />
+        <button type="button" class="add-hero fade-up" onClick={() => openSheet('add')} id="lib-add">
+          <Mascot mood="happy" size={58} />
+          <span><strong>{t('addMusic')}</strong><span>{t('addMusicSub')}</span></span>
+          <span class="plus"><Icon name="plus" size={22} stroke={2.8} /></span>
+        </button>
         <label class="search" for="lib-search"><Icon name="search" size={18} /><input id="lib-search" type="search" placeholder={t('searchPrompt')} value={q} onInput={(e) => setQ(e.currentTarget.value)} /></label>
         <div class="chips">{FILTERS.map((f) => <Chip key={f.id} on={filter === f.id} color={f.color} onClick={() => setFilter(f.id)}>{t(f.label)}</Chip>)}</div>
         {recent.length > 0 && <Section title={t('recentlyPractised')}><List>{recent.map((p) => <PieceRow key={'r' + p.id} p={p} />)}</List></Section>}
@@ -159,7 +165,7 @@ export function PasteSheet({ initial = '' }) {
   );
 }
 
-const SITES = [
+export const SITES = [
   { name: 'Ultimate Guitar', kind: 'siteChords', url: (q) => `https://www.ultimate-guitar.com/search.php?search_type=title&value=${q}`, color: 'orange' },
   { name: 'Chordify', kind: 'siteChords', url: (q) => `https://chordify.net/search/${q}`, color: 'green' },
   { name: 'MuseScore', kind: 'siteSheet', url: (q) => `https://musescore.com/sheetmusic?text=${q}`, color: 'blue' },

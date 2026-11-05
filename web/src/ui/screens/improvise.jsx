@@ -14,11 +14,9 @@ import { formatChord, chordPcs, rootPc, transposeChord, chordToneLabel } from '.
 import { transposeScore, concertKey, measureLength } from '../../core/score.js';
 import { sheetChords, transposeSheet } from '../../core/chordsheet.js';
 import { q } from '../../core/q.js';
+import { VaryPanel, STYLE_META, swingQ } from './vary.jsx';
+import { Mascot } from '../mascot.jsx';
 
-const STYLE_META = [
-  ['pop', 'pink', 'library'], ['ballad', 'blue', 'moon'], ['pentatonic', 'teal', 'globe'], ['blues', 'indigo', 'guitar'],
-  ['jazz', 'orange', 'sparkles'], ['bossa', 'green', 'drone'], ['baroque', 'brown', 'staff'], ['rock', 'red', 'bolt'],
-];
 const FREE_STYLES = new Set(['pop', 'ballad', 'pentatonic']);
 const INSTR = ['violin', 'voice', 'flute', 'piano', 'guitar', 'cello', 'sax', 'trumpet', 'erhu', 'dizi', 'clarinet', 'ukulele'];
 
@@ -28,16 +26,11 @@ function stepKey(fifths, minor, dir) {
   return k.fifths;
 }
 
-/** Swing: offbeat eighths move later (ratio 2:1 = 0.667 of the beat). */
-function swingQ(x, ratio) {
-  if (!ratio) return x;
-  const b = Math.floor(x + 1e-9), f = x - b;
-  return b + (f < 0.5 ? f * (ratio / 0.5) : ratio + (f - 0.5) * ((1 - ratio) / 0.5));
-}
-
 export function ImproviseView({ active }) {
   const s = useApp();
   const lang = getLang();
+  const [mode, setMode] = useState(() => (s.pieces.some((p) => p.kind === 'score') ? 'vary' : 'solo'));
+  const [varySrc, setVarySrc] = useState(null);
   const [source, setSource] = useState('preset');
   const [preset, setPreset] = useState('axis');
   const [keyF, setKeyF] = useState(0);
@@ -64,6 +57,8 @@ export function ImproviseView({ active }) {
     const src = s.improvSource;
     if (!src) return;
     setState({ improvSource: null });
+    if (src.vary) { stop(); setMode('vary'); setVarySrc({ ...src, n: Date.now() }); return; }
+    setMode('solo');
     (async () => {
       const d = await getPiece(src.pieceId);
       if (!d) return;
@@ -202,9 +197,19 @@ export function ImproviseView({ active }) {
         <LargeTitle title={t('improvise')} color="purple" />
         <div class="hero improv">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon name="sparkles" size={22} stroke={2.2} /><h2>AI {t('improvise')}</h2></div>
-          <p>{t('improviseIntro')}</p>
+          <p>{mode === 'vary' ? t('varyIntro') : t('improviseIntro')}</p>
+          <span class="mascot-peek"><Mascot mood={mode === 'vary' ? 'cheer' : 'think'} size={96} /></span>
         </div>
 
+        <div class="mode-cards improv-modes" role="radiogroup" aria-label={t('improvise')}>
+          {[['vary', 'fromMySong', 'fromMySongSub', 'wand', 'purple'], ['solo', 'newSolo', 'newSoloSub', 'sparkles', 'pink']].map(([id, a, b, ic, c]) => (
+            <button type="button" key={id} role="radio" aria-checked={mode === id} class={`mode-card${mode === id ? ' on' : ''}`} onClick={() => { stop(); setMode(id); }}>
+              <Badge icon={ic} color={c} size={34} /><strong>{t(a)}</strong><span>{t(b)}</span>
+            </button>
+          ))}
+        </div>
+
+        {mode === 'vary' ? <VaryPanel active={active} src={varySrc} /> : <>
         <Section title={t('chordsFrom')}>
           <Segmented value={source} onChange={setSource} options={[{ value: 'preset', label: t('presets') }, { value: 'piece', label: t('fromPiece') }]} />
           {source === 'preset' ? (
@@ -270,6 +275,7 @@ export function ImproviseView({ active }) {
             )}
           </Section>
         )}
+        </>}
       </div>
     </div>
   );

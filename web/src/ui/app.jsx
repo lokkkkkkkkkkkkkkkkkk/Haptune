@@ -3,26 +3,34 @@ import { useEffect } from 'preact/hooks';
 import { useApp, loadAll, go, pop, closeSheet, openSheet, getState } from './state.js';
 import { t } from '../core/i18n.js';
 import { Icon } from './components.jsx';
-import { SummaryView, HistoryView } from './screens/summary.jsx';
-import { LibraryView, SongbookView, AddSheet, PasteSheet, FindSongSheet, ScaleSheet, ImportReportSheet } from './screens/library.jsx';
-import { PieceView, ChordSheet, FindKeySheet, ExportSheet } from './screens/piece.jsx';
+import { HistoryView } from './screens/summary.jsx';
+import { HomeView } from './screens/home.jsx';
+import { LibraryView, SongbookView, PasteSheet, FindSongSheet, ScaleSheet, ImportReportSheet } from './screens/library.jsx';
+import { AddSheet, ImportWizardSheet, FinderSheet } from './screens/addmusic.jsx';
+import { WelcomeSheet } from './screens/welcome.jsx';
+import { Aurora } from './mascot.jsx';
+import { local } from './storage.js';
+import { PieceView, ChordSheet, FindKeySheet, ExportSheet, PlayAlongSheet, KeySheet, DetailsSheet } from './screens/piece.jsx';
 import { ImproviseView } from './screens/improvise.jsx';
 import { AcademyView, CourseView, LessonSheet, ChallengeSheet } from './screens/academy.jsx';
+import { ClassView, AssignmentView, JoinClassSheet, NewClassSheet, NewAssignmentSheet, ReviewSheet } from './screens/classes.jsx';
 import { ToolsView, ToolView } from './screens/tools.jsx';
 import { AccountSheet, PaywallSheet } from './screens/account.jsx';
 
 export const TABS = [
-  { id: 'summary', icon: 'summary', color: 'pink' },
+  { id: 'summary', icon: 'summary', color: 'pink', label: 'home' },
   { id: 'library', icon: 'library', color: 'blue' },
   { id: 'improvise', icon: 'improvise', color: 'purple' },
   { id: 'academy', icon: 'academy', color: 'orange' },
   { id: 'tools', icon: 'tools', color: 'teal' },
 ];
-const ROOTS = { summary: SummaryView, library: LibraryView, improvise: ImproviseView, academy: AcademyView, tools: ToolsView };
-const VIEWS = { piece: PieceView, songbook: SongbookView, course: CourseView, tool: ToolView, history: HistoryView };
+const ROOTS = { summary: HomeView, library: LibraryView, improvise: ImproviseView, academy: AcademyView, tools: ToolsView };
+const VIEWS = { piece: PieceView, songbook: SongbookView, course: CourseView, tool: ToolView, history: HistoryView, classView: ClassView, assignment: AssignmentView };
 const SHEETS = {
   add: AddSheet, paste: PasteSheet, findSong: FindSongSheet, scale: ScaleSheet, report: ImportReportSheet, chord: ChordSheet, findKey: FindKeySheet,
   export: ExportSheet, lesson: LessonSheet, challenge: ChallengeSheet, account: AccountSheet, paywall: PaywallSheet,
+  importWizard: ImportWizardSheet, finder: FinderSheet, welcome: WelcomeSheet, playAlong: PlayAlongSheet, keySheet: KeySheet, details: DetailsSheet,
+  joinClass: JoinClassSheet, newClass: NewClassSheet, newAssignment: NewAssignmentSheet, review: ReviewSheet,
 };
 
 function Stack({ tab, active }) {
@@ -58,7 +66,7 @@ function SheetHost({ sheet }) {
 function App() {
   const s = useApp();
   useEffect(() => {
-    loadAll();
+    loadAll().then(() => { if (!local.get('welcomed', false)) openSheet('welcome'); });
     const onHash = () => {
       const h = location.hash.replace('#', '');
       if (TABS.some((x) => x.id === h)) go(h);
@@ -74,10 +82,12 @@ function App() {
       go(tab.id);
     }} aria-current={s.tab === tab.id ? 'page' : undefined}>
       <Icon name={tab.icon} size={cls === 'side' ? 22 : 25} stroke={s.tab === tab.id ? 2.3 : 1.9} />
-      <span>{t(tab.id)}</span>
+      <span>{t(tab.label || tab.id)}</span>
     </button>
   );
   return (
+    <>
+    <Aurora tab={s.tab} />
     <div class="app">
       <nav class="sidebar" aria-label="Sections">
         <h1>Haptune</h1>
@@ -93,6 +103,7 @@ function App() {
       {s.sheet && <SheetHost sheet={s.sheet} />}
       {s.toast && <div class={`toast${s.toast.kind === 'err' ? ' err' : ''}`} role="status"><Icon name={s.toast.kind === 'err' ? 'info' : 'check'} size={18} stroke={2.4} />{s.toast.text}</div>}
     </div>
+    </>
   );
 }
 

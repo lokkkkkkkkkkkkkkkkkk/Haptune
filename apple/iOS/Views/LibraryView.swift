@@ -60,6 +60,10 @@ struct LibraryView: View {
     @State private var pendingRecording: URL?
     @State private var renaming: LibraryItem?
     @State private var newTitle = ""
+    @State private var findSheet = false
+    @State private var progressValue: Double?
+    @State private var progressText: String?
+    @State private var notice: String?
 
     private var filtered: [LibraryItem] {
         let q = search.trimmingCharacters(in: .whitespaces).lowercased()
@@ -78,11 +82,16 @@ struct LibraryView: View {
             List {
                 if library.items.isEmpty {
                     ContentUnavailableView {
-                        Label("No Pieces Yet", systemImage: "music.note.list")
+                        VStack(spacing: 8) {
+                            HapiMascot(size: 96, mood: .happy)
+                            Text("No Pieces Yet")
+                        }
                     } description: {
-                        Text("Import MusicXML or MIDI, scan printed music, type jianpu, or split a recording into parts.")
+                        Text("Find a song by name, scan printed music, import MusicXML or MIDI, or split a recording into parts.")
                     } actions: {
-                        Button("Import a File") { importing = true }.buttonStyle(.borderedProminent)
+                        Button { findSheet = true } label: { Label("Find a Song", systemImage: "magnifyingglass") }
+                            .buttonStyle(.borderedProminent).tint(.purple)
+                        Button("Import a File") { importing = true }
                         Button("Try Samples") { DemoData.addSamplePieces(to: library, instrument: settings.instrument) }
                     }
                     .listRowBackground(Color.clear)
@@ -105,6 +114,8 @@ struct LibraryView: View {
                 }
             }
             .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .background { HaptuneBackground() }
             .searchable(text: $search, prompt: Text("Pieces, composers, instruments"))
             .navigationTitle("Library")
             .navigationDestination(for: LibraryItem.self) { item in PieceDestination(item: item) }
@@ -123,6 +134,7 @@ struct LibraryView: View {
             }
             .sheet(isPresented: $jianpuSheet) { JianpuEntryView() }
             .sheet(isPresented: $linkSheet) { LinkImportView() }
+            .sheet(isPresented: $findSheet) { FindSongView() }
             .sheet(isPresented: $scaleSheet) { NavigationStack { ScalesView(asSheet: true) } }
             #if canImport(VisionKit) && !targetEnvironment(macCatalyst)
             .fullScreenCover(isPresented: $scanning) {
@@ -164,11 +176,24 @@ struct LibraryView: View {
             } message: {
                 Text(error ?? "")
             }
+            .alert("Please Check", isPresented: Binding(get: { notice != nil }, set: { if !$0 { notice = nil } })) {
+                Button("OK", role: .cancel) { notice = nil }
+            } message: {
+                Text(notice ?? "")
+            }
             .overlay {
                 if let busy {
-                    ProgressView(busy)
-                        .padding(20)
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    VStack(spacing: 12) {
+                        HapiMascot(size: 70, mood: .think)
+                        if let v = progressValue {
+                            ProgressView(value: v) { Text(busy) } currentValueLabel: { Text(progressText ?? "") }
+                        } else {
+                            ProgressView(busy)
+                        }
+                    }
+                    .frame(maxWidth: 300)
+                    .padding(20)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                 }
             }
         }
@@ -241,6 +266,9 @@ struct LibraryView: View {
     private var addMenu: some View {
         Menu {
             Section {
+                Button { findSheet = true } label: { Label("Find a Song (name or YouTube link)", systemImage: "magnifyingglass") }
+            }
+            Section {
                 Button { importing = true } label: { Label("Import File", systemImage: "folder") }
                 #if canImport(VisionKit) && !targetEnvironment(macCatalyst)
                 if VNDocumentCameraViewController.isSupported {
@@ -292,12 +320,23 @@ struct LibraryView: View {
 
     private func importFile(_ url: URL) async {
         busy = Importer.kind(of: url) == .score ? "Reading the score…" : "Reading the music… this can take a minute"
-        defer { busy = nil }
+        progressValue = nil
+        progressText = nil
+        defer { busy = nil; progressValue = nil; progressText = nil }
         do {
-            let r = try await Importer(api: settings.api).importFile(url, instrument: settings.instrument)
+            var importer = Importer(api: settings.api)
+            importer.progress = { value, message in
+                progressValue = value
+                progressText = message
+            }
+            let r = try await importer.importFile(url, instrument: settings.instrument)
             let inst = r.score.parts.first.map { $0.instrument.isEmpty ? settings.instrumentKey : $0.instrument } ?? settings.instrumentKey
             let item = try library.add(score: r.score, musicXML: r.musicXML, instrument: inst, kind: r.kind)
             router.libraryPath = [item]
+            if !r.unsureBars.isEmpty {
+                let bars = r.unsureBars.prefix(8).map(String.init).joined(separator: ", ")
+                notice = String(localized: "Hapi wasn't sure about bars \(bars). Please check them against your paper.")
+            }
         } catch {
             self.error = error.localizedDescription
         }

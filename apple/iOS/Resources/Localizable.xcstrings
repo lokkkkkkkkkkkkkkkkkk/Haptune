@@ -133,6 +133,28 @@
         }
       }
     },
+    "%lld pages": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 页"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 頁"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld halaman"
+          }
+        }
+      }
+    },
     "%lld parts": {
       "localizations": {
         "zh-Hans": {
@@ -529,6 +551,28 @@
         }
       }
     },
+    "Adding to your Library…": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在加入曲库…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在加入曲庫…"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menambah ke Pustaka anda…"
+          }
+        }
+      }
+    },
     "Advanced": {
       "localizations": {
         "zh-Hans": {
@@ -833,6 +877,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pisah Band berjalan pada pelayan Haptune anda. Tambah alamatnya dalam Tetapan > Pelayan Analisis."
+          }
+        }
+      }
+    },
+    "Band Split uses Haptune's online service, which isn't available right now. Please try again later.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "乐队分轨使用 Haptune 在线服务，但服务暂时不可用。请稍后再试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "樂隊分軌使用 Haptune 線上服務，但服務暫時無法使用。請稍後再試。"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Band Split menggunakan perkhidmatan dalam talian Haptune, yang tidak tersedia sekarang. Sila cuba lagi nanti."
           }
         }
       }
@@ -1519,6 +1585,28 @@
         }
       }
     },
+    "Custom server (optional)": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自定义服务器（可选）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自訂伺服器（選填）"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelayan tersuai (pilihan)"
+          }
+        }
+      }
+    },
     "Daily Goal: %lld min": {
       "localizations": {
         "zh-Hans": {
@@ -1937,6 +2025,72 @@
         }
       }
     },
+    "Find a Song": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查找歌曲"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尋找歌曲"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cari Lagu"
+          }
+        }
+      }
+    },
+    "Find a Song (name or YouTube link)": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查找歌曲（歌名或 YouTube 链接）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尋找歌曲（歌名或 YouTube 連結）"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cari Lagu (nama atau pautan YouTube)"
+          }
+        }
+      }
+    },
+    "Find a song by name, scan printed music, import MusicXML or MIDI, or split a recording into parts.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按歌名查找歌曲、扫描纸质乐谱、导入 MusicXML 或 MIDI，或把录音分成各个声部。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按歌名尋找歌曲、掃描紙本樂譜、匯入 MusicXML 或 MIDI，或把錄音分成各個聲部。"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cari lagu mengikut nama, imbas muzik bercetak, import MusicXML atau MIDI, atau pisahkan rakaman kepada bahagian."
+          }
+        }
+      }
+    },
     "Finding the melody instrument…": {
       "localizations": {
         "zh-Hans": {
@@ -1999,6 +2153,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ikut Saya"
+          }
+        }
+      }
+    },
+    "For example “Canon in D”, “Twinkle Twinkle piano easy”, or a link from YouTube, Spotify or Apple Music.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例如“卡农”“小星星 钢琴 简单版”，或来自 YouTube、Spotify、Apple Music 的链接。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例如「卡農」「小星星 鋼琴 簡單版」，或來自 YouTube、Spotify、Apple Music 的連結。"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contohnya “Canon in D”, “Twinkle Twinkle piano easy”, atau pautan daripada YouTube, Spotify atau Apple Music."
           }
         }
       }
@@ -2131,6 +2307,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "Guzheng"
+          }
+        }
+      }
+    },
+    "Hapi is searching…": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hapi 正在搜索…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hapi 正在搜尋…"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hapi sedang mencari…"
+          }
+        }
+      }
+    },
+    "Hapi wasn't sure about bars %@. Please check them against your paper.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hapi 对第 %@ 小节不太确定，请对照纸质乐谱检查。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hapi 對第 %@ 小節不太確定，請對照紙本樂譜檢查。"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hapi kurang pasti tentang bar %@. Sila semak dengan helaian anda."
           }
         }
       }
@@ -2285,6 +2505,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Skala minor harmonik"
+          }
+        }
+      }
+    },
+    "Hi, I'm Hapi! Add a song and let's practise together.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "嗨，我是 Hapi！添加一首歌，我们一起练习吧。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "嗨，我是 Hapi！新增一首歌，我們一起練習吧。"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hai, saya Hapi! Tambah lagu dan mari berlatih bersama."
           }
         }
       }
@@ -2747,6 +2989,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pautan daripada Apple Music, Spotify dan YouTube disokong."
+          }
+        }
+      }
+    },
+    "Listen on YouTube": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 YouTube 上听"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 YouTube 上聽"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dengar di YouTube"
           }
         }
       }
@@ -3323,6 +3587,28 @@
         }
       }
     },
+    "Not available": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不可用"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法使用"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tidak tersedia"
+          }
+        }
+      }
+    },
     "Note, cents and your open strings": {
       "localizations": {
         "zh-Hans": {
@@ -3341,6 +3627,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Not, sen dan tali terbuka anda"
+          }
+        }
+      }
+    },
+    "Nothing free to download turned up. Try another spelling, or add the composer's name.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有找到可免费下载的乐谱。换个写法试试，或加上作曲家的名字。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "沒有找到可免費下載的樂譜。換個寫法試試，或加上作曲家的名字。"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiada fail percuma ditemui. Cuba ejaan lain, atau tambah nama komposer."
           }
         }
       }
@@ -3433,6 +3741,28 @@
         }
       }
     },
+    "Offline right now": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂时离线"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暫時離線"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Luar talian sekarang"
+          }
+        }
+      }
+    },
     "On This Device": {
       "localizations": {
         "zh-Hans": {
@@ -3473,6 +3803,72 @@
           "stringUnit": {
             "state": "translated",
             "value": "Satu Alat Muzik atau Vokal"
+          }
+        }
+      }
+    },
+    "Online Features": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在线功能"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "線上功能"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ciri Dalam Talian"
+          }
+        }
+      }
+    },
+    "Online features": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在线功能"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "線上功能"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ciri dalam talian"
+          }
+        }
+      }
+    },
+    "Open": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打開"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buka"
           }
         }
       }
@@ -3763,6 +4159,28 @@
         }
       }
     },
+    "Please Check": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请检查"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請檢查"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sila Semak"
+          }
+        }
+      }
+    },
     "Practice": {
       "localizations": {
         "zh-Hans": {
@@ -3917,6 +4335,50 @@
         }
       }
     },
+    "Reading PDFs and photos with AI, finding songs online, recordings to sheet music, Band Split, full reports and Academy classes use the Haptune server. There is nothing to set up. Practice, MusicXML, MIDI and jianpu work offline.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用 AI 读取 PDF 和照片、在线找歌、录音转乐谱、乐队分轨、完整报告和学院班级都使用 Haptune 服务器，无需任何设置。练习、MusicXML、MIDI 和简谱可离线使用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用 AI 讀取 PDF 和照片、線上找歌、錄音轉樂譜、樂隊分軌、完整報告和學院班級都使用 Haptune 伺服器，無需任何設定。練習、MusicXML、MIDI 和簡譜可離線使用。"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Membaca PDF dan foto dengan AI, mencari lagu dalam talian, rakaman ke skor muzik, Band Split, laporan penuh dan kelas Akademi menggunakan pelayan Haptune. Tiada apa yang perlu disediakan. Latihan, MusicXML, MIDI dan jianpu berfungsi tanpa talian."
+          }
+        }
+      }
+    },
+    "Reading the music…": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在读谱…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在讀譜…"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Membaca muzik…"
+          }
+        }
+      }
+    },
     "Reading the music… this can take a minute": {
       "localizations": {
         "zh-Hans": {
@@ -3979,6 +4441,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Membaca skor…"
+          }
+        }
+      }
+    },
+    "Ready": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "就绪"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "就緒"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sedia"
           }
         }
       }
@@ -4357,6 +4841,28 @@
         }
       }
     },
+    "Searching the web for sheet music… this takes about a minute.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在网上搜索乐谱……大约需要一分钟。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在網上搜尋樂譜……大約需要一分鐘。"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mencari muzik helaian di web… ini mengambil kira-kira seminit."
+          }
+        }
+      }
+    },
     "See what to fix": {
       "localizations": {
         "zh-Hans": {
@@ -4555,6 +5061,28 @@
         }
       }
     },
+    "Sheet Music Found": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找到的乐谱"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找到的樂譜"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muzik Helaian Ditemui"
+          }
+        }
+      }
+    },
     "Sheet music coloured note by note, tempo and intonation charts, and a practice plan.": {
       "localizations": {
         "zh-Hans": {
@@ -4683,6 +5211,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Solo satu bahagian untuk mendengarnya sahaja. Senyapkan bahagian anda dan main bersama yang lain."
+          }
+        }
+      }
+    },
+    "Song name or YouTube link": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "歌名或 YouTube 链接"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "歌名或 YouTube 連結"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nama lagu atau pautan YouTube"
           }
         }
       }
@@ -5237,6 +5787,28 @@
         }
       }
     },
+    "That link can't be opened.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法打开这个链接。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法打開這個連結。"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pautan itu tidak dapat dibuka."
+          }
+        }
+      }
+    },
     "The App Store could not verify this purchase.": {
       "localizations": {
         "zh-Hans": {
@@ -5255,6 +5827,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "App Store tidak dapat mengesahkan pembelian ini."
+          }
+        }
+      }
+    },
+    "The full report uses Haptune's online service, which isn't available right now.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完整报告使用 Haptune 在线服务，但服务暂时不可用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完整報告使用 Haptune 線上服務，但服務暫時無法使用。"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Laporan penuh menggunakan perkhidmatan dalam talian Haptune, yang tidak tersedia sekarang."
+          }
+        }
+      }
+    },
+    "The music could not be read.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法读取这份乐谱。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法讀取這份樂譜。"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muzik tidak dapat dibaca."
           }
         }
       }
@@ -5303,6 +5919,28 @@
         }
       }
     },
+    "This file is read by Haptune's online service, which isn't available right now. Please try again later.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此文件由 Haptune 在线服务读取，但服务暂时不可用。请稍后再试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此檔案由 Haptune 線上服務讀取，但服務暫時無法使用。請稍後再試。"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fail ini dibaca oleh perkhidmatan dalam talian Haptune, yang tidak tersedia sekarang. Sila cuba lagi nanti."
+          }
+        }
+      }
+    },
     "This is a test build: every Plus feature is unlocked and nothing can be bought.": {
       "localizations": {
         "zh-Hans": {
@@ -5343,6 +5981,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fail jenis ini dibaca oleh pelayan Haptune. Tambah alamat pelayan dalam Tetapan > Pelayan Analisis."
+          }
+        }
+      }
+    },
+    "This song is still under copyright, so only free arrangements and the publishers' own pages are shown.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这首歌仍受版权保护，因此只显示免费改编版和出版商自己的页面。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這首歌仍受版權保護，因此只顯示免費改編版和出版商自己的頁面。"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lagu ini masih di bawah hak cipta, jadi hanya gubahan percuma dan halaman penerbit ditunjukkan."
           }
         }
       }
@@ -5721,6 +6381,28 @@
         }
       }
     },
+    "Type a song name or paste a YouTube link. I'll look for sheet music you can play along with.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "输入歌名或粘贴 YouTube 链接，我来帮你找可以跟着弹的乐谱。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "輸入歌名或貼上 YouTube 連結，我來幫你找可以跟著彈的樂譜。"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taip nama lagu atau tampal pautan YouTube. Saya akan cari muzik helaian untuk anda main bersama."
+          }
+        }
+      }
+    },
     "Unfavourite": {
       "localizations": {
         "zh-Hans": {
@@ -6073,6 +6755,28 @@
         }
       }
     },
+    "Welcome back! A few minutes today keeps your streak going.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "欢迎回来！今天练几分钟，保持连续打卡。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "歡迎回來！今天練幾分鐘，保持連續打卡。"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selamat kembali! Beberapa minit hari ini mengekalkan rentetan anda."
+          }
+        }
+      }
+    },
     "Welcome to Haptune": {
       "localizations": {
         "zh-Hans": {
@@ -6157,6 +6861,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Siapa yang bermain?"
+          }
+        }
+      }
+    },
+    "Working": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正常"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正常"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Berfungsi"
           }
         }
       }

@@ -3,14 +3,19 @@ import PracticeCore
 import UniformTypeIdentifiers
 
 /// Turns any supported file into a library entry. MusicXML, MIDI and jianpu are read on the device;
-/// PDF / photos (OMR), ABC / MEI / Humdrum and recordings go to the analysis server.
+/// PDF / photos (read by AI when the server has it, otherwise classic OMR), ABC / MEI / Humdrum and
+/// recordings go to the analysis server.
 struct Importer {
     var api: EngineAPI?
+    /// Called while the AI reads sheet music: how far along (0...1) and what it is doing.
+    var progress: (@MainActor (Double, String) -> Void)? = nil
 
     struct Result {
         var score: PracticeScore
         var musicXML: String?
         var kind: String
+        /// Bars the AI reader wasn't sure about (1-based), to check against the paper.
+        var unsureBars: [Int] = []
     }
 
     enum Kind { case score, image, recording, unknown }
@@ -67,10 +72,22 @@ struct Importer {
         case "json":
             let s = try PracticeScore.decode(Data(contentsOf: url))
             return Result(score: s, musicXML: nil, kind: "json")
-        case _ where Self.imageTypes.contains(ext) || Self.serverScoreTypes.contains(ext):
+        case _ where Self.imageTypes.contains(ext):
+            guard let api else { throw ImportError.needsServer }
+            let kind = ext == "pdf" ? "pdf" : "photo"
+            if let status = await api.aiStatus(), status.ai {
+                // AI reads every note, rest, tie, dynamic and articulation, checks each bar, and writes MusicXML
+                let report: @MainActor (Double, String) -> Void = progress ?? { _, _ in }
+                let r = try await api.readSheetMusic(files: [url], title: name, instrument: instrument.key, progress: report)
+                let s = try MusicXMLParser.parse(data: Data(r.musicxml.utf8), fallbackTitle: name)
+                return Result(score: s, musicXML: r.musicxml, kind: kind, unsureBars: r.flags.compactMap { $0.bar })
+            }
+            let p = try await api.importScore(file: url)
+            return Result(score: p.score, musicXML: p.musicxml, kind: kind)
+        case _ where Self.serverScoreTypes.contains(ext):
             guard let api else { throw ImportError.needsServer }
             let p = try await api.importScore(file: url)
-            return Result(score: p.score, musicXML: p.musicxml, kind: ext == "pdf" ? "pdf" : (Self.imageTypes.contains(ext) ? "photo" : ext))
+            return Result(score: p.score, musicXML: p.musicxml, kind: ext)
         case _ where Self.audioTypes.contains(ext):
             guard let api else { throw ImportError.needsServer }
             let p = try await api.transcribe(recording: url, instrument: instrument.key)
@@ -98,7 +115,7 @@ enum ImportError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .needsServer:
-            return String(localized: "This kind of file is read by the Haptune server. Add the server address in Settings > Analysis Server.")
+            return String(localized: "This file is read by Haptune's online service, which isn't available right now. Please try again later.")
         case .unsupported(let ext):
             return String(localized: "Haptune can't open .\(ext) files yet.")
         case .noSound:

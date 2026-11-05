@@ -1,0 +1,48 @@
+# Tests the server (AI reader, song finder, Academy) and deploys it to Fly.io.
+# Deploying needs two one-time steps (see README "Turn on the server"):
+#   1. repository secret FLY_API_TOKEN (from `fly tokens create deploy`)
+#   2. on Fly: `fly secrets set ANTHROPIC_API_KEY=...` (the key stays on the server; app users never see it)
+name: server
+on:
+  push:
+    paths: ["server/**", "engine/**", "fly.toml", ".github/workflows/server.yml"]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends libsndfile1 libcairo2
+          pip install fastapi "uvicorn[standard]" python-multipart numpy scipy soundfile music21 mido verovio \
+            pymupdf pillow anthropic sqlalchemy httpx pytest cairosvg
+      - name: Engine tests (AI reader with a fake model)
+        working-directory: engine
+        run: python -m pytest -q tests/test_ai_reader.py
+      - name: Server tests
+        working-directory: server
+        run: python -m pytest -q .
+
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      HAS_TOKEN: ${{ secrets.FLY_API_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Skip (no FLY_API_TOKEN yet)
+        if: env.HAS_TOKEN != 'true'
+        run: echo "Add the FLY_API_TOKEN repository secret to deploy the server."
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+        if: env.HAS_TOKEN == 'true'
+      - name: Deploy to Fly.io
+        if: env.HAS_TOKEN == 'true'
+        run: flyctl deploy --remote-only --ha=false     # one machine: jobs are kept in memory, the Academy database is on its volume
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
