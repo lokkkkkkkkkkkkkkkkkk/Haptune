@@ -4,10 +4,12 @@ The installable web version of Haptune: the same practice coach as the Apple app
 
 ## What it does
 
+- **Add music, guided.** The Add screen comes first: find a song by name or YouTube link (the server searches the web for sheet music), scan or photograph printed music (read by AI, with a short guide: title, instrument, which pages, printed or handwritten), or open a file. Bars the AI reader is unsure of are marked on the score.
+- **Song screen.** Title, key, tempo and details at the top; **Play Along** first (the app listens: *Wait for me* waits on each note, *Keep the beat* plays in time), **Listen** second; a transport with bar-by-bar stepping, loops and speed; part and hand choice (right / left hand on piano); export to MusicXML, MIDI, PDF, text or a zip.
 - **Library and exact imports.** Reads MusicXML (`.musicxml`, `.xml`, `.mxl`), MIDI (`.mid`), ABC, ChordPro and chord-over-lyrics text, and PDF chord sheets. Everything is read on the device, so imports use no data. A typical song imports in a fraction of a second, and even a 17,000-note string quartet movement takes about 2 seconds. Timing is kept as exact fractions, never rounded decimals.
 - **Up Key / Down Key.** Moves a piece up or down by semitones. Notes, key signature and chord symbols are re-spelled in the simplest key. *Find My Key* suggests keys that fit your voice range.
-- **AI Improvise.** Writes a solo over any chord progression (presets or a piece from your library) in eight styles, then plays it with a backing band. There is also a *Jam* mode with a looping band.
-- **Academy.** Six courses (reading, rhythm, ear training, harmony, improvisation, instrument labs) with generated quizzes, XP, badges, a daily challenge and challenge codes to send friends. An AI tutor is available in the Claude preview.
+- **AI Improvise.** *Vary a song*: decorates a song's own melody (light touch, balanced or free) while its main notes stay, so it still sounds like the song; compare original and variation at the same beat and save it as a new version. *New solo*: writes a solo over any chord progression in eight styles and plays it with a backing band, with a *Jam* mode.
+- **Academy.** Classes with a teacher (join with a code; assignments with due dates; hand in Play Along results; stickers, comments and bars to work on; activity feed and weekly leaderboard), six courses with generated quizzes, XP, badges, a daily challenge, challenge codes for friends, and Hapi the AI tutor (needs the Haptune server).
 - **Tools.** Tuner, metronome, chord finder (guitar, ukulele and piano shapes), key changer for pasted chord sheets, scale builder and drone.
 - **Languages.** English, Bahasa Melayu, 简体中文 and 繁體中文.
 
@@ -22,6 +24,10 @@ npm test          # unit tests for pitch, chords, MusicXML/MIDI round trips, cho
 npm run build     # writes dist/pages (installable app) and dist/artifact (single-file preview)
 npm run serve     # http://localhost:8080
 ```
+
+## Online features
+
+The server address is set once with the repository variable `HAPTUNE_SERVER_URL`, which the Pages build passes in as `HAPTUNE_SERVER` (see the main README, "Turn on the server"). People using the app never type it. Without it, everything that runs on the device still works and the AI features say they are not available yet.
 
 ## Deploy
 
