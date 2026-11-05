@@ -10,5 +10,6 @@ COPY server server
 RUN cd engine && python -c "from haptune.separate import MDX_MODELS, model_path; [model_path(MDX_MODELS[k]) for k in ('vocals', 'drums', 'bass')]"
 WORKDIR /srv/server
 EXPOSE 8000
-ENV HAPTUNE_WORKERS=1
+ENV HAPTUNE_WORKERS=1 HAPTUNE_DATA=/data
+RUN mkdir -p /data
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -66,8 +66,22 @@ final class AppSettings: ObservableObject {
     var instrument: InstrumentProfile { InstrumentLibrary.profile(instrumentKey) }
     var sensitivity: HapticGate.Sensitivity { HapticGate.Sensitivity(rawValue: sensitivityRaw) ?? .normal }
     var level: ScoreFollower.Level { ScoreFollower.Level(rawValue: levelRaw) ?? .intermediate }
+    /// The Haptune server built into the app (CI sets it from the repository variable HAPTUNE_SERVER_URL),
+    /// so nobody has to type a server address. `serverURL` stays as an optional override for developers.
+    nonisolated static var bundledServerURL: String {
+        let s = (Bundle.main.object(forInfoDictionaryKey: "HaptuneServerURL") as? String ?? "").trimmingCharacters(in: .whitespaces)
+        return s.hasPrefix("$(") ? "" : s
+    }
+
+    var effectiveServerURL: String {
+        let custom = serverURL.trimmingCharacters(in: .whitespaces)
+        return custom.isEmpty ? Self.bundledServerURL : custom
+    }
+
+    var usesCustomServer: Bool { !serverURL.trimmingCharacters(in: .whitespaces).isEmpty }
+
     var api: EngineAPI? {
-        guard let u = URL(string: serverURL.trimmingCharacters(in: .whitespaces)), u.scheme?.hasPrefix("http") == true else { return nil }
+        guard let u = URL(string: effectiveServerURL), u.scheme?.hasPrefix("http") == true else { return nil }
         return EngineAPI(baseURL: u)
     }
 

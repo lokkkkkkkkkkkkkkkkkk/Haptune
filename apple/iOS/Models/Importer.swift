@@ -98,7 +98,7 @@ enum ImportError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .needsServer:
-            return String(localized: "This kind of file is read by the Haptune server. Add the server address in Settings > Analysis Server.")
+            return String(localized: "This file is read by Haptune's online service, which isn't available right now. Please try again later.")
         case .unsupported(let ext):
             return String(localized: "Haptune can't open .\(ext) files yet.")
         case .noSound:

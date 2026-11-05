@@ -1,0 +1,34 @@
+# Fly.io config for the Haptune server (server/ + engine/). Deployed by .github/workflows/server.yml
+# once the FLY_API_TOKEN secret is set. Change `app` if the name is taken; the app's address then becomes
+# https://<app>.fly.dev - put that in the repository variable HAPTUNE_SERVER_URL so both apps use it.
+app = "haptune"
+primary_region = "sin"            # Singapore: closest region to Malaysia
+
+[build]
+  dockerfile = "server/Dockerfile"
+
+[env]
+  HAPTUNE_DATA = "/data"           # Academy database (SQLite) lives on the volume below
+  HAPTUNE_WORKERS = "1"
+
+[[mounts]]
+  source = "haptune_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "stop"      # sleeps when idle, wakes on the next request
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    grace_period = "60s"
+    interval = "30s"
+    method = "GET"
+    path = "/health"
+    timeout = "10s"
+
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "2gb"                   # band split needs this; AI reading and the Academy run in far less

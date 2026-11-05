@@ -14,6 +14,7 @@ settings:
     MARKETING_VERSION: "0.2.0"
     CURRENT_PROJECT_VERSION: "2"
     DEVELOPMENT_TEAM: ""                       # your Apple Developer team id (needed for devices / TestFlight)
+    HAPTUNE_SERVER_URL: ""                     # set by CI from the repository variable HAPTUNE_SERVER_URL
     LOCALIZATION_PREFERS_STRING_CATALOGS: YES
     SWIFT_EMIT_LOC_STRINGS: YES
 packages:
@@ -36,6 +37,7 @@ targets:
       path: iOS/Info.plist
       properties:
         CFBundleDisplayName: Haptune
+        HaptuneServerURL: $(HAPTUNE_SERVER_URL)
         CFBundleDevelopmentRegion: en
         CFBundleLocalizations: [en, zh-Hans, zh-Hant, ms]
         LSApplicationCategoryType: public.app-category.music

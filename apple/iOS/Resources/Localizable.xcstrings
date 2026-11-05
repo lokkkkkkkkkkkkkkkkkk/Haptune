@@ -837,6 +837,28 @@
         }
       }
     },
+    "Band Split uses Haptune's online service, which isn't available right now. Please try again later.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "乐队分轨使用 Haptune 在线服务，但服务暂时不可用。请稍后再试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "樂隊分軌使用 Haptune 線上服務，但服務暫時無法使用。請稍後再試。"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Band Split menggunakan perkhidmatan dalam talian Haptune, yang tidak tersedia sekarang. Sila cuba lagi nanti."
+          }
+        }
+      }
+    },
     "Band Split, sheet music scanning, full reports": {
       "localizations": {
         "zh-Hans": {
@@ -1515,6 +1537,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kiraan masuk: %lld bar"
+          }
+        }
+      }
+    },
+    "Custom server (optional)": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自定义服务器（可选）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自訂伺服器（選填）"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pelayan tersuai (pilihan)"
           }
         }
       }
@@ -3323,6 +3367,28 @@
         }
       }
     },
+    "Not available": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不可用"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法使用"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tidak tersedia"
+          }
+        }
+      }
+    },
     "Note, cents and your open strings": {
       "localizations": {
         "zh-Hans": {
@@ -3433,6 +3499,28 @@
         }
       }
     },
+    "Offline right now": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂时离线"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暫時離線"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Luar talian sekarang"
+          }
+        }
+      }
+    },
     "On This Device": {
       "localizations": {
         "zh-Hans": {
@@ -3473,6 +3561,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "Satu Alat Muzik atau Vokal"
+          }
+        }
+      }
+    },
+    "Online Features": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在线功能"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "線上功能"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ciri Dalam Talian"
+          }
+        }
+      }
+    },
+    "Online features": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在线功能"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "線上功能"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ciri dalam talian"
           }
         }
       }
@@ -3917,6 +4049,28 @@
         }
       }
     },
+    "Reading PDFs and photos with AI, finding songs online, recordings to sheet music, Band Split, full reports and Academy classes use the Haptune server. There is nothing to set up. Practice, MusicXML, MIDI and jianpu work offline.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用 AI 读取 PDF 和照片、在线找歌、录音转乐谱、乐队分轨、完整报告和学院班级都使用 Haptune 服务器，无需任何设置。练习、MusicXML、MIDI 和简谱可离线使用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用 AI 讀取 PDF 和照片、線上找歌、錄音轉樂譜、樂隊分軌、完整報告和學院班級都使用 Haptune 伺服器，無需任何設定。練習、MusicXML、MIDI 和簡譜可離線使用。"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Membaca PDF dan foto dengan AI, mencari lagu dalam talian, rakaman ke skor muzik, Band Split, laporan penuh dan kelas Akademi menggunakan pelayan Haptune. Tiada apa yang perlu disediakan. Latihan, MusicXML, MIDI dan jianpu berfungsi tanpa talian."
+          }
+        }
+      }
+    },
     "Reading the music… this can take a minute": {
       "localizations": {
         "zh-Hans": {
@@ -3979,6 +4133,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Membaca skor…"
+          }
+        }
+      }
+    },
+    "Ready": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "就绪"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "就緒"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sedia"
           }
         }
       }
@@ -5259,6 +5435,28 @@
         }
       }
     },
+    "The full report uses Haptune's online service, which isn't available right now.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完整报告使用 Haptune 在线服务，但服务暂时不可用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完整報告使用 Haptune 線上服務，但服務暫時無法使用。"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Laporan penuh menggunakan perkhidmatan dalam talian Haptune, yang tidak tersedia sekarang."
+          }
+        }
+      }
+    },
     "The recording is silent.": {
       "localizations": {
         "zh-Hans": {
@@ -5299,6 +5497,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pemisahan tidak selesai."
+          }
+        }
+      }
+    },
+    "This file is read by Haptune's online service, which isn't available right now. Please try again later.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此文件由 Haptune 在线服务读取，但服务暂时不可用。请稍后再试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此檔案由 Haptune 線上服務讀取，但服務暫時無法使用。請稍後再試。"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fail ini dibaca oleh perkhidmatan dalam talian Haptune, yang tidak tersedia sekarang. Sila cuba lagi nanti."
           }
         }
       }
@@ -6157,6 +6377,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Siapa yang bermain?"
+          }
+        }
+      }
+    },
+    "Working": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正常"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正常"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Berfungsi"
           }
         }
       }

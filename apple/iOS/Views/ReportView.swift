@@ -74,7 +74,7 @@ struct ReportView: View {
                     }
                     .disabled(settings.api == nil || loading || session.takeURL == nil)
                     if settings.api == nil {
-                        Text("Add your analysis server in Account > Analysis Server to get the full report.").font(.footnote).foregroundStyle(.secondary)
+                        Text("The full report uses Haptune's online service, which isn't available right now.").font(.footnote).foregroundStyle(.secondary)
                     } else {
                         Text("Sheet music coloured note by note, tempo and intonation charts, and a practice plan.").font(.footnote).foregroundStyle(.secondary)
                     }
