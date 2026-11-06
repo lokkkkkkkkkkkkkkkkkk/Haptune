@@ -6,8 +6,9 @@ whenever they like before the due date; each Play Along result (and an optional 
 submitted to the teacher, who answers with comments, stickers and bars to focus on. The class has a
 feed and a weekly leaderboard.
 
-No passwords: a device asks for an identity once (POST /academy/me) and keeps the token it gets back.
-A one-time link code moves that identity to another device.
+A device asks for an identity once (POST /academy/me) and keeps the token it gets back. A one-time link
+code moves that identity to another device; with a handle and password (community.py) the same account
+can also sign in on several devices at once.
 
 Storage: SQLAlchemy Core on DATABASE_URL (SQLite file by default, Postgres in production).
 """
@@ -86,6 +87,14 @@ submissions = Table("submissions", meta,
                     Column("late", Boolean, nullable=False, default=False),
                     Column("points", Integer, nullable=False, default=0),
                     Column("created", Float, nullable=False))
+# Signed-in devices of one account (phone, tablet, PC). A device made with POST /academy/me keeps using
+# users.token_hash; signing in with a handle and password (community.py) adds a row here.
+sessions = Table("sessions", meta,
+                 Column("token_hash", String(64), primary_key=True),
+                 Column("user_id", String(36), ForeignKey("users.id"), nullable=False),
+                 Column("label", String(60), nullable=False, default=""),
+                 Column("created", Float, nullable=False),
+                 Column("last_seen", Float, nullable=False))
 feedback = Table("feedback", meta,
                  Column("id", String(36), primary_key=True),
                  Column("submission_id", String(36), ForeignKey("submissions.id"), nullable=False),
@@ -156,8 +165,13 @@ def current_user(authorization: str = Header("")) -> dict:
     token = authorization.removeprefix("Bearer ").strip()
     if not token:
         raise HTTPException(401, "Open the Academy once to get your profile.")
+    h = _hash(token)
     with engine().connect() as c:
-        row = c.execute(select(users).where(users.c.token_hash == _hash(token))).mappings().first()
+        row = c.execute(select(users).where(users.c.token_hash == h)).mappings().first()
+        if row is None:
+            uid = c.execute(select(sessions.c.user_id).where(sessions.c.token_hash == h)).scalar()
+            if uid:
+                row = c.execute(select(users).where(users.c.id == uid)).mappings().first()
     if row is None:
         raise HTTPException(401, "This device's Academy profile was not found.")
     return dict(row)

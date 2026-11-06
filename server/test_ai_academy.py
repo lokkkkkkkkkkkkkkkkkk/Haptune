@@ -15,6 +15,7 @@ import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 import academy  # noqa: E402
+import accounts  # noqa: E402
 import app as app_module  # noqa: E402
 from app import app  # noqa: E402
 
@@ -25,6 +26,9 @@ client = TestClient(app)
 def fresh(monkeypatch, tmp_path):
     academy.reset_engine(f"sqlite:///{tmp_path}/academy.db")
     app_module._limiter.hits.clear()
+    accounts.limiter.hits.clear()
+    # these tests are about the AI endpoints themselves; plans and allowances are tested in test_community.py
+    monkeypatch.setitem(accounts.PLANS, "free", {**accounts.PLANS["free"], "read_pages": None, "find": None, "tutor": None})
     yield
 
 
@@ -63,7 +67,7 @@ def test_ai_read_job_with_fake_model(monkeypatch):
     pdf = render_pdf(path, bars_per_line=4)
     fake = FakeReaderClient(bars, meta, bars_per_line=4, instrument="violin")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
-    monkeypatch.setattr(reader_mod, "Claude", lambda: Claude(client=fake))
+    monkeypatch.setattr(reader_mod, "Claude", lambda **kw: Claude(client=fake))
     r = client.post("/ai/read", files={"file": ("minuet.pdf", pdf, "application/pdf")},
                     data={"instrument": "violin", "title": "Minuet"}, headers={"X-Haptune-Device": "dev-1"})
     assert r.status_code == 200, r.text
@@ -128,6 +132,9 @@ def test_ai_find_with_fake_model(monkeypatch):
     class FakeAI:
         model = "fake"
         usage = type("U", (), {"to_json": lambda self: {}})()
+
+        def __init__(self, **kw):
+            pass
 
         def run_tools(self, system, user, tools, **kw):
             assert "Ode to Joy" in user and any(t.get("type", "").startswith("web_search") for t in tools)
