@@ -1,0 +1,8 @@
+{
+  "appId": "com.sloky.haptune",
+  "appName": "Haptune",
+  "webDir": "dist/native",
+  "server": { "androidScheme": "https" },
+  "android": { "allowMixedContent": false, "webContentsDebuggingEnabled": false },
+  "plugins": { "SystemBars": { "insetsHandling": "css" } }
+}

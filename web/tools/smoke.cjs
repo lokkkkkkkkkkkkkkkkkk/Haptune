@@ -43,7 +43,7 @@ const DEVICE = {
     await p.waitForSelector('.welcome', { timeout: 15000 });
     await shot('00-welcome');
     for (let i = 0; i < 3; i++) { await V('.welcome .btn.brand').click(); await p.waitForTimeout(350); }
-    await V('.welcome .btn.secondary').click();          // "Let's go"
+    await V('.welcome .btn.plain').filter({ hasText: "Let's go" }).click();
     await p.waitForTimeout(700);
   });
   await step('home', async () => { await shot('01-home'); await overflow('home'); });
@@ -80,7 +80,7 @@ const DEVICE = {
     await tab(1);                                            // tapping the active tab goes back to the list
   });
   await step('improvise: vary a song', async () => {
-    await tab(2);
+    await tab(3);
     await V('.list .row').filter({ hasText: 'Ode' }).first().click();
     await p.waitForSelector('.vary-score svg', { timeout: 30000 });
     await V('.mode-cards.three .mode-card').nth(1).click();
@@ -98,8 +98,10 @@ const DEVICE = {
     await shot('08-solo');
     await overflow('solo');
   });
-  await step('academy', async () => {
-    await tab(3);
+  await step('academy (Community > Learn)', async () => {
+    await tab(2);
+    await V('#community-seg button').nth(4).click();
+    await p.waitForTimeout(400);
     await shot('09-academy');
     await overflow('academy');
     await V('.course-tile').first().click();
@@ -112,7 +114,7 @@ const DEVICE = {
     if (await V('.sheet .q-opt').count()) { await V('.sheet .q-opt').first().click(); await p.waitForTimeout(300); }
     await V('.sheet-head .l').first().click();
     await p.waitForTimeout(300);
-    await tab(3);
+    await tab(2);
   });
   await step('tools', async () => {
     await tab(4);

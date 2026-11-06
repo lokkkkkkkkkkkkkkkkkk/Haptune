@@ -18,9 +18,9 @@ export function WelcomeSheet() {
   };
   const slides = [
     { mood: 'wave', title: t('welcomeHapi'), body: t('welcomeHapiSub') },
-    { mood: 'think', title: t('tip1Title'), body: t('tip1'), icon: 'camera', color: 'purple' },
+    { mood: 'think', title: t('tip1Title'), body: t('welcomeAdd'), icon: 'folder', color: 'purple' },
     { mood: 'listen', title: t('tip2Title'), body: t('tip2'), icon: 'mic', color: 'pink' },
-    { mood: 'cheer', title: t('tip3Title'), body: t('tip3'), icon: 'users', color: 'orange' },
+    { mood: 'cheer', title: t('welcomeCommunityTitle'), body: t('welcomeCommunity'), icon: 'users', color: 'orange' },
   ];
   const sl = slides[i];
   return (
@@ -49,7 +49,8 @@ export function WelcomeSheet() {
             ? <Button kind="brand" full onClick={() => setI(i + 1)}>{t('next')} <Icon name="chevronR" size={18} stroke={2.6} /></Button>
             : <>
                 <Button kind="brand" full icon="plus" onClick={() => finish(() => { go('library'); openSheet('add'); })}>{t('addMusic')}</Button>
-                <Button kind="secondary" full color="purple" onClick={() => finish(() => go('summary'))}>{t('letsGo')}</Button>
+                <Button kind="secondary" full color="purple" icon="users" onClick={() => finish(() => go('community'))}>{t('openCommunity')}</Button>
+                <Button kind="plain" full onClick={() => finish(() => go('summary'))}>{t('letsGo')}</Button>
               </>}
           {i > 0 && <Button kind="plain" full onClick={() => setI(i - 1)}>{t('back')}</Button>}
         </div>

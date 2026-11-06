@@ -9,6 +9,8 @@
     "serve": "npx --yes http-server dist/pages -p 8080 -c-1"
   },
   "devDependencies": {
+    "@capacitor/android": "8.5.0",
+    "@capacitor/cli": "8.5.0",
     "@xmldom/xmldom": "^0.9.8",
     "esbuild": "^0.28.2",
     "pdfjs-dist": "^3.11.174",
@@ -17,5 +19,11 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.5.0",
+    "@capacitor/status-bar": "8.0.4",
+    "@revenuecat/purchases-capacitor": "13.7.6"
   }
 }

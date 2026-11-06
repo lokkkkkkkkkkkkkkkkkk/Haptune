@@ -1,4 +1,5 @@
 // Interface text: [English, Bahasa Melayu, 简体中文, 繁體中文]. {name} placeholders are filled by t().
+import { MORE } from './i18n-community.js';
 export const LANGS = [
   { id: 'en', name: 'English' }, { id: 'ms', name: 'Bahasa Melayu' }, { id: 'zh-Hans', name: '简体中文' }, { id: 'zh-Hant', name: '繁體中文' },
 ];
@@ -423,6 +424,8 @@ const S = {
   replayGuide: ['Replay the welcome guide', 'Main semula panduan', '重看新手引导', '重看新手引導'],
 };
 
+
+Object.assign(S, MORE);                // community, accounts, plans and help (i18n-community.js)
 
 const INSTR = {
   piano: ['Piano', 'Piano', '钢琴', '鋼琴'], keyboard: ['Keyboard', 'Papan kekunci', '电子琴', '電子琴'], violin: ['Violin', 'Biola', '小提琴', '小提琴'], viola: ['Viola', 'Viola', '中提琴', '中提琴'],

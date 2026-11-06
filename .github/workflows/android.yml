@@ -1,0 +1,87 @@
+# Builds the Android app (web/ wrapped with Capacitor) on every push that touches web/.
+#
+#   * Haptune.apk  - install it on your own phone to test (Settings may ask you to allow installing from
+#                    your browser or Files app). It is also published as the release "android-test", so the
+#                    newest build is always at:
+#                    https://github.com/<owner>/<repo>/releases/download/android-test/Haptune.apk
+#   * Haptune.aab  - the file you upload to Google Play. Built and signed only when the four signing secrets
+#                    exist (see web/ANDROID.md): HAPTUNE_KEYSTORE_BASE64, HAPTUNE_KEYSTORE_PASSWORD,
+#                    HAPTUNE_KEY_ALIAS, HAPTUNE_KEY_PASSWORD.
+# Repository variables used when set: HAPTUNE_SERVER_URL (the server address built into the app) and
+# REVENUECAT_ANDROID_KEY (RevenueCat's public Google Play key, so purchases work).
+name: android
+on:
+  push:
+    paths: ["web/**", ".github/workflows/android.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write          # to publish the "android-test" release with the APK
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    env:
+      HAS_KEY: ${{ secrets.HAPTUNE_KEYSTORE_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - run: npm ci
+      - run: npm test
+      - name: Build the web app
+        run: npm run build
+        env:
+          HAPTUNE_SERVER: ${{ vars.HAPTUNE_SERVER_URL }}
+          HAPTUNE_REVENUECAT_ANDROID: ${{ vars.REVENUECAT_ANDROID_KEY }}
+      - name: Copy it into the Android project
+        run: npx cap sync android
+      - name: Version
+        id: v
+        run: echo "name=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Build the test APK
+        working-directory: web/android
+        run: ./gradlew --no-daemon assembleDebug -PversionCode=${{ github.run_number }} -PversionName=${{ steps.v.outputs.name }}
+      - name: Build the Google Play bundle (signed)
+        if: env.HAS_KEY == 'true'
+        working-directory: web/android
+        env:
+          HAPTUNE_KEYSTORE_PASSWORD: ${{ secrets.HAPTUNE_KEYSTORE_PASSWORD }}
+          HAPTUNE_KEY_ALIAS: ${{ secrets.HAPTUNE_KEY_ALIAS }}
+          HAPTUNE_KEY_PASSWORD: ${{ secrets.HAPTUNE_KEY_PASSWORD }}
+        run: |
+          echo "${{ secrets.HAPTUNE_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          HAPTUNE_KEYSTORE="$RUNNER_TEMP/upload.jks" ./gradlew --no-daemon bundleRelease -PversionCode=${{ github.run_number }} -PversionName=${{ steps.v.outputs.name }}
+      - name: Collect files
+        run: |
+          mkdir -p ../out
+          cp android/app/build/outputs/apk/debug/app-debug.apk ../out/Haptune.apk
+          if [ -f android/app/build/outputs/bundle/release/app-release.aab ]; then cp android/app/build/outputs/bundle/release/app-release.aab ../out/Haptune.aab; fi
+          ls -lh ../out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Haptune-android
+          path: out/
+      - name: Publish the test APK (release "android-test")
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete android-test --yes --cleanup-tag 2>/dev/null || true
+          gh release create android-test ../out/Haptune.apk --prerelease --target "$GITHUB_SHA" \
+            --title "Android test build ${{ steps.v.outputs.name }} (${{ github.run_number }})" \
+            --notes "Newest test build from branch ${{ github.ref_name }}, commit ${GITHUB_SHA::7}. Download Haptune.apk on your Android phone and open it to install (allow installing from your browser if asked). It updates the app in place; your library stays."

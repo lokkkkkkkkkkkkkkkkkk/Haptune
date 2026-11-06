@@ -2,7 +2,7 @@
 // students practise whenever they like inside it, hand in their Play Along results, and get stickers, comments
 // and the bars to work on. Each class has an activity feed and a weekly leaderboard.
 import { useState, useEffect } from 'preact/hooks';
-import { useApp, push, pop, go, openSheet, closeSheet, toast, getPiece, addScore, addXP, setState, updateSettings } from '../state.js';
+import { useApp, push, pop, go, openSheet, closeSheet, toast, getPiece, addScore, addXP, setState, updateSettings, goLearn } from '../state.js';
 import { t, getLang } from '../../core/i18n.js';
 import { Icon, Card, Section, List, Row, Button, Badge, Segmented, Chip, Stepper, Rings } from '../components.jsx';
 import { NavBar, SheetFrame } from './common.jsx';
@@ -134,7 +134,7 @@ export function ClassesSection({ active }) {
               <Row key={c.id} icon={c.role === 'teacher' ? 'academy' : 'users'} color={c.color} title={c.name}
                 subtitle={`${c.role === 'teacher' ? t('teacherT') : t('studentT')} · ${studentsText(c.students)}`}
                 right={c.to_review ? <span class="count-pill">{t('toReview', { n: c.to_review })}</span> : null}
-                onClick={() => push('classView', { id: c.id }, 'academy')} />
+                onClick={() => push('classView', { id: c.id })} />
             ))}
           </List>
         )}
@@ -148,7 +148,7 @@ export function ClassesSection({ active }) {
 export function MissionCard({ a, color, onClick }) {
   const best = a.best ?? null;
   return (
-    <button type="button" class={`mission c-${color || a.class_color || 'orange'}`} onClick={onClick || (() => push('assignment', { id: a.id }, 'academy'))}>
+    <button type="button" class={`mission c-${color || a.class_color || 'orange'}`} onClick={onClick || (() => push('assignment', { id: a.id }))}>
       <span class="m-main">
         <span class="m-top"><StatusChip status={a.status} />{a.class_name && <span class="m-class">{a.class_name}</span>}</span>
         <strong>{a.title}</strong>
@@ -179,7 +179,7 @@ export function ClassView({ id }) {
   };
   const leave = async () => {
     if (!confirm(teacher ? t('confirmClose') : t('confirmLeave'))) return;
-    try { await academy.leave(id, myId()); refreshClasses(); pop('academy'); } catch (e) { toast(e.message, 'err'); }
+    try { await academy.leave(id, myId()); refreshClasses(); pop(); } catch (e) { toast(e.message, 'err'); }
   };
   const remove = async (m) => {
     if (!confirm(t('confirmRemove', { name: m.name }))) return;
@@ -290,7 +290,7 @@ export function ClassView({ id }) {
 function TeacherMission({ a, color }) {
   const frac = a.students ? a.reached_goal / a.students : 0;
   return (
-    <button type="button" class={`mission c-${color}`} onClick={() => push('assignment', { id: a.id }, 'academy')}>
+    <button type="button" class={`mission c-${color}`} onClick={() => push('assignment', { id: a.id })}>
       <span class="m-main">
         <strong>{a.title}</strong>
         <span class="m-sub">{dueText(a)}</span>
@@ -329,12 +329,12 @@ export function AssignmentView({ id }) {
       if (!pid) { toast(t('engineFailedShort'), 'err'); return; }
       const asg = { id: a.id, part: a.part, mode: a.mode, tempo_pct: a.tempo_pct, goal: a.goal, title: a.title, due_at: a.due_at,
         bars_from: range ? range.from : a.bars_from, bars_to: range ? range.to : a.bars_to };
-      push('piece', { id: pid, assignment: asg, start: 'playAlong' }, 'academy');
+      push('piece', { id: pid, assignment: asg, start: 'playAlong' });
     } catch (e) { toast(e.message, 'err'); } finally { setBusy(false); }
   };
   const del = async () => {
     if (!confirm(t('confirmDeleteAsg'))) return;
-    try { await academy.deleteAssignment(id); refreshClasses(); pop('academy'); } catch (e) { toast(e.message, 'err'); }
+    try { await academy.deleteAssignment(id); refreshClasses(); pop(); } catch (e) { toast(e.message, 'err'); }
   };
 
   if (!a) {
@@ -469,8 +469,8 @@ export function JoinClassSheet() {
       closeSheet();
       toast(t('joinedClass', { name: r.class.name }));
       addXP(10);
-      go('academy');
-      push('classView', { id: r.class.id }, 'academy');
+      goLearn();
+      push('classView', { id: r.class.id }, 'community');
     } catch (e) { setErr(e.message); setBusy(false); }
   };
   return (
@@ -518,7 +518,7 @@ export function NewClassSheet() {
   };
   if (made) {
     return (
-      <SheetFrame title={t('teachClass')} right={t('done')} onRight={() => { closeSheet(); go('academy'); push('classView', { id: made.id }, 'academy'); }} left={false}>
+      <SheetFrame title={t('teachClass')} right={t('done')} onRight={() => { closeSheet(); goLearn(); push('classView', { id: made.id }, 'community'); }} left={false}>
         <Confetti />
         <div class="sheet-mascot"><Mascot mood="cheer" size={100} /></div>
         <h2 style={{ textAlign: 'center', font: '800 24px/1.2 var(--round)' }}>{made.name}</h2>

@@ -16,15 +16,17 @@ let state = {
   ready: false,
   settings: {
     name: '', instrument: 'violin', voice: 'tenor', voiceRange: null, lang: detectLang(), theme: 'system', dailyGoal: 20, wifiOnly: true,
-    server: '', showRoles: true, chordView: 'guitar',
+    server: '', showRoles: true, chordView: 'guitar', syncMs: 0,
   },
-  plus: false,
+  plus: false,          // a paid plan (Plus, Pro) or the developer, from the account on the server
+  me: null,             // the Haptune account (community, classes, plan), see account.js
+  communitySeg: 'home',
   pieces: [],
   history: [],
   progress: { xp: 0, lessons: {}, badges: [], days: [], minutes: {}, quizzes: 0, challengeWins: 0 },
   examples: false,
   tab: 'summary',
-  stacks: { summary: [], library: [], academy: [], improvise: [], tools: [] },
+  stacks: { summary: [], library: [], community: [], academy: [], improvise: [], tools: [] },
   sheet: null,
   toast: null,
 };
@@ -42,6 +44,10 @@ export function useApp() {
 
 // ---------- navigation ----------
 export function go(tab) { setState({ tab }); }
+/** The Academy (courses, classes, tutor) lives in the Community tab as "Learn". */
+export function goLearn() { setState({ tab: 'community', communitySeg: 'learn' }); }
+/** Hooks the app shell fills in (keeps this file free of network code). */
+export const hooks = { practice: null };
 export function push(view, props = {}, tab = state.tab) {
   setState((s) => ({ tab, stacks: { ...s.stacks, [tab]: [...s.stacks[tab], { view, props, key: Math.random().toString(36).slice(2) }] } }));
 }
@@ -71,7 +77,7 @@ export function applyTheme(theme) {
     else root.removeAttribute('data-theme');
   } catch { /* no DOM */ }
 }
-export function setPlus(on) { local.set('plus', on); setState({ plus: on }); }
+export function setPlus(on) { setState({ plus: on }); }
 
 // ---------- library ----------
 const pieceCache = new Map();
@@ -90,7 +96,8 @@ export async function loadAll() {
   setLang(settings.lang);
   applyTheme(settings.theme);
   const progress = { ...state.progress, ...local.get('progress', {}) };
-  const plus = local.get('plus', false);
+  const me = local.get('me', null);
+  const plus = ['plus', 'pro', 'dev'].includes(me?.tier);
   const firstRun = !local.get('started', false);
   let pieces = await db.all('pieces');
   let history = await db.all('history');
@@ -102,7 +109,7 @@ export async function loadAll() {
     history = await db.all('history');
     local.set('started', true);
   }
-  setState({ ready: true, settings, progress, plus, pieces: pieces.map(metaOf).sort((a, b) => (b.opened || b.created) - (a.opened || a.created)), history: history.sort((a, b) => a.date - b.date), examples: history.some((h) => h.example) });
+  setState({ ready: true, settings, progress, plus, me, pieces: pieces.map(metaOf).sort((a, b) => (b.opened || b.created) - (a.opened || a.created)), history: history.sort((a, b) => a.date - b.date), examples: history.some((h) => h.example) });
 }
 
 async function savePiece(rec) {
@@ -225,6 +232,7 @@ export function logMinutes(seconds) {
   const days = p.days.includes(d) ? p.days : [...p.days, d];
   saveProgress({ ...p, minutes, days, xp: p.xp + Math.round(seconds / 60) * 5 });
   checkStreakBadges();
+  try { hooks.practice?.(seconds / 60); } catch { /* offline: the streak on this device still counts */ }
 }
 
 export async function recordTake(take) {

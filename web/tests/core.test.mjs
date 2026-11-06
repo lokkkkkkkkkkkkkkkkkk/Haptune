@@ -232,3 +232,31 @@ test('challenge codes round trip', () => {
   assert.deepEqual(levelFor(0), { level: 1, into: 0, need: 100 });
   assert.equal(levelFor(250).level, 3);
 });
+
+test('auto beams: chord members and rests carry no <beam> (Verovio rejects them)', async () => {
+  const { autoBeam } = await import('../src/core/score.js');
+  const n = (off, type, dur, extra = {}) => ({ off: q(off[0], off[1]), dur: q(dur[0], dur[1]), type, staff: 1, voice: '1', ...extra });
+  // eighth + chord member, a 16th rest, then a 16th: one beat in 4/4
+  const notes = [n([0, 1], 'eighth', [1, 2]), n([0, 1], 'eighth', [1, 2], { chord: true }), n([1, 2], '16th', [1, 4], { rest: true }), n([3, 4], '16th', [1, 4])];
+  autoBeam(notes, { beats: 4, beatType: 4 });
+  assert.deepEqual(notes[0].beams, [{ n: 1, v: 'begin' }]);
+  assert.equal(notes[1].beams, undefined);
+  assert.equal(notes[2].beams, undefined);
+  assert.deepEqual(notes[3].beams, [{ n: 1, v: 'end' }, { n: 2, v: 'backward hook' }]);
+});
+
+test('community text: every entry in all four languages, no key overwrites an existing one', async () => {
+  const fs = await import('node:fs');
+  const { MORE } = await import('../src/core/i18n-community.js');
+  const src = fs.readFileSync(new URL('../src/core/i18n.js', import.meta.url), 'utf8');
+  const body = src.slice(src.indexOf('const S = {'), src.indexOf('Object.assign(S, MORE)'));
+  const old = new Set([...body.matchAll(/(?:^|[,{]\s*)([A-Za-z0-9_]+):\s*\[/gm)].map((m) => m[1]));
+  const clash = Object.keys(MORE).filter((k) => old.has(k));
+  assert.deepEqual(clash, []);
+  const ph = (x) => (x.match(/\{\w+\}/g) || []).sort().join();
+  for (const [k, v] of Object.entries(MORE)) {
+    assert.equal(v.length, 4, k);
+    assert.ok(v.every((x) => typeof x === 'string' && x.length), k);
+    assert.equal(new Set(v.map(ph)).size, 1, `placeholders differ in ${k}`);
+  }
+});

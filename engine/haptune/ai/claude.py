@@ -56,6 +56,14 @@ class Usage:
                 "cache_read_tokens": self.cache_read_tokens, "cache_write_tokens": self.cache_write_tokens}
 
 
+def fallback_args(model: str) -> dict:
+    """Anthropic's server-side fallback (another model answers if a request is refused) exists for the Opus,
+    Fable and Sonnet 5.5 models, not for Haiku; Haiku requests leave it out."""
+    if "haiku" in (model or ""):
+        return {"betas": []}
+    return {"betas": [FALLBACK_BETA], "fallbacks": "default"}
+
+
 class Claude:
     def __init__(self, client=None, model: str | None = None):
         self.model = model or os.environ.get("HAPTUNE_AI_MODEL", DEFAULT_MODEL)
@@ -83,8 +91,7 @@ class Claude:
                 system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
                 messages=[{"role": "user", "content": content}],
                 output_config={"effort": effort, "format": {"type": "json_schema", "schema": schema}},
-                betas=[FALLBACK_BETA],
-                fallbacks="default",
+                **fallback_args(self.model),
             ) as stream:
                 if started is not None:
                     for _ in stream:
@@ -112,7 +119,7 @@ class Claude:
                 model=self.model, max_tokens=max_tokens,
                 system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
                 messages=[{"role": "user", "content": prompt}],
-                output_config={"effort": effort}, betas=[FALLBACK_BETA], fallbacks="default",
+                output_config={"effort": effort}, **fallback_args(self.model),
             )
         except Exception as e:
             raise _translate(e) from e
@@ -135,7 +142,7 @@ class Claude:
                 msg = self.client.beta.messages.create(
                     model=self.model, max_tokens=max_tokens, system=system, messages=messages, tools=tools,
                     tool_choice={"type": "auto"}, output_config={"effort": effort},
-                    betas=[FALLBACK_BETA], fallbacks="default",
+                    **fallback_args(self.model),
                 )
             except Exception as e:
                 raise _translate(e) from e

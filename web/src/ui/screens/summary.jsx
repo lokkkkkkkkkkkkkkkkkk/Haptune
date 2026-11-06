@@ -127,7 +127,7 @@ export function SummaryView() {
         )}
 
         {!s.plus && (
-          <button type="button" class="hero plus" onClick={() => openSheet('paywall')} style={{ textAlign: 'left' }}>
+          <button type="button" class="hero plus" onClick={() => openSheet('plans')} style={{ textAlign: 'left' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon name="crown" size={20} stroke={2.3} /><h2>{t('plusTitle')}</h2></div>
             <p>{t('plusBlurb')}</p>
             <strong>{t('tryFreeWeek')} ›</strong>

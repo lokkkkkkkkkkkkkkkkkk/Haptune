@@ -20,16 +20,22 @@ export function deviceId() {
 }
 
 export class ApiError extends Error {
-  constructor(message, status = 0) { super(message); this.status = status; }
+  constructor(message, status = 0, detail = null) { super(message); this.status = status; this.detail = detail; }
+  /** The server says this needs a plan (402) or this month's allowance is used up (429 with a code). */
+  get plan() { return this.detail && ['plan_required', 'plan_limit', 'open_requests'].includes(this.detail.code) ? this.detail : null; }
 }
+
+/** The account's token (the same one Academy classes use). */
+export const accountToken = () => local.get('academyToken', '');
 
 const NO_SERVER = 'Online features are not available in this version yet.';
 
-async function call(path, { method = 'GET', json, form, token, raw = false, timeout = 120000 } = {}) {
+export async function call(path, { method = 'GET', json, form, token, raw = false, timeout = 120000 } = {}) {
   const base = serverURL();
   if (!base) throw new ApiError(NO_SERVER, 0);
   const headers = { 'X-Haptune-Device': deviceId() };
-  if (token) headers.Authorization = `Bearer ${token}`;
+  const tok = token ?? accountToken();       // every call carries the account, so plans and allowances apply
+  if (tok) headers.Authorization = `Bearer ${tok}`;
   let body;
   if (json !== undefined) { headers['Content-Type'] = 'application/json'; body = JSON.stringify(json); }
   if (form) body = form;
@@ -42,10 +48,15 @@ async function call(path, { method = 'GET', json, form, token, raw = false, time
     throw new ApiError(e.name === 'AbortError' ? 'The server took too long. Please try again.' : 'Could not reach Haptune online. Check your connection.', 0);
   } finally { clearTimeout(timer); }
   if (!res.ok) {
-    let msg = `${res.status}`;
-    try { const j = await res.json(); msg = j.detail || j.message || msg; } catch { /* not JSON */ }
+    let msg = `${res.status}`, detail = null;
+    try {
+      const j = await res.json();
+      msg = j.detail || j.message || msg;
+      if (msg && typeof msg === 'object' && !Array.isArray(msg)) { detail = msg; msg = detail.message || detail.code || `${res.status}`; }
+      else if (Array.isArray(msg)) msg = msg.map((x) => x.msg || '').filter(Boolean).join('; ') || `${res.status}`;
+    } catch { /* not JSON */ }
     if (typeof msg !== 'string') msg = JSON.stringify(msg);
-    throw new ApiError(msg, res.status);
+    throw new ApiError(msg, res.status, detail);
   }
   return raw ? res : res.json();
 }

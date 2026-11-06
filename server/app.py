@@ -21,6 +21,7 @@ All score responses carry the canonical score JSON ("haptune.score/1") plus Musi
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -64,8 +65,12 @@ DEFAULT_ORIGINS = (r"https?://(localhost|127\.0\.0\.1)(:\d+)?|https://[\w-]+\.gi
 app.add_middleware(CORSMiddleware, allow_origin_regex=os.environ.get("HAPTUNE_CORS_ORIGINS", DEFAULT_ORIGINS),
                    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"], allow_headers=["*"], max_age=86400)
 from academy import router as academy_router  # noqa: E402  (classes for teachers and students)
+import accounts  # noqa: E402  (accounts, plans, credits, notifications, feedback)
+from community import router as community_router  # noqa: E402  (requests, questions, library, challenges)
 
 app.include_router(academy_router)
+app.include_router(accounts.router)
+app.include_router(community_router)
 _jobs: dict[str, dict] = {}
 _lock = threading.Lock()
 _pool = ThreadPoolExecutor(max_workers=int(os.environ.get("HAPTUNE_WORKERS", "1")))
@@ -100,34 +105,46 @@ def instruments():
     return {"instruments": [p.to_dict() for p in PROFILES.values()]}
 
 
+OMR_PER_DAY = int(os.environ.get("HAPTUNE_OMR_PER_DAY", "15"))
+
+
 @app.post("/score/import")
-async def import_score(file: UploadFile = File(...)):
+async def import_score(request: Request, file: UploadFile = File(...)):
+    """Free basic scan (homr, no AI) of printed music, and other score formats the phone can't read."""
+    from starlette.concurrency import run_in_threadpool
+    name = (file.filename or "").lower()
+    if name.endswith((".pdf", ".png", ".jpg", ".jpeg", ".heic", ".tif", ".tiff")):
+        _limit(request, "omr", OMR_PER_DAY)
     with tempfile.TemporaryDirectory() as d:
         path = await _save(file, d)
-        ext = os.path.splitext(path)[1].lower()
-        try:
-            if ext in (".txt", ".jianpu"):
-                with open(path, encoding="utf-8") as f:
-                    sc = parse_jianpu(f.read())
-                xml = write_musicxml(sc, os.path.join(d, "out.musicxml"))
-            elif ext in (".pdf", ".png", ".jpg", ".jpeg", ".heic", ".tif", ".tiff"):
-                if ext in (".heic", ".tif", ".tiff"):
-                    path = _to_png(path, d)
-                sc = load_score(path, keep_dir=os.path.join(d, "omr"))
-                xml = sc.source.get("musicxml")
-            elif ext in (".abc", ".mei", ".krn", ".kern"):
-                import music21 as m21
-                xml = os.path.join(d, "converted.musicxml")
-                m21.converter.parse(path).write("musicxml", fp=xml)
-                sc = load_score(xml)
-            else:
-                sc = load_score(path)
-                xml = path if ext in (".musicxml", ".xml") else write_musicxml(sc, os.path.join(d, "out.musicxml"))
-        except (ValueError, KeyError, RuntimeError) as e:
-            raise HTTPException(422, f"could not read the score: {e}")
-        except Exception as e:                                   # music21 / OMR failures on odd files
-            raise HTTPException(422, f"could not read the score: {e}")
-        return JSONResponse(_payload(sc, xml))
+        return await run_in_threadpool(_import_path, path, d)
+
+
+def _import_path(path: str, d: str):
+    ext = os.path.splitext(path)[1].lower()
+    try:
+        if ext in (".txt", ".jianpu"):
+            with open(path, encoding="utf-8") as f:
+                sc = parse_jianpu(f.read())
+            xml = write_musicxml(sc, os.path.join(d, "out.musicxml"))
+        elif ext in (".pdf", ".png", ".jpg", ".jpeg", ".heic", ".tif", ".tiff"):
+            if ext in (".heic", ".tif", ".tiff"):
+                path = _to_png(path, d)
+            sc = load_score(path, keep_dir=os.path.join(d, "omr"))
+            xml = sc.source.get("musicxml")
+        elif ext in (".abc", ".mei", ".krn", ".kern"):
+            import music21 as m21
+            xml = os.path.join(d, "converted.musicxml")
+            m21.converter.parse(path).write("musicxml", fp=xml)
+            sc = load_score(xml)
+        else:
+            sc = load_score(path)
+            xml = path if ext in (".musicxml", ".xml") else write_musicxml(sc, os.path.join(d, "out.musicxml"))
+    except (ValueError, KeyError, RuntimeError) as e:
+        raise HTTPException(422, f"could not read the score: {e}")
+    except Exception as e:                                   # music21 / OMR failures on odd files
+        raise HTTPException(422, f"could not read the score: {e}")
+    return JSONResponse(_payload(sc, xml))
 
 
 def _to_png(path: str, d: str) -> str:
@@ -326,7 +343,7 @@ MAX_READ_PAGES = int(os.environ.get("HAPTUNE_MAX_READ_PAGES", "12"))
 @app.get("/ai/status")
 def ai_status():
     from haptune.ai.claude import DEFAULT_MODEL, ai_configured
-    return {"ai": ai_configured(), "model": os.environ.get("HAPTUNE_AI_MODEL", DEFAULT_MODEL),
+    return {"ai": ai_configured(), "model": _model("read"), "models": {k: _model(k) for k in ("read", "find", "tutor")},
             "reads_per_day": READS_PER_DAY, "finds_per_day": FINDS_PER_DAY, "max_pages": MAX_READ_PAGES, "tutor": True}
 
 
@@ -344,7 +361,29 @@ def _pages_arg(s: str) -> list[int] | None:
     return sorted(set(out))[:MAX_READ_PAGES] or None
 
 
-def _run_read(jid: str, paths: list[tuple[str, str]], hints):
+def _model(kind: str) -> str:
+    """Each AI feature can use its own model (fly.toml [env]), so the cheapest one that does the job well is used.
+    HAPTUNE_AI_MODEL_READ reads the pages; HAPTUNE_AI_MODEL_REREAD (default: the same) re-reads doubtful bars."""
+    return accounts.feature_model(kind)
+
+
+def _count_pages(paths: list[tuple[str, str]], selected: list[int] | None) -> int:
+    n = 0
+    for path, _name in paths:
+        if path.lower().endswith(".pdf"):
+            try:
+                import fitz
+                with fitz.open(path) as doc:
+                    total = doc.page_count
+            except Exception:
+                total = 1
+            n += len([p for p in selected if 1 <= p <= total]) if selected else total
+        else:
+            n += 1
+    return max(1, min(n, MAX_READ_PAGES))
+
+
+def _run_read(jid: str, paths: list[tuple[str, str]], hints, me=None, pages: int = 0):
     from haptune.ai.claude import AIError
     from haptune.ai.reader import Reader
     from haptune.score import load_musicxml
@@ -358,7 +397,11 @@ def _run_read(jid: str, paths: list[tuple[str, str]], hints):
         for path, name in paths:
             with open(path, "rb") as f:
                 data.append((f.read(), name))
-        res = Reader(max_pages=MAX_READ_PAGES).read(data, "", hints, progress=progress)
+        from haptune.ai import reader as reader_mod
+        first = reader_mod.Claude(model=_model("read"))
+        again = _model("reread")                               # a stronger model for the doubtful bars, if set
+        res = Reader(ai=first, max_pages=MAX_READ_PAGES,
+                     reread_ai=reader_mod.Claude(model=again) if again != first.model else None).read(data, "", hints, progress=progress)
         payload = {"musicxml": res.musicxml, "flags": res.flags, "report": res.report}
         try:
             payload["score"] = load_musicxml(res.musicxml.encode("utf-8")).to_json()
@@ -370,9 +413,11 @@ def _run_read(jid: str, paths: list[tuple[str, str]], hints):
         with _lock:
             _jobs[jid].update(status="done", stage="done", progress=1.0, result=out, message="Done")
     except AIError as e:
+        accounts.refund_ai(me, "read_pages", pages)             # nothing was read: the pages don't count
         with _lock:
             _jobs[jid].update(status="error", message=str(e))
     except Exception as e:                                       # report any failure to the app
+        accounts.refund_ai(me, "read_pages", pages)
         with _lock:
             _jobs[jid].update(status="error", message=f"The music could not be read ({type(e).__name__}: {e}).")
 
@@ -398,11 +443,17 @@ async def ai_read(request: Request, file: UploadFile = File(...), more: list[Upl
         paths.append((await _save(up, sub), up.filename or f"page{i + 1}"))
     hints = Hints(title=title.strip()[:200], instrument=instrument.strip()[:40], description=description.strip()[:300],
                   handwritten=handwritten, pages=_pages_arg(pages))
+    n_pages = _count_pages(paths, hints.pages)
+    try:
+        me = accounts.charge_ai(request, "read_pages", n_pages)  # Plus/Pro allowance (402 / 429 explain why not)
+    except HTTPException:
+        shutil.rmtree(d, ignore_errors=True)
+        raise
     with _lock:
         _jobs[jid] = {"id": jid, "kind": "read", "status": "queued", "stage": "queued", "progress": 0.0,
                       "message": "Waiting to start", "dir": d, "created": time.time()}
-    threading.Thread(target=_run_read, args=(jid, paths, hints), daemon=True).start()
-    return {"id": jid}
+    threading.Thread(target=_run_read, args=(jid, paths, hints, me, n_pages), daemon=True).start()
+    return {"id": jid, "pages": n_pages}
 
 
 class FindRequest(BaseModel):
@@ -420,12 +471,49 @@ def ai_find(body: FindRequest, request: Request):
     if not ai_configured():
         raise HTTPException(503, "Song search is not switched on for this server yet.")
     _limit(request, "find", FINDS_PER_DAY)
+    # The same song searched in the last week: answer from the shared cache, free and without using the allowance.
+    key = "find:" + hashlib.sha1(json.dumps([" ".join(body.query.lower().split()), body.link.strip(), body.instrument.lower()]).encode()).hexdigest()
+    hit = _find_cache_get(key)
+    if hit is not None:
+        return {**hit, "cached": True}
+    me = accounts.charge_ai(request, "find")
+    from haptune.ai import finder
     try:
-        return find_music(query=body.query[:200], link=body.link[:500], instrument=body.instrument[:40])
+        res = find_music(query=body.query[:200], link=body.link[:500], instrument=body.instrument[:40], ai=finder.Claude(model=_model("find")))
+        if res.get("candidates"):
+            _find_cache_put(key, res)
+        return res
     except ValueError as e:
+        accounts.refund_ai(me, "find")
         raise HTTPException(400, str(e))
     except AIError as e:
+        accounts.refund_ai(me, "find")
         raise HTTPException(502, str(e))
+
+
+FIND_CACHE_DAYS = 7
+
+
+def _find_cache_get(key: str) -> dict | None:
+    from academy import engine
+    from sqlalchemy import select
+    with engine().connect() as c:
+        v = c.execute(select(accounts.kv.c.v).where(accounts.kv.c.k == key)).scalar()
+    if not v:
+        return None
+    try:
+        data = json.loads(v)
+    except ValueError:
+        return None
+    return data["result"] if data.get("at", 0) > time.time() - FIND_CACHE_DAYS * 86400 else None
+
+
+def _find_cache_put(key: str, result: dict) -> None:
+    from academy import engine
+    from sqlalchemy import delete, insert
+    with engine().begin() as c:
+        c.execute(delete(accounts.kv).where(accounts.kv.c.k == key))
+        c.execute(insert(accounts.kv).values(k=key, v=json.dumps({"at": time.time(), "result": result})))
 
 
 TUTOR_PER_DAY = int(os.environ.get("HAPTUNE_TUTOR_PER_DAY", "60"))
@@ -452,11 +540,13 @@ def ai_tutor(body: TutorRequest, request: Request):
     if not ai_configured():
         raise HTTPException(503, "The tutor is not switched on for this server yet.")
     _limit(request, "tutor", TUTOR_PER_DAY)
+    me = accounts.charge_ai(request, "tutor")
     who = f"The student plays {body.instrument or 'an instrument'} and is at Academy level {body.level}."
     prompt = f"{who} Answer in {LANG_NAMES.get(body.lang, 'English')}.\n\nQuestion: {body.question.strip()}"
     try:
-        return {"answer": _plain(Claude().ask_text(TUTOR_SYSTEM, prompt, effort="low", max_tokens=4000))}
+        return {"answer": _plain(Claude(model=_model("tutor")).ask_text(TUTOR_SYSTEM, prompt, effort="low", max_tokens=4000))}
     except AIError as e:
+        accounts.refund_ai(me, "tutor")
         raise HTTPException(502, str(e))
 
 

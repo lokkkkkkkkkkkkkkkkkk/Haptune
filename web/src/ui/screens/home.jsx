@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
-import { useApp, push, go, openSheet, minutesOn, streakDays, clearExamples } from '../state.js';
+import { useApp, push, go, openSheet, minutesOn, streakDays, clearExamples, goLearn } from '../state.js';
 import { t, getLang } from '../../core/i18n.js';
 import { Card, Section, Icon, Button, List, Row } from '../components.jsx';
 import { Avatar } from './common.jsx';
@@ -103,7 +103,7 @@ export function HomeView({ active }) {
                 <Row key={a.id} icon="flag" color={a.status === 'due-soon' || a.status === 'late' ? 'orange' : 'blue'} title={a.title}
                   subtitle={`${a.class_name} · ${a.status === 'upcoming' ? t('opensOn', { d: dueLabel(a.opens_at, lang) }) : t('dueOn', { d: dueLabel(a.due_at, lang) })}`}
                   right={<span class={`fmt ${a.status === 'late' ? 'page' : a.status === 'due-soon' ? 'ai' : 'ready'}`}>{t(a.status === 'due-soon' ? 'st_dueSoon' : `st_${a.status}`)}</span>}
-                  onClick={() => push('assignment', { id: a.id }, 'academy')} />
+                  onClick={() => push('assignment', { id: a.id }, 'community')} />
               ))}
             </List>
           </Section>
@@ -135,7 +135,7 @@ export function HomeView({ active }) {
             <strong>{t('dailyChallenge')}</strong>
             <span>{t('dailyChallengeSub')}</span>
           </button>
-          <button type="button" class="action-tile c-purple" onClick={() => next ? openSheet('lesson', { lessonId: next.lesson.id }) : go('academy')}>
+          <button type="button" class="action-tile c-purple" onClick={() => next ? openSheet('lesson', { lessonId: next.lesson.id }) : goLearn()}>
             <span class="ic"><Icon name="academy" size={22} stroke={2.4} /></span>
             <strong>{t('nextLesson')}</strong>
             <span>{next ? tx(next.lesson.title, lang) : t('academy')}</span>

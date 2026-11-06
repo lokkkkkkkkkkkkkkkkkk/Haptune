@@ -9,19 +9,30 @@ import { VOICE_RANGES } from '../../core/analysis.js';
 import { spellMidi, pitchName } from '../../core/pitch.js';
 import { ClassesSection } from './classes.jsx';
 import { hasServer, aiStatus, askTutor } from '../api.js';
+import { planError, hasPlan } from '../account.js';
 import { Mascot } from '../mascot.jsx';
 
 const dateSeed = () => { const d = new Date(); return d.getFullYear() * 400 + d.getMonth() * 32 + d.getDate(); };
 
 export function AcademyView({ active }) {
+  return (
+    <div class="scroll">
+      <div class="wrap">
+        <LargeTitle title={t('academy')} color="orange" />
+        <AcademyBody active={active} />
+      </div>
+    </div>
+  );
+}
+
+/** Courses, classes, the tutor and badges: shown as "Learn" inside the Community tab. */
+export function AcademyBody({ active }) {
   const s = useApp();
   const lang = getLang();
   const lv = levelFor(s.progress.xp);
   const streak = streakDays();
   return (
-    <div class="scroll">
-      <div class="wrap">
-        <LargeTitle title={t('academy')} color="orange" />
+    <>
         <div class="hero academy">
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <Rings size={74} width={9} rings={[{ value: lv.into / lv.need, color: 'cyan' }]} />
@@ -52,7 +63,7 @@ export function AcademyView({ active }) {
             {COURSES.map((c) => {
               const done = c.lessons.filter((l) => s.progress.lessons[l.id]).length;
               return (
-                <button type="button" key={c.id} class={`tile course-tile c-${c.color}`} onClick={() => push('course', { id: c.id }, 'academy')}>
+                <button type="button" key={c.id} class={`tile course-tile c-${c.color}`} onClick={() => push('course', { id: c.id })}>
                   <Badge icon={c.icon} color={c.color} size={34} solid={false} />
                   <h3>{tx(c.title, lang)}</h3>
                   <p>{tx(c.blurb, lang)}</p>
@@ -79,8 +90,7 @@ export function AcademyView({ active }) {
             })}
           </div>
         </Section>
-      </div>
-    </div>
+    </>
   );
 }
 
@@ -112,7 +122,7 @@ function Tutor() {
         const r = await askTutor({ question: qtext.trim(), instrument: instrumentName(s.settings.instrument), level: levelFor(s.progress.xp).level, lang });
         setAnswer(r.answer);
         addXP(5);
-      } catch (e) { setAnswer(e.message); }
+      } catch (e) { setAnswer(planError(e) ? '' : e.message); }
       setBusy(false);
       return;
     }
@@ -130,8 +140,14 @@ function Tutor() {
   return (
     <Section title={t('aiTutor')}>
       <Card>
-        <div class="report-line"><Badge icon="sparkles" color="indigo" size={34} /><p class="sub">{sample === null ? t('aiUnavailable') : t('aiTutorHelp')}</p></div>
-        {sample && <>
+        <div class="report-line"><Badge icon="sparkles" color="indigo" size={34} /><p class="sub">{sample === null ? t('aiUnavailable') : sample === 'server' && !hasPlan() ? t('tutorPlus') : t('aiTutorHelp')}</p></div>
+        {sample === 'server' && !hasPlan() && (
+          <div class="btn-row">
+            <Button icon="quiz" color="blue" onClick={() => openSheet('compose', { type: 'question' })}>{t('askCommunity')}</Button>
+            <Button kind="secondary" icon="crown" onClick={() => openSheet('plans', { reason: { feature: 'tutor' } })}>{t('seePlans')}</Button>
+          </div>
+        )}
+        {sample && !(sample === 'server' && !hasPlan()) && <>
           <textarea class="field" id="tutor-q" style={{ minHeight: 70, fontFamily: 'var(--font)', fontSize: 16 }} placeholder="Why does the V chord want to go to I?" value={qtext} onInput={(e) => setQ(e.currentTarget.value)} />
           <div class="btn-row"><Button onClick={ask} disabled={busy || !qtext.trim()} color="indigo" icon="sparkles">{busy ? t('thinking') : t('ask')}</Button>
             {busy && <Button kind="secondary" onClick={() => ctl.current?.abort()}>{t('stop')}</Button>}</div>

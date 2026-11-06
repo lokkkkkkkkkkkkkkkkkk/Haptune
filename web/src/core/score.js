@@ -458,12 +458,16 @@ export function autoBeam(notes, time) {
     const flush = () => {
       const beamable = group.filter((n) => !n.rest);
       if (group.length >= 2 && beamable.length >= 2 && !group[0].rest && !group[group.length - 1].rest) {
+        // rests inside a group get no beam of their own (the beam passes over them) and break the
+        // secondary beams, as engravers do
+        const lvOf = (m) => (m && !m.rest ? beamLevels(m) : 0);
         group.forEach((n, i) => {
+          if (n.rest) { delete n.beams; return; }
           const lv = beamLevels(n);
           const beams = [];
           for (let level = 1; level <= lv; level++) {
-            const prevLv = i > 0 ? beamLevels(group[i - 1]) : 0;
-            const nextLv = i < group.length - 1 ? beamLevels(group[i + 1]) : 0;
+            const prevLv = lvOf(group[i - 1]);
+            const nextLv = lvOf(group[i + 1]);
             let v;
             if (level === 1) v = i === 0 ? 'begin' : i === group.length - 1 ? 'end' : 'continue';
             else {
@@ -474,7 +478,6 @@ export function autoBeam(notes, time) {
           }
           n.beams = beams;
         });
-        // chord members share the beam of their first note
       }
       group = [];
     };
@@ -490,12 +493,9 @@ export function autoBeam(notes, time) {
     }
     flush();
   }
-  // copy beams to chord members
-  let lead = null;
-  for (const n of notes) {
-    if (!n.chord) lead = n;
-    else if (lead && lead.beams) n.beams = lead.beams;
-  }
+  // chord members follow their first note's beam: like MuseScore, only the first note carries <beam>
+  // (Verovio rejects beams on the other notes of a chord: "Adding 'beam' to a 'chord'")
+  for (const n of notes) if (n.chord) delete n.beams;
 }
 
 function beamLevels(n) {
