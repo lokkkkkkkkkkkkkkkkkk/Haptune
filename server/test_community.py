@@ -54,7 +54,8 @@ def test_guest_account_has_welcome_credits_and_free_plan():
     assert me["credits"] == 100 and me["tier"] == "free" and me["handle"].startswith("aina")
     assert me["usage"]["tutor"] == {"used": 0, "limit": 0}
     plans = client.get("/c/plans").json()
-    assert plans["plans"]["plus"]["read_pages"] == 30 and plans["prices"]["plus"]["monthly"]["myr"] == "14.90"
+    assert plans["plans"]["plus"]["read_pages"] >= 1 and plans["plans"]["free"]["read_pages"] == 0
+    assert plans["prices"]["plus"]["monthly"]["myr"] == "14.90"
     assert client.get("/c/me").status_code == 401
 
 
@@ -68,7 +69,7 @@ def test_ai_features_need_a_plan_and_have_monthly_allowances(monkeypatch):
     assert client.post("/ai/tutor", json={"question": "How?"}).status_code == 402            # no account at all
     d, _ = dev()
     assert client.post("/c/admin/grant", json={"handle": me["handle"], "tier": "plus", "days": 30}, headers=d).status_code == 200
-    monkeypatch.setitem(accounts.PLANS, "plus", {**accounts.PLANS["plus"], "tutor": 2})
+    monkeypatch.setitem(accounts.OVERRIDES, "plus", {"tutor": 2})
     assert [client.post("/ai/tutor", json={"question": "How?"}, headers=h).status_code for _ in range(3)] == [200, 200, 429]
     assert client.get("/c/me", headers=h).json()["usage"]["tutor"] == {"used": 2, "limit": 2}
     # the developer has no limits
@@ -79,7 +80,7 @@ def test_ai_features_need_a_plan_and_have_monthly_allowances(monkeypatch):
     def broken(self, *a, **k):
         raise AIError("busy")
     monkeypatch.setattr(claude_mod.Claude, "ask_text", broken)
-    monkeypatch.setitem(accounts.PLANS, "plus", {**accounts.PLANS["plus"], "tutor": 3})
+    monkeypatch.setitem(accounts.OVERRIDES, "plus", {"tutor": 3})
     assert client.post("/ai/tutor", json={"question": "How?"}, headers=h).status_code == 502
     assert client.get("/c/me", headers=h).json()["usage"]["tutor"]["used"] == 2
 
@@ -95,6 +96,7 @@ def test_ai_read_counts_pdf_pages(monkeypatch):
     h, me = person()
     d, _ = dev()
     client.post("/c/admin/grant", json={"handle": me["handle"], "tier": "plus", "days": 30}, headers=d)
+    monkeypatch.setitem(accounts.OVERRIDES, "plus", {"read_pages": 10})
     r = client.post("/ai/read", files={"file": ("p.pdf", pdf, "application/pdf")}, headers=h)
     assert r.status_code == 200 and r.json()["pages"] == 3
     assert client.get("/c/me", headers=h).json()["usage"]["read_pages"]["used"] == 3
@@ -281,3 +283,64 @@ def test_community_home_and_deleting_an_account():
     p = client.get(f"/c/posts/{pid}").json()
     assert p["author"]["name"] == "Deleted user" and p["status"] == "closed"
     assert client.get("/c/me", headers=b).status_code == 401
+
+
+def test_allowances_follow_the_cost_of_the_models(monkeypatch):
+    """A plan's AI budget stays the same; a cheaper model gives more pages, searches and answers."""
+    for k in ("HAPTUNE_AI_MODEL", "HAPTUNE_AI_MODEL_READ", "HAPTUNE_AI_MODEL_REREAD", "HAPTUNE_AI_MODEL_TUTOR"):
+        monkeypatch.delenv(k, raising=False)
+    opus = accounts.ai_allowance("plus", "read_pages")
+    monkeypatch.setenv("HAPTUNE_AI_MODEL_READ", "claude-haiku-5-5")
+    monkeypatch.setenv("HAPTUNE_AI_MODEL_REREAD", "claude-opus-5-5")
+    cascade = accounts.ai_allowance("plus", "read_pages")
+    monkeypatch.setenv("HAPTUNE_AI_MODEL_REREAD", "claude-haiku-5-5")
+    haiku = accounts.ai_allowance("plus", "read_pages")
+    assert 1 <= opus < cascade < haiku
+    for kind in ("read_pages", "find", "tutor"):                  # within the plan's budget (but at least one use)
+        n, per_use = accounts.ai_allowance("plus", kind), accounts.unit_cost(kind)
+        assert n == 1 or n * per_use <= accounts.AI_BUDGET["plus"] * accounts.BUDGET_SPLIT[kind] + 1e-9
+    assert accounts.ai_allowance("free", "tutor") == 0 and accounts.ai_allowance("pro", "tutor") > accounts.ai_allowance("plus", "tutor")
+    monkeypatch.setitem(accounts.OVERRIDES, "free", {"tutor": 3})
+    assert accounts.ai_allowance("free", "tutor") == 3
+
+
+def test_haiku_requests_leave_out_the_server_side_fallback():
+    from haptune.ai.claude import FALLBACK_BETA, fallback_args
+    assert fallback_args("claude-haiku-5-5") == {"betas": []}
+    assert fallback_args("claude-sonnet-5-5") == {"betas": [FALLBACK_BETA], "fallbacks": "default"}
+    assert fallback_args("claude-opus-5-5")["fallbacks"] == "default"
+
+
+def test_song_searches_are_shared_for_a_week(monkeypatch):
+    """Someone already searched for this song: the answer comes back at once, free, without using the allowance."""
+    from haptune.ai import finder
+    calls = []
+
+    class FakeAI:
+        model = "fake"
+        usage = type("U", (), {"to_json": lambda self: {}})()
+
+        def __init__(self, **kw):
+            pass
+
+        def run_tools(self, system, user, tools, **kw):
+            calls.append(user)
+            return {"song": {"title": "Canon", "artist": "Pachelbel", "copyrighted": False}, "advice": "", "listen_url": None,
+                    "candidates": [{"title": "Canon", "arrangement": "Violin", "instrument": "violin", "level": "easy", "format": "musicxml",
+                                    "file_url": "https://example.org/canon.musicxml", "page_url": "https://example.org/", "source": "Example",
+                                    "license": "Public domain", "pages": None}]}
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.setattr(finder, "Claude", FakeAI)
+    monkeypatch.setattr(finder, "_verify", lambda c: {**c, "verified": True})
+    monkeypatch.setitem(accounts.OVERRIDES, "plus", {"find": 1})
+    d, _ = dev()
+    a, am = person("Aina")
+    b, bm = person("Bala")
+    for m in (am, bm):
+        client.post("/c/admin/grant", json={"handle": m["handle"], "tier": "plus", "days": 30}, headers=d)
+    assert client.post("/ai/find", json={"query": "Canon in D", "instrument": "violin"}, headers=a).status_code == 200
+    r = client.post("/ai/find", json={"query": "  canon IN d ", "instrument": "violin"}, headers=b)
+    assert r.status_code == 200 and r.json().get("cached") is True and len(calls) == 1
+    assert client.get("/c/me", headers=b).json()["usage"]["find"]["used"] == 0
+    assert client.post("/ai/find", json={"query": "Canon in D", "instrument": "violin"}, headers=a).status_code == 200   # cached: free again
+    assert client.post("/ai/find", json={"query": "Air on the G string", "instrument": "violin"}, headers=a).status_code == 429

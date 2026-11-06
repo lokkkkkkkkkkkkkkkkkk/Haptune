@@ -21,6 +21,7 @@ All score responses carry the canonical score JSON ("haptune.score/1") plus Musi
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -361,9 +362,9 @@ def _pages_arg(s: str) -> list[int] | None:
 
 
 def _model(kind: str) -> str:
-    """Each AI feature can use its own model (fly.toml [env]), so the cheapest one that does the job well is used."""
-    from haptune.ai.claude import DEFAULT_MODEL
-    return os.environ.get(f"HAPTUNE_AI_MODEL_{kind.upper()}") or os.environ.get("HAPTUNE_AI_MODEL") or DEFAULT_MODEL
+    """Each AI feature can use its own model (fly.toml [env]), so the cheapest one that does the job well is used.
+    HAPTUNE_AI_MODEL_READ reads the pages; HAPTUNE_AI_MODEL_REREAD (default: the same) re-reads doubtful bars."""
+    return accounts.feature_model(kind)
 
 
 def _count_pages(paths: list[tuple[str, str]], selected: list[int] | None) -> int:
@@ -397,7 +398,10 @@ def _run_read(jid: str, paths: list[tuple[str, str]], hints, me=None, pages: int
             with open(path, "rb") as f:
                 data.append((f.read(), name))
         from haptune.ai import reader as reader_mod
-        res = Reader(ai=reader_mod.Claude(model=_model("read")), max_pages=MAX_READ_PAGES).read(data, "", hints, progress=progress)
+        first = reader_mod.Claude(model=_model("read"))
+        again = _model("reread")                               # a stronger model for the doubtful bars, if set
+        res = Reader(ai=first, max_pages=MAX_READ_PAGES,
+                     reread_ai=reader_mod.Claude(model=again) if again != first.model else None).read(data, "", hints, progress=progress)
         payload = {"musicxml": res.musicxml, "flags": res.flags, "report": res.report}
         try:
             payload["score"] = load_musicxml(res.musicxml.encode("utf-8")).to_json()
@@ -467,16 +471,49 @@ def ai_find(body: FindRequest, request: Request):
     if not ai_configured():
         raise HTTPException(503, "Song search is not switched on for this server yet.")
     _limit(request, "find", FINDS_PER_DAY)
+    # The same song searched in the last week: answer from the shared cache, free and without using the allowance.
+    key = "find:" + hashlib.sha1(json.dumps([" ".join(body.query.lower().split()), body.link.strip(), body.instrument.lower()]).encode()).hexdigest()
+    hit = _find_cache_get(key)
+    if hit is not None:
+        return {**hit, "cached": True}
     me = accounts.charge_ai(request, "find")
     from haptune.ai import finder
     try:
-        return find_music(query=body.query[:200], link=body.link[:500], instrument=body.instrument[:40], ai=finder.Claude(model=_model("find")))
+        res = find_music(query=body.query[:200], link=body.link[:500], instrument=body.instrument[:40], ai=finder.Claude(model=_model("find")))
+        if res.get("candidates"):
+            _find_cache_put(key, res)
+        return res
     except ValueError as e:
         accounts.refund_ai(me, "find")
         raise HTTPException(400, str(e))
     except AIError as e:
         accounts.refund_ai(me, "find")
         raise HTTPException(502, str(e))
+
+
+FIND_CACHE_DAYS = 7
+
+
+def _find_cache_get(key: str) -> dict | None:
+    from academy import engine
+    from sqlalchemy import select
+    with engine().connect() as c:
+        v = c.execute(select(accounts.kv.c.v).where(accounts.kv.c.k == key)).scalar()
+    if not v:
+        return None
+    try:
+        data = json.loads(v)
+    except ValueError:
+        return None
+    return data["result"] if data.get("at", 0) > time.time() - FIND_CACHE_DAYS * 86400 else None
+
+
+def _find_cache_put(key: str, result: dict) -> None:
+    from academy import engine
+    from sqlalchemy import delete, insert
+    with engine().begin() as c:
+        c.execute(delete(accounts.kv).where(accounts.kv.c.k == key))
+        c.execute(insert(accounts.kv).values(k=key, v=json.dumps({"at": time.time(), "result": result})))
 
 
 TUTOR_PER_DAY = int(os.environ.get("HAPTUNE_TUTOR_PER_DAY", "60"))

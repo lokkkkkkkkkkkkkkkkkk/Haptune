@@ -105,22 +105,69 @@ app_feedback = Table("app_feedback", meta,
 kv = Table("kv", meta, Column("k", String(64), primary_key=True), Column("v", Text, nullable=False))
 
 # ----------------------------------------------------------------------------------------------- plans
-# Monthly allowances. read_pages / find / tutor call the paid AI API, so the free plan has none of them
-# (override with HAPTUNE_PLANS_JSON, e.g. {"free": {"tutor": 3}} to give free users a taste).
-# Costs per use with the models set in fly.toml (measured, see README): a page about $0.01-0.05,
-# a search about $0.05-0.30, a tutor answer well under $0.01. At these allowances even a member who uses
-# everything every month costs less than the plan earns after the store's 15%.
+# Features that call the paid AI API (read_pages, find, tutor) are not in the free plan. For Plus and Pro, each
+# member gets a monthly AI budget in US$, kept under what the plan earns after the store's 15% (Plus earns about
+# US$1.77-3.39 a month, Pro about US$4.25-6.79), so no plan can cost more than it brings in. The allowances people
+# see (pages, searches, answers) are worked out from that budget and what one use costs on the model each feature
+# runs on (fly.toml: HAPTUNE_AI_MODEL_READ / _REREAD / _FIND / _TUTOR). A cheaper model therefore gives
+# everyone more, automatically. Fixed numbers can still be set with HAPTUNE_PLANS_JSON,
+# e.g. {"plus": {"read_pages": 20}} or {"free": {"tutor": 3}} (null = no limit).
 PLANS = {
-    "free": {"read_pages": 0, "find": 0, "tutor": 0, "open_requests": 3, "monthly_credits": 0, "spotlights": 0},
-    "plus": {"read_pages": 30, "find": 15, "tutor": 300, "open_requests": 10, "monthly_credits": 100, "spotlights": 1},
-    "pro": {"read_pages": 120, "find": 50, "tutor": 1500, "open_requests": 30, "monthly_credits": 300, "spotlights": 4},
+    "free": {"open_requests": 3, "monthly_credits": 0, "spotlights": 0},
+    "plus": {"open_requests": 10, "monthly_credits": 100, "spotlights": 1},
+    "pro": {"open_requests": 30, "monthly_credits": 300, "spotlights": 4},
 }
+AI_BUDGET = {"free": 0.0, "plus": 1.20, "pro": 3.60}
+BUDGET_SPLIT = {"read_pages": 0.60, "find": 0.25, "tutor": 0.15}
+# What one use typically costs on each model family (US$; measured on the Claude API, see the README and
+# engine/tools/model_bench.py). The song finder needs web search, which runs on Sonnet or Opus.
+UNIT_COST = {
+    "read_pages": {"opus": 0.30, "sonnet": 0.15, "haiku": 0.02},
+    "find": {"opus": 0.45, "sonnet": 0.25, "haiku": 0.25},
+    "tutor": {"opus": 0.010, "sonnet": 0.005, "haiku": 0.0005},
+}
+OVERRIDES: dict = {}
 try:
     for _tier, _over in json.loads(os.environ.get("HAPTUNE_PLANS_JSON") or "{}").items():
         if _tier in PLANS and isinstance(_over, dict):
-            PLANS[_tier].update({k: int(v) for k, v in _over.items() if k in PLANS[_tier]})
+            OVERRIDES[_tier] = {k: (None if v is None else int(v)) for k, v in _over.items()}
 except (ValueError, TypeError):
     pass
+
+
+def feature_model(kind: str) -> str:
+    """The model an AI feature runs on: read, reread, find or tutor."""
+    from haptune.ai.claude import DEFAULT_MODEL
+    if kind == "reread":
+        return os.environ.get("HAPTUNE_AI_MODEL_REREAD") or feature_model("read")
+    return os.environ.get(f"HAPTUNE_AI_MODEL_{kind.upper()}") or os.environ.get("HAPTUNE_AI_MODEL") or DEFAULT_MODEL
+
+
+def _family(model: str) -> str:
+    return "haiku" if "haiku" in model else "sonnet" if "sonnet" in model else "opus"
+
+
+def unit_cost(kind: str) -> float:
+    if kind == "read_pages":
+        first, again = feature_model("read"), feature_model("reread")
+        c = UNIT_COST[kind][_family(first)]
+        return c + (0.15 * UNIT_COST[kind][_family(again)] if again != first else 0.0)   # about 15% of bars are re-read
+    return UNIT_COST[kind][_family(feature_model({"find": "find", "tutor": "tutor"}[kind]))]
+
+
+def ai_allowance(tier: str, kind: str) -> int | None:
+    over = OVERRIDES.get(tier, {})
+    if kind in over:
+        return over[kind]
+    budget = AI_BUDGET.get(tier, 0.0) * BUDGET_SPLIT[kind]
+    return max(1, int(budget / unit_cost(kind))) if budget > 0 else 0
+
+
+def plan_table() -> dict:
+    return {tier: {**vals, **{k: v for k, v in OVERRIDES.get(tier, {}).items() if k in vals},
+                   **{k: ai_allowance(tier, k) for k in ("read_pages", "find", "tutor")}} for tier, vals in PLANS.items()}
+
+
 # Shown in the app before the store answers with the local price. The store prices are set in the
 # Play Console / App Store Connect; these are the suggested ones.
 PRICES = {
@@ -235,9 +282,10 @@ def effective_tier(acc: dict | None) -> str:
 
 
 def plan_limits(tier: str) -> dict:
+    table = plan_table()
     if tier == "dev":
-        return {k: None for k in PLANS["pro"]}                   # no limits for the developer
-    return dict(PLANS.get(tier, PLANS["free"]))
+        return {k: None for k in table["pro"]}                   # no limits for the developer
+    return dict(table.get(tier, table["free"]))
 
 
 def user_from_token(token: str) -> dict | None:
@@ -322,7 +370,7 @@ def notify(c, uid: str, kind: str, *, actor: str | None = None, post: str | None
 
 def _monthly_bonus(c, acc: dict) -> None:
     tier = effective_tier(acc)
-    n = PLANS.get(tier, {}).get("monthly_credits", 0) if tier != "dev" else 0
+    n = plan_table().get(tier, {}).get("monthly_credits", 0) if tier != "dev" else 0
     if n and acc.get("bonus_month") != month():
         c.execute(update(accounts).where(accounts.c.user_id == acc["user_id"]).values(bonus_month=month()))
         grant(c, acc["user_id"], n, "plan_bonus", note=f"{tier} {month()}")
@@ -546,7 +594,8 @@ def claim_dev(body: DevIn, request: Request, me: Me = Depends(current)):
 
 @router.get("/plans")
 def plans():
-    return {"plans": PLANS, "prices": PRICES, "rules": RULES, "revenuecat": bool(os.environ.get("REVENUECAT_SECRET"))}
+    return {"plans": plan_table(), "prices": PRICES, "rules": RULES, "revenuecat": bool(os.environ.get("REVENUECAT_SECRET")),
+            "models": {k: feature_model(k) for k in ("read", "reread", "find", "tutor")}}
 
 
 # ----------------------------------------------------------------------------------------------- AI allowances

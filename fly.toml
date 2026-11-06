@@ -10,6 +10,15 @@ primary_region = "sin"            # Singapore: closest region to Malaysia
 [env]
   HAPTUNE_DATA = "/data"           # Academy database (SQLite) lives on the volume below
   HAPTUNE_WORKERS = "1"
+  # Which Claude model each AI feature uses (the plans' allowances follow their cost, see server/accounts.py).
+  # Short tutor answers: Haiku costs 1/40 of Opus per token. The song finder needs web search: Sonnet, half the price.
+  HAPTUNE_AI_MODEL_TUTOR = "claude-haiku-5-5"
+  HAPTUNE_AI_MODEL_FIND = "claude-sonnet-5-5"
+  # Reading sheet music stays on Opus (accuracy measured in the README) until engine/tools/model_bench.py
+  # (GitHub Actions > ai-bench) shows a cheaper set-up reads as well. For example, Haiku reads every line and
+  # Opus re-reads only the doubtful bars (Plus then covers about 11 pages a month instead of 2):
+  # HAPTUNE_AI_MODEL_READ = "claude-haiku-5-5"
+  # HAPTUNE_AI_MODEL_REREAD = "claude-opus-5-5"
 
 [[mounts]]
   source = "haptune_data"

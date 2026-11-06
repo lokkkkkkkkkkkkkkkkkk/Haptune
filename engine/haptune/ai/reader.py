@@ -105,8 +105,12 @@ def parse_time(s: str | None) -> tuple[int, int] | None:
 
 
 class Reader:
-    def __init__(self, ai: Claude | None = None, workers: int = 6, max_rereads: int = 16, max_pages: int = 20):
+    def __init__(self, ai: Claude | None = None, workers: int = 6, max_rereads: int = 16, max_pages: int = 20,
+                 reread_ai: Claude | None = None):
         self.ai = ai or Claude()
+        # The bars that look wrong after the first reading can be read again by a stronger model: a cheap model
+        # reads every line, the strong one only the few doubtful bars (see engine/tools/model_bench.py).
+        self.reread_ai = reread_ai or self.ai
         self.workers = workers
         self.max_rereads = max_rereads
         self.max_pages = max_pages
@@ -216,6 +220,7 @@ class Reader:
             "failed_lines": [{"page": j.page + 1, "line": (j.system or 0) + 1, "error": j.error} for j in failed],
             "rereads": len(rereads), "seconds": round(_time.time() - t0, 1), "model": self.ai.model,
             "usage": self.ai.usage.to_json(),
+            **({"reread_model": self.reread_ai.model, "reread_usage": self.reread_ai.usage.to_json()} if self.reread_ai is not self.ai else {}),
             "skew": [round(p.skew, 2) for p in pages],
         }
         flag_list = [self._flag_json(doc, bi, reasons) for bi, reasons in sorted(flags.items())]
@@ -468,8 +473,8 @@ class Reader:
             prompt = REREAD_PROMPT_TMPL.format(what=what, context=ctx, first=first or "(nothing)", problem=problem,
                                                target=target, count_text="exactly one bar in measures")
             try:
-                res = self.ai.ask_json(READER_SYSTEM, [image_block(png), text_block(prompt)], REREAD_SCHEMA,
-                                       effort="high", max_tokens=16000, started=gate)
+                res = self.reread_ai.ask_json(READER_SYSTEM, [image_block(png), text_block(prompt)], REREAD_SCHEMA,
+                                              effort="high", max_tokens=16000, started=gate)
             except AIError:
                 res = None
             done[0] += 1

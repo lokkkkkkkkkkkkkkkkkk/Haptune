@@ -28,7 +28,7 @@ def fresh(monkeypatch, tmp_path):
     app_module._limiter.hits.clear()
     accounts.limiter.hits.clear()
     # these tests are about the AI endpoints themselves; plans and allowances are tested in test_community.py
-    monkeypatch.setitem(accounts.PLANS, "free", {**accounts.PLANS["free"], "read_pages": None, "find": None, "tutor": None})
+    monkeypatch.setitem(accounts.OVERRIDES, "free", {"read_pages": None, "find": None, "tutor": None})
     yield
 
 

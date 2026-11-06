@@ -17,10 +17,12 @@ const FEATURES = {
   plus: ['pp_scan', 'pp_find', 'pp_tutor', 'pp_styles', 'pp_requests', 'pp_spotlight', 'pp_credits'],
   pro: ['pr_scan', 'pr_find', 'pr_tutor', 'pr_requests', 'pr_spotlight', 'pr_credits', 'pr_teacher'],
 };
-const DEFAULT_PLANS = {      // the server's numbers are used once loaded (accounts.py PLANS)
+// Until the server answers. The server's numbers follow the cost of the AI models it uses (accounts.py), so they
+// grow when a cheaper model is switched on; these are its numbers for the default models.
+const DEFAULT_PLANS = {
   free: { read_pages: 0, find: 0, tutor: 0, open_requests: 3, monthly_credits: 0, spotlights: 0 },
-  plus: { read_pages: 30, find: 15, tutor: 300, open_requests: 10, monthly_credits: 100, spotlights: 1 },
-  pro: { read_pages: 120, find: 50, tutor: 1500, open_requests: 30, monthly_credits: 300, spotlights: 4 },
+  plus: { read_pages: 2, find: 1, tutor: 360, open_requests: 10, monthly_credits: 100, spotlights: 1 },
+  pro: { read_pages: 7, find: 3, tutor: 1080, open_requests: 30, monthly_credits: 300, spotlights: 4 },
 };
 const FALLBACK = {
   plus: { monthly: { usd: '3.99', myr: '14.90' }, yearly: { usd: '24.99', myr: '99.90' } },

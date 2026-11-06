@@ -64,10 +64,26 @@ generated scales and arpeggios.
 ## Plans (`server/accounts.py`)
 
 Free covers everything that costs nothing to run. Plus (RM 14.90 / US$3.99 a month, RM 99.90 / US$24.99 a year) and
-Pro (RM 29.90 / US$7.99, RM 229.90 / US$59.99) add the features that call the paid AI API, each with a monthly
-allowance checked on the server (30 / 120 AI pages, 15 / 50 song searches, 300 / 1,500 tutor answers), plus all
-improviser styles, more open requests, spotlights and bonus credits. The developer account has no limits. Purchases go
-through Google Play and RevenueCat; see [web/ANDROID.md](web/ANDROID.md).
+Pro (RM 29.90 / US$7.99, RM 229.90 / US$59.99) add the features that call the paid AI API, plus all improviser styles,
+more open requests, spotlights and bonus credits. The developer account has no limits. Purchases go through Google Play
+and RevenueCat; see [web/ANDROID.md](web/ANDROID.md).
+
+**AI allowances follow what the AI costs, so no plan loses money.** Each member gets a monthly AI budget (Plus US$1.20,
+Pro US$3.60, well under what the plan earns after the store's 15%), split between reading music (60%), the song finder
+(25%) and the tutor (15%). The server turns it into pages, searches and answers from the cost of the model each feature
+runs on (`fly.toml`):
+
+| Reading music on | Plus: pages a month | Pro |
+|---|---|---|
+| Opus 5.5 (now; accuracy measured below) | 2 | 7 |
+| Sonnet 5.5, Opus re-reads doubtful bars | 3 | 11 |
+| Haiku 5.5, Opus re-reads doubtful bars | 11 | 33 |
+| Haiku 5.5 only | 36 | 108 |
+
+The tutor runs on Haiku 5.5 (Plus 360 answers, Pro 1,080) and the song finder on Sonnet 5.5 (1 and 3 searches; a song
+anyone searched in the last 7 days is answered from a shared cache, free and without using the allowance). Before
+switching the reader, run **Actions → ai-bench** (with the `ANTHROPIC_API_KEY` repository secret): it reads pages with
+known answers on each model and reports notes read exactly and the cost, within a budget you set.
 
 ## Online features: AI reader, song finder, classes
 

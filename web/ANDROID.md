@@ -98,14 +98,16 @@ account signs in on a PC.
 | Practice, Play Along, real piano playback, imports, basic scan, tools | ✓ | ✓ | ✓ |
 | Community: requests, help, credits, library, Q&A, challenge, classes | ✓ | ✓ | ✓ |
 | Open requests at a time | 3 | 10 | 30 |
-| AI reads photos/PDFs (pages a month) | – | 30 | 120 |
-| AI song finder (searches a month) | – | 15 | 50 |
-| Hapi AI tutor (answers a month) | – | 300 | 1,500 |
+| AI reads photos/PDFs (pages a month) | – | 2 on Opus, up to 36 on Haiku | 7 to 108 |
+| AI song finder (searches a month; repeats of anyone's search are free) | – | 1 | 3 |
+| Hapi AI tutor (answers a month, on Haiku) | – | 360 | 1,080 |
 | All improviser styles | – | ✓ | ✓ |
 | Free spotlights a month, bonus credits a month | – | 1, 100 | 4, 300 |
 
-Change any number without a new app: `fly secrets set HAPTUNE_PLANS_JSON='{"free": {"tutor": 3}}'` (for example, to
-give free users three tutor answers a month). The app reads the plans from the server.
+The AI numbers come from each plan's monthly AI budget (Plus US$1.20, Pro US$3.60) and the cost of the models set in
+`fly.toml`, so a cheaper model gives everyone more automatically (README, "Plans"). Fixed numbers can be set without a
+new app: `fly secrets set HAPTUNE_PLANS_JSON='{"free": {"tutor": 3}}'` (for example, to give free users three tutor
+answers a month). The app reads the plans from the server.
 
 ## 6. Store listing (copy, then adjust)
 

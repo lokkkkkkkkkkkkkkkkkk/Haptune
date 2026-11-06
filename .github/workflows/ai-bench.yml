@@ -1,0 +1,56 @@
+# Which Claude model reads sheet music well enough for the least money? (engine/tools/model_bench.py)
+# Engraves pages whose notes are known, reads them back on each model and writes a table of notes read exactly,
+# time and cost to the run's summary. It stops before --max-cost (US$) would be passed.
+#
+# One-time: add your Anthropic API key as the repository secret ANTHROPIC_API_KEY (Settings > Secrets and
+# variables > Actions > New repository secret). Then Actions > ai-bench > Run workflow.
+# Afterwards pick the models in fly.toml (HAPTUNE_AI_MODEL_READ / _REREAD); the plans' allowances follow.
+name: ai-bench
+on:
+  workflow_dispatch:
+    inputs:
+      models:
+        description: "Models to compare (A+B = A reads, B re-reads doubtful bars)"
+        default: "claude-haiku-5-5,claude-haiku-5-5+claude-opus-5-5,claude-sonnet-5-5"
+      max_cost:
+        description: "Stop before spending more than this (US$)"
+        default: "1.50"
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    env:
+      HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: No key yet
+        if: env.HAS_KEY != 'true'
+        run: |
+          echo "Add the repository secret ANTHROPIC_API_KEY, then run this again." | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/setup-python@v5
+        if: env.HAS_KEY == 'true'
+        with:
+          python-version: "3.12"
+      - name: Install
+        if: env.HAS_KEY == 'true'
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends libcairo2
+          pip install numpy scipy music21 verovio pymupdf pillow anthropic cairosvg
+      - name: Compare the models
+        if: env.HAS_KEY == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python engine/tools/model_bench.py --models "${{ inputs.models }}" --max-cost "${{ inputs.max_cost }}" --tutor | tee bench.jsonl
+          python - <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          rows = [json.loads(l) for l in open("bench.jsonl") if l.startswith("{")]
+          print("| model | page | notes exact | bars flagged | seconds | cost (US$) |\n|---|---|---|---|---|---|")
+          for r in rows:
+              if "file" in r:
+                  print(f"| {r['model']} | {r['file']} | {r['notes_exact']}/{r['notes']} | {r['bars_flagged']} | {r['seconds']} | {r['cost_usd']} |")
+          for r in rows:
+              if "tutor_cost_usd" in r:
+                  print(f"\n**Tutor on {r['model']}:** US${r['tutor_cost_usd']} in {r['tutor_seconds']} s: {r['answer'][:200]}")
+          EOF
+          tail -1 bench.jsonl >> "$GITHUB_STEP_SUMMARY"
