@@ -18,7 +18,8 @@ import { suggestChords, difficulty, bestKeys, VOICE_RANGES } from '../../core/an
 import { expectedNotes, Follower, trickyBars } from '../../core/follow.js';
 import { q, Q, ZERO } from '../../core/q.js';
 import { Mascot, Confetti } from '../mascot.jsx';
-import { academy } from '../api.js';
+import { academy, hasServer } from '../api.js';
+import { C, attempt } from '../account.js';
 import { dueText } from './classes.jsx';
 
 export const SOUND = { violin: 'strings', viola: 'strings', cello: 'strings', erhu: 'strings', doublebass: 'bass', voice: 'piano', flute: 'flute', recorder: 'flute', dizi: 'flute',
@@ -125,7 +126,7 @@ const idle = (fn) => (globalThis.requestIdleCallback ? requestIdleCallback(fn, {
 
 // ---------- the piece screen ----------
 
-export function PieceView({ id, active, start, assignment }) {
+export function PieceView({ id, active, start, assignment, challenge }) {
   const s = useApp();
   const meta = s.pieces.find((p) => p.id === id);
   const [data, setData] = useState(null);
@@ -145,10 +146,10 @@ export function PieceView({ id, active, start, assignment }) {
   if (!meta) return <div class="scroll"><NavBar title="" backLabel={t('library')} /></div>;
   if (!data) return <div class="scroll"><NavBar title={meta.title} backLabel={t('library')} /><div class="loading"><Mascot mood="think" size={80} /></div></div>;
   return <PieceBody meta={meta} data={data} semis={semis} setSemis={(v) => { setSemis(v); updatePiece(id, { transpose: v }); if (v) awardBadge('transposer'); }}
-    view={view} setView={setView} active={active} start={start} assignment={assignment} />;
+    view={view} setView={setView} active={active} start={start} assignment={assignment} challenge={challenge} />;
 }
 
-function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, assignment }) {
+function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, assignment, challenge }) {
   const s = useApp();
   const { score, sheet: baseSheet, rec } = data;
   const tScore = useMemo(() => (score ? transposeScore(score, semis) : null), [score, semis]);
@@ -522,6 +523,19 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
     startPractice({ part: result?.part || defaultPracticePart(), mode: result?.mode || 'wait', speed: pct / 100, countIn: true, range });
   };
 
+  // the weekly community challenge: is this piece this week's song?
+  const challengeSong = useRef(null);
+  useEffect(() => {
+    if (!hasServer() || !rec.songId) return;
+    C.challenge().then((ch) => { challengeSong.current = ch.song; }).catch(() => {});
+  }, [rec.songId]);
+  const enterChallenge = async () => {
+    if (!result) return;
+    const song = challenge || rec.songId;
+    const r = await attempt(() => C.enterChallenge({ song, accuracy: Math.round(result.accuracy * 1000) / 1000, tempo_pct: Math.round((result.speed || 1) * 100), seconds: result.seconds || 0 }));
+    if (r) { setResult((x) => x && ({ ...x, entered: true })); toast(t('challengeEnteredToast', { n: r.mine ? Math.round(r.mine.accuracy * 100) : '' })); }
+  };
+
   const sendToTeacher = async () => {
     if (!assignment || !result) return;
     try {
@@ -623,7 +637,9 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
           </div>
         )}
 
-        {result && <ResultCard result={result} barNo={barNo} onPractise={practiseBars} onAgain={openPlayAlong} assignment={assignment} onSend={sendToTeacher} />}
+        {result && <ResultCard result={result} barNo={barNo} onPractise={practiseBars} onAgain={openPlayAlong} assignment={assignment} onSend={sendToTeacher}
+          challenge={challenge || (rec.songId && challengeSong.current === rec.songId ? rec.songId : null)} onChallenge={enterChallenge}
+          onShare={() => openSheet('compose', { type: 'show', show: { piece: meta.title, accuracy: Math.round(result.accuracy * 1000) / 1000, minutes: Math.round((result.seconds || 0) / 6) / 10, mode: result.mode, tempo_pct: Math.round((result.speed || 1) * 100) } })} />}
 
         {flags.length > 0 && view === 'sheet' && (
           <Card>
@@ -731,7 +747,7 @@ function MiniKeys({ want, played }) {
   return <div class="kbd-wrap"><Keyboard lo={start} hi={start + 24} marks={marks} height={58} /></div>;
 }
 
-function ResultCard({ result, barNo, onPractise, onAgain, assignment, onSend }) {
+function ResultCard({ result, barNo, onPractise, onAgain, assignment, onSend, challenge, onChallenge, onShare }) {
   const acc = Math.round(result.accuracy * 100);
   const good = acc >= 85;
   const next = Math.min(150, Math.round(result.speed * 100) + 10);
@@ -762,6 +778,8 @@ function ResultCard({ result, barNo, onPractise, onAgain, assignment, onSend }) 
       <div class="btn-row">
         <Button small icon="mic" color="pink" onClick={onAgain}>{good && next > Math.round(result.speed * 100) ? t('tryAt', { p: next }) : t('tryAgain')}</Button>
         {assignment && <Button small icon="send" kind="brand" onClick={onSend} disabled={result.sent}>{result.sent ? t('sentToTeacher') : t('submitToTeacher')}</Button>}
+        {challenge && <Button small icon="trophy" color="orange" onClick={onChallenge} disabled={result.entered}>{result.entered ? t('challengeEntered') : t('enterChallenge')}</Button>}
+        {hasServer() && <Button small icon="share" kind="secondary" onClick={onShare}>{t('shareWin')}</Button>}
       </div>
     </Card>
   );

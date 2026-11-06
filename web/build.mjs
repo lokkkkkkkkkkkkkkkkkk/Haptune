@@ -1,6 +1,7 @@
 // Builds two outputs from the same source:
 //   dist/artifact/haptune.html : one self-contained page (libraries from CDNs) for the Claude preview
 //   dist/pages/                : installable PWA for GitHub Pages (offline, libraries vendored)
+//   dist/native/               : the Android app's files (Capacitor copies them into web/android)
 import { build } from 'esbuild';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
@@ -39,32 +40,34 @@ const artifact = `<title>Haptune</title>
 `;
 fs.writeFileSync(out('artifact', 'haptune.html'), artifact);
 
-// ---- PWA ----
-const html = `<!doctype html>
+// ---- PWA (GitHub Pages) and the native app (Capacitor: Android now, iOS later) ----
+const page = (config, { pwa }) => `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Haptune</title>
-<meta name="description" content="Music practice coach: exact imports, key change, chords, AI improviser and a teaching academy.">
+<meta name="description" content="Practise music with feedback, get any score made by the community, and learn together.">
 <meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
-<meta name="apple-mobile-web-app-capable" content="yes">
+${pwa ? `<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Haptune">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="icon" href="icons/icon-192.png">
-<style>:root{padding-top:env(safe-area-inset-top,0px);box-sizing:border-box;height:100%}${css}</style>
+` : ''}<link rel="icon" href="icons/icon-192.png">
+<style>:root{padding-top:var(--sa-top);box-sizing:border-box;height:100%}${css}</style>
 </head>
 <body>
 <div id="haptune"></div>
-<script>window.HAPTUNE_CONFIG=${CONFIG({ pwa: true, verovio: 'vendor/verovio-toolkit-wasm.js', pdfjs: 'vendor/pdf.min.js', pdfWorker: 'vendor/pdf.worker.min.js', piano: 'piano/' })};</script>
+<script>window.HAPTUNE_CONFIG=${CONFIG(config)};</script>
 <script src="app.js?v=${BUILD}"></script>
 </body>
 </html>
 `;
+const ASSETS = { verovio: 'vendor/verovio-toolkit-wasm.js', pdfjs: 'vendor/pdf.min.js', pdfWorker: 'vendor/pdf.worker.min.js', piano: 'piano/' };
+const html = page({ pwa: true, ...ASSETS }, { pwa: true });
 fs.writeFileSync(out('pages', 'index.html'), html);
 fs.writeFileSync(out('pages', 'app.js'), result.outputFiles[0].text);
 fs.copyFileSync(path.join(root, 'node_modules/verovio/dist/verovio-toolkit-wasm.js'), out('pages', 'vendor', 'verovio-toolkit-wasm.js'));
@@ -96,4 +99,9 @@ self.addEventListener('fetch', (e) => {
 });
 `);
 fs.writeFileSync(out('pages', '.nojekyll'), '');
+// ---- native app: the same files without the service worker (the app is installed, not cached) ----
+// Store keys are public by design (RevenueCat "public SDK key"); purchases are checked on the server.
+const REVENUECAT = (process.env.HAPTUNE_REVENUECAT_ANDROID || '').trim();
+fs.cpSync(out('pages'), out('native'), { recursive: true, filter: (src) => !/(sw\.js|manifest\.webmanifest|\.nojekyll)$/.test(src) });
+fs.writeFileSync(out('native', 'index.html'), page({ pwa: false, native: true, revenuecat: REVENUECAT, ...ASSETS }, { pwa: false }));
 console.log('server', SERVER || '(none)', '| build', BUILD, '| artifact', (artifact.length / 1024).toFixed(0), 'KB; app.js', (result.outputFiles[0].text.length / 1024).toFixed(0), 'KB');

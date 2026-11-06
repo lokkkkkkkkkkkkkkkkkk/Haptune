@@ -89,7 +89,7 @@ export function ImproviseView({ active }) {
   const locked = !s.plus && (!FREE_STYLES.has(style) || level === 3);
 
   const generate = (newSeed = seed) => {
-    if (locked) { openSheet('paywall', { feature: 'improvise' }); return; }
+    if (locked) { openSheet('plans', { reason: { feature: 'improvise' } }); return; }
     const k = source === 'piece' && piece ? piece.key : { fifths: keyF, mode: PROGRESSIONS[preset]?.mode === 'minor' ? 'minor' : minor ? 'minor' : 'major' };
     const nBars = source === 'piece' && piece ? Math.min(16, Math.max(4, Math.round(piece.progression.reduce((a, x) => a + (x.dur ? x.dur.num() : 4), 0) / 4))) : (preset === 'blues' ? 12 : bars);
     const r = improvise({ key: k, time, progression, bars: nBars, style, level, instrument: inst, seed: newSeed, tempo, title: `${t('st_' + style)} · ${source === 'piece' && piece ? piece.title : PROGRESSIONS[preset].name}` });

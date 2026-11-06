@@ -1,0 +1,82 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace = "com.sloky.haptune"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "com.sloky.haptune"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        // CI passes -PversionCode=<run number> -PversionName=<package.json version>; every upload to Google Play
+        // needs a higher versionCode than the last one.
+        versionCode((project.findProperty('versionCode') ?: '1') as Integer)
+        versionName((project.findProperty('versionName') ?: '0.4.0') as String)
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    // Release signing for Google Play, from repository secrets (see web/ANDROID.md). Without them the
+    // workflow still builds the debug APK for testing on your own phone.
+    signingConfigs {
+        // The test APK is always signed with this fixed key (it is not a secret), so each new test build
+        // installs over the last one and keeps your library; a random debug key would not.
+        debug {
+            storeFile file('haptune-test.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+        release {
+            if (System.getenv('HAPTUNE_KEYSTORE')) {
+                storeFile file(System.getenv('HAPTUNE_KEYSTORE'))
+                storePassword System.getenv('HAPTUNE_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('HAPTUNE_KEY_ALIAS')
+                keyPassword System.getenv('HAPTUNE_KEY_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            if (System.getenv('HAPTUNE_KEYSTORE')) {
+                signingConfig signingConfigs.release
+            }
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}
