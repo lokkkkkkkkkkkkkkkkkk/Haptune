@@ -232,3 +232,15 @@ test('challenge codes round trip', () => {
   assert.deepEqual(levelFor(0), { level: 1, into: 0, need: 100 });
   assert.equal(levelFor(250).level, 3);
 });
+
+test('auto beams: chord members and rests carry no <beam> (Verovio rejects them)', async () => {
+  const { autoBeam } = await import('../src/core/score.js');
+  const n = (off, type, dur, extra = {}) => ({ off: q(off[0], off[1]), dur: q(dur[0], dur[1]), type, staff: 1, voice: '1', ...extra });
+  // eighth + chord member, a 16th rest, then a 16th: one beat in 4/4
+  const notes = [n([0, 1], 'eighth', [1, 2]), n([0, 1], 'eighth', [1, 2], { chord: true }), n([1, 2], '16th', [1, 4], { rest: true }), n([3, 4], '16th', [1, 4])];
+  autoBeam(notes, { beats: 4, beatType: 4 });
+  assert.deepEqual(notes[0].beams, [{ n: 1, v: 'begin' }]);
+  assert.equal(notes[1].beams, undefined);
+  assert.equal(notes[2].beams, undefined);
+  assert.deepEqual(notes[3].beams, [{ n: 1, v: 'end' }, { n: 2, v: 'backward hook' }]);
+});

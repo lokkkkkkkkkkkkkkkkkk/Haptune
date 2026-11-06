@@ -6,6 +6,7 @@ import { NavBar, SheetFrame } from './common.jsx';
 import { renderMusicXML, isVerovioReady } from '../verovio.js';
 import { openPdf } from '../importer.js';
 import { Transport, audioContext, note, listen } from '../audio.js';
+import { ScoreCursor } from '../cursor.js';
 import { writeMusicXML } from '../../core/musicxml.js';
 import { writeMIDI } from '../../core/midi.js';
 import { writeZip } from '../../core/zip.js';
@@ -120,6 +121,7 @@ async function printScore(xml, title) {
 const matchSel = (sel) => (e) => sel.pi === null || sel.pi === undefined || (e.pi === sel.pi && (!sel.staff || (e.staff || 1) === sel.staff));
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const toQ = (x) => (x instanceof Q ? x : Q.approx(Number(x) || 0));
+const idle = (fn) => (globalThis.requestIdleCallback ? requestIdleCallback(fn, { timeout: 1500 }) : setTimeout(fn, 400));
 
 // ---------- the piece screen ----------
 
@@ -186,8 +188,12 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
   const [yt, setYt] = useState(false);
   const transport = useRef(null);
   const scoreBox = useRef(null);
-  const lit = useRef([]);
+  const layerRef = useRef(null);
+  const cursorRef = useRef(null);
+  const viewRef = useRef(view);
+  viewRef.current = view;
   const builtRef = useRef(null);
+  const tlRef = useRef(null);
   const micStop = useRef(null);
   const frames = useRef([]);
   const follower = useRef(null);
@@ -201,32 +207,32 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
 
   // ----- the score cursor -----
   const clearMarks = () => scoreBox.current?.querySelectorAll('g.note.ok, g.note.bad, g.note.now').forEach((el) => el.classList.remove('ok', 'bad', 'now'));
-  const highlight = useCallback((qNow, scroll = true) => {
-    const box = scoreBox.current;
-    if (!box || !perf) return;
-    const ids = [];
-    for (const e of perf.events) {
-      const a = e.t.num();
-      if (a > qNow + 1e-6) break;
-      if (qNow < a + e.dur.num()) ids.push(...e.ids);
-    }
-    lit.current.forEach((el) => el.classList.remove('on'));
-    lit.current = ids.map((nid) => box.querySelector(`[id="${nid}"]`)).filter(Boolean);
-    lit.current.forEach((el) => el.classList.add('on'));
-    if (scroll && lit.current[0] && view === 'sheet') {
-      const r = lit.current[0].getBoundingClientRect();
-      const scroller = box.closest('.scroll');
-      if (scroller && (r.top < 120 || r.bottom > innerHeight - 230)) scroller.scrollBy({ top: r.top - innerHeight * 0.32, behavior: 'smooth' });
-    }
-  }, [perf, view]);
+  /** The notes drawn for these ids (a map lookup once the cursor has measured the score). */
+  const elsFor = (ids) => (cursorRef.current ? cursorRef.current.elementsFor(ids) : ids.map((nid) => scoreBox.current?.querySelector(`[id="${nid}"]`)).filter(Boolean));
+  /** The sheet calls this each time it has drawn the score: measure it once for the cursor. */
+  const onSheetDrawn = () => {
+    cursorRef.current?.destroy();
+    cursorRef.current = null;
+    if (!scoreBox.current || !layerRef.current || !perf) return;
+    const cur = new ScoreCursor({ box: scoreBox.current, layer: layerRef.current, perf });
+    cursorRef.current = cur;
+    if (transport.current?.playing || lastQ.current > 0) cur.update(lastQ.current, { scroll: false, notes: !!transport.current?.playing });
+    else idle(() => { if (cursorRef.current === cur && !cur.geo) cur.measure(); });     // ready before the first Play
+  };
+  // prepare the notes for playing while the player reads the page, so the first Play starts at once
+  useEffect(() => { if (perf) idle(() => { try { timeline(); } catch { /* built again on Play */ } }); }, [perf]);
+  useEffect(() => () => cursorRef.current?.destroy(), []);
+  const highlight = (qNow, scroll = true, notes = true) => {
+    if (viewRef.current === 'sheet') return cursorRef.current?.update(qNow, { scroll, notes });
+    return null;
+  };
 
   const stop = (silent = false) => {
     if (transport.current?.playing) {
       transport.current.stop();
       if (!practice.current) logMinutes((performance.now() - playStart.current) / 1000);
     }
-    lit.current.forEach((el) => el.classList.remove('on'));
-    lit.current = [];
+    cursorRef.current?.unlight();
     setPlayer((p) => ({ ...p, playing: false, mode: null }));
     if (!silent && practice.current?.mode === 'beat') finishBeat();
   };
@@ -235,57 +241,61 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
   useEffect(() => () => { latest.current.stop(true); micStop.current?.(); }, []);
   useEffect(() => { if (!active) { stop(true); endWait(true); } }, [active]);
 
-  /** Events from `fromQ` on, with a count-in bar first. `mute` = the part the player plays themselves. */
-  const buildEvents = (fromQ, mute = null, sp = speed, ci = countIn, click = metro) => {
-    if (!perf) return null;
+  /** Every note (plus chords and metronome clicks) of the piece, in seconds from the start at speed `sp`.
+   *  Built once per setting, so starting and jumping to a bar are instant. `mute` = the part the player plays. */
+  const timeline = (mute = null, sp = speed, click = metro) => {
+    const key = `${sp}|${click ? 1 : 0}|${withChords ? 1 : 0}|${mute ? mute.id : '-'}`;
+    if (tlRef.current && tlRef.current.key === key && tlRef.current.perf === perf) return tlRef.current;
     const tempos = perf.tempos;
-    const fq = toQ(fromQ);
-    const base = secondsAt(tempos, fq, sp);
-    const sec = (x) => secondsAt(tempos, x, sp) - base;
-    const startSpan = spanAt(fq.num()) || perf.spans[0];
-    const tStart = timeAt(tScore, startSpan.mi);
-    const lead = ci ? secondsAt(tempos, fq.add(measureLength(tStart)), sp) - base : 0;
+    const sec = (x) => secondsAt(tempos, x, sp);
     const evs = [];
     for (const e of perf.events) {
-      if (e.t.lt(fq)) continue;
       if (mute && matchSel(mute)(e)) continue;
-      evs.push({ time: lead + sec(e.t), dur: sec(e.t.add(e.dur)) - sec(e.t), midi: e.midi, vel: e.vel || 80, inst: instFor(e), ids: e.ids, pan: e.pi === 0 ? 0 : -0.2 });
+      const a = sec(e.t);
+      evs.push({ time: a, dur: sec(e.t.add(e.dur)) - a, midi: e.midi, vel: e.vel || 80, inst: instFor(e), pan: e.pi === 0 ? 0 : -0.2 });
     }
     if (withChords && harmonies.length && tScore.parts.length === 1 && !mute) {
+      let prev = null;
+      const byBar = new Map();
+      for (const h of harmonies) { if (!byBar.has(h.mi)) byBar.set(h.mi, []); byBar.get(h.mi).push(h); }
+      const lastBefore = new Map();
+      for (let mi = 0; mi <= lastMi; mi++) { lastBefore.set(mi, prev); const hs = byBar.get(mi); if (hs?.length) prev = hs[hs.length - 1]; }
       for (const span of perf.spans) {
-        if (span.t.add(span.dur).le(fq)) continue;
-        const hs = harmonies.filter((h) => h.mi === span.mi);
-        const prev = [...harmonies].reverse().find((h) => h.mi < span.mi);
-        const list = hs.length ? hs : prev ? [{ ...prev, off: ZERO }] : [];
+        const hs = byBar.get(span.mi) || [];
+        const before = lastBefore.get(span.mi);
+        const list = hs.length ? hs : before ? [{ ...before, off: ZERO }] : [];
         list.forEach((h, k) => {
           const end = k + 1 < list.length ? list[k + 1].off : span.dur;
           const at = span.t.add(h.off);
-          if (at.lt(fq)) return;
-          pianoVoicing(h.chord, 3).map((m) => (m < 48 ? m + 12 : m)).forEach((m) => evs.push({ time: lead + sec(at), dur: sec(at.add(end.sub(h.off))) - sec(at) - 0.02, midi: m, vel: hs.length ? 44 : 38, inst: 'epiano', pan: 0.25 }));
+          const a = sec(at);
+          pianoVoicing(h.chord, 3).map((m) => (m < 48 ? m + 12 : m)).forEach((m) => evs.push({ time: a, dur: sec(at.add(end.sub(h.off))) - a - 0.02, midi: m, vel: hs.length ? 44 : 38, inst: 'epiano', pan: 0.25 }));
         });
       }
-    }
-    // count-in clicks before the start, and the metronome through the piece
-    if (ci) {
-      const beat = beatLength(tStart);
-      let k = 0;
-      for (let b = ZERO; b.lt(measureLength(tStart)); b = b.add(beat), k++) evs.push({ time: secondsAt(tempos, fq.add(b), sp) - base, click: true, accent: k === 0 });
     }
     if (click) {
       for (const span of perf.spans) {
         const beat = beatLength(timeAt(tScore, span.mi));
         let k = 0;
-        for (let b = ZERO; b.lt(span.dur); b = b.add(beat), k++) {
-          const at = span.t.add(b);
-          if (at.lt(fq)) continue;
-          evs.push({ time: lead + sec(at), click: true, accent: k === 0 });
-        }
+        for (let b = ZERO; b.lt(span.dur); b = b.add(beat), k++) evs.push({ time: sec(span.t.add(b)), click: true, accent: k === 0 });
       }
     }
-    const length = lead + sec(perf.length) + 0.3;
-    return { evs, lead, length, base, fromQ: fq, sp };
+    tlRef.current = { key, perf, evs, length: sec(perf.length) + 0.3 };
+    return tlRef.current;
   };
 
+  /** One bar of count-in clicks before `fq` (times in the piece's seconds, so they come just before it). */
+  const countInClicks = (fq, sp) => {
+    const tempos = perf.tempos;
+    const tStart = timeAt(tScore, (spanAt(fq.num()) || perf.spans[0]).mi);
+    const bar = measureLength(tStart);
+    const lead = secondsAt(tempos, fq.add(bar), sp) - secondsAt(tempos, fq, sp);
+    const out = [];
+    let k = 0;
+    for (let b = ZERO; b.lt(bar); b = b.add(beatLength(tStart)), k++) out.push({ time: secondsAt(tempos, fq.add(b), sp) - lead, click: true, accent: k === 0 });
+    return out;
+  };
+
+  /** Starts playing from `fromQ` (or jumps there when already playing: no gap, no new count-in). */
   const play = (fromQ = null, { mode = 'listen', mute = null, sp = speed, ci = countIn, range = loop } = {}) => {
     if (!perf) return;
     audioContext();
@@ -294,39 +304,41 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
       const a = spanOfBar(range.from), b = spanOfBar(range.to);
       if (startQ.lt(a.t) || startQ.ge(b.t.add(b.dur))) startQ = a.t;
     }
-    const built = buildEvents(startQ, mute, sp, ci);
-    if (!built) return;
-    builtRef.current = built;
+    const tl = timeline(mute, sp);
     if (!transport.current) transport.current = new Transport();
     const tr = transport.current;
-    tr.load(built.evs, built.length);
+    if (tr.timeline !== tl) { tr.load(tl.evs, tl.length); tr.timeline = tl; }
+    const fromSec = secondsAt(perf.tempos, startQ, sp);
+    builtRef.current = { fromQ: startQ, fromSec, sp };
     if (range) {
       const a = spanOfBar(range.from), b = spanOfBar(range.to);
-      tr.setLoop({ start: built.lead + secondsAt(perf.tempos, a.t, sp) - built.base, end: built.lead + secondsAt(perf.tempos, b.t.add(b.dur), sp) - built.base });
+      tr.setLoop({ start: secondsAt(perf.tempos, a.t, sp), end: secondsAt(perf.tempos, b.t.add(b.dur), sp) });
     } else tr.setLoop(null);
-    let lastUi = 0;
+    const startNum = startQ.num();
+    let shownMi = -1, lastUi = 0;
     tr.onTime = (secNow) => {
-      const qNow = quartersAt(perf.tempos, built.base + Math.max(0, secNow - built.lead), sp);
+      // during the count-in the cursor waits on the first note
+      const qNow = secNow < fromSec - 1e-6 ? startNum : quartersAt(perf.tempos, secNow, sp);
       lastQ.current = qNow;
-      highlight(qNow);
+      let mi = highlight(qNow);
+      if (mi === null || mi === undefined) mi = spanAt(qNow)?.mi ?? 0;
       const nowMs = performance.now();
-      if (nowMs - lastUi > 120) {
-        lastUi = nowMs;
-        const span = spanAt(qNow);
-        setPlayer({ playing: true, q: qNow, mi: span ? span.mi : 0, mode });
+      if (mi !== shownMi || (viewRef.current === 'roll' && nowMs - lastUi > 200)) {
+        shownMi = mi; lastUi = nowMs;
+        setPlayer({ playing: true, q: qNow, mi, mode });
       }
     };
     tr.onEnd = () => { lastQ.current = perf.length.num(); latest.current.stop(); setCursorQ(0); setPlayer({ playing: false, q: 0, mi: 0, mode: null }); };
-    playStart.current = performance.now();
-    tr.play(0);
+    if (!tr.playing) playStart.current = performance.now();
+    tr.play(fromSec, { preroll: ci ? countInClicks(startQ, sp) : [] });
     setPlayer((p) => ({ ...p, playing: true, mode }));
   };
 
-  // restart with new settings while listening
-  useEffect(() => { if (transport.current?.playing && player.mode === 'listen') { const qNow = lastQ.current; stop(true); setTimeout(() => play(qNow), 30); } }, [speed, metro, loop, withChords, semis]);
+  // new settings while listening: carry on from the same place with them
+  useEffect(() => { if (transport.current?.playing && player.mode === 'listen') play(lastQ.current, { mode: 'listen', ci: false }); }, [speed, metro, loop, withChords, semis]);
 
   const toggleListen = () => {
-    if (player.playing) { setCursorQ(lastQ.current); stop(); return; }
+    if (transport.current?.playing || player.playing) { setCursorQ(lastQ.current); stop(); return; }
     if (pa) endWait(true);
     setResult(null);
     play(null, { mode: 'listen' });
@@ -336,9 +348,10 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
     const sp = spanOfBar(mi);
     if (!sp) return;
     setCursorQ(sp.t.num());
+    lastQ.current = sp.t.num();
     setPlayer((p) => ({ ...p, q: sp.t.num(), mi }));
-    if (transport.current?.playing && player.mode === 'listen') { stop(true); setTimeout(() => play(sp.t, { mode: 'listen' }), 30); }
-    else highlight(sp.t.num());
+    if (transport.current?.playing && practice.current?.mode !== 'beat') play(sp.t, { mode: 'listen', ci: false });
+    else highlight(sp.t.num(), true, false);
   };
   const curMi = player.playing ? player.mi : (spanAt(cursorQ)?.mi ?? 0);
   const stepBar = (d) => {
@@ -401,7 +414,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
     box.querySelectorAll('g.note.now').forEach((el) => el.classList.remove('now'));
     const cur = f.current;
     if (!cur) return;
-    const els = cur.ids.map((nid) => box.querySelector(`[id="${nid}"]`)).filter(Boolean);
+    const els = elsFor(cur.ids);
     els.forEach((el) => el.classList.add('now'));
     if (els[0]) {
       const r = els[0].getBoundingClientRect();
@@ -416,8 +429,9 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
     if (pr.mode === 'beat') {
       const tr = transport.current;
       if (!p || !tr?.playing || !builtRef.current) return;
-      const secNow = tr.position() - 0.09;                     // microphone latency
-      frames.current.push({ q: quartersAt(perf.tempos, builtRef.current.base + Math.max(0, secNow - builtRef.current.lead), pr.speed), midi: p.midi });
+      const secNow = tr.position() - 0.06;                     // microphone latency (the speaker delay is already allowed for)
+      if (secNow < builtRef.current.fromSec) return;            // still counting in
+      frames.current.push({ q: quartersAt(perf.tempos, secNow, pr.speed), midi: p.midi });
       return;
     }
     const f = follower.current;
@@ -427,7 +441,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
     const box = scoreBox.current;
     const exp = f.exp[r.index];
     if (r.type === 'ok') {
-      exp.ids.forEach((nid) => box?.querySelector(`[id="${nid}"]`)?.classList.add(f.firstTry[r.index] ? 'ok' : 'bad'));
+      elsFor(exp.ids).forEach((el) => el.classList.add(f.firstTry[r.index] ? 'ok' : 'bad'));
       accompany(r.index);
       setPa((x) => x && ({ ...x, msg: null, k: f.k }));
       if (f.done) finishWait();
@@ -497,7 +511,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
       const bs = bars.get(e.mi) || { right: 0, total: 0 };
       bs.total++; if (ok) bs.right++;
       bars.set(e.mi, bs);
-      e.ids.forEach((nid) => box?.querySelector(`[id="${nid}"]`)?.classList.add(ok ? 'ok' : 'bad'));
+      elsFor(e.ids).forEach((el) => el.classList.add(ok ? 'ok' : 'bad'));
     }
     showResult({ accuracy: total ? right / total : 0, right, total, inTune: right ? tuned / right : 0, bars });
   }
@@ -627,7 +641,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
 
         {views.length > 1 && <Segmented id="piece-views" value={view} onChange={setView} options={views} />}
 
-        {view === 'sheet' && xml && <SheetMusic xml={xml} boxRef={scoreBox} flagged={flags.map((f) => f.bar - 1)} changed={rec.changedIds}
+        {view === 'sheet' && xml && <SheetMusic xml={xml} boxRef={scoreBox} layerRef={layerRef} onDrawn={onSheetDrawn} flagged={flags.map((f) => f.bar - 1)} changed={rec.changedIds}
           onFallback={() => setView('roll')} onTapId={(nid) => { const e = perf?.events.find((x) => x.ids.includes(nid)); if (e) goToBar(e.mi); }} />}
         {view === 'sheet' && tScore && <p class="note-text" style={{ textAlign: 'center' }}>{t('tapBarHint')}</p>}
         {view === 'roll' && perf && <PianoRoll score={tScore} perf={perf} q={player.q} harmonies={harmonies} />}
@@ -753,9 +767,12 @@ function ResultCard({ result, barNo, onPractise, onAgain, assignment, onSend }) 
   );
 }
 
-function SheetMusic({ xml, boxRef, onTapId, onFallback, flagged = [], changed = null }) {
+function SheetMusic({ xml, boxRef, layerRef, onDrawn, onTapId, onFallback, flagged = [], changed = null }) {
   const [state, setState2] = useState({ loading: true, pages: [], error: null, first: !isVerovioReady() });
   const wrapRef = useRef(null);
+  const html = useMemo(() => state.pages.join(''), [state.pages]);     // joined once, not on every playing frame
+  const drawn = useRef(onDrawn);
+  drawn.current = onDrawn;
   useEffect(() => {
     let alive = true;
     const width = Math.min(980, (wrapRef.current?.clientWidth || 360));
@@ -772,6 +789,7 @@ function SheetMusic({ xml, boxRef, onTapId, onFallback, flagged = [], changed = 
     flagged.forEach((i) => ms[i]?.classList.add('flagged'));
     if (changed) for (const nid of changed) box.querySelector(`[id="${nid}"]`)?.classList.add('changed');
   }, [state.pages, flagged.join(','), changed]);
+  useEffect(() => { if (!state.loading && state.pages.length) drawn.current?.(); }, [state.pages, state.loading]);
   const onClick = (e) => {
     const g = e.target.closest?.('g.note');
     if (g?.id) onTapId?.(g.id);
@@ -785,8 +803,11 @@ function SheetMusic({ xml, boxRef, onTapId, onFallback, flagged = [], changed = 
           {onFallback && <Button kind="secondary" icon="piano" onClick={onFallback}>{t('viewRoll')}</Button>}
         </Card>
       )}
-      <div class="score-box vrv" ref={boxRef} onClick={onClick} hidden={state.loading && !state.pages.length}
-        dangerouslySetInnerHTML={{ __html: state.pages.join('') }} />
+      <div class="score-wrap">
+        <div class="score-box vrv" ref={boxRef} onClick={onClick} hidden={state.loading && !state.pages.length}
+          dangerouslySetInnerHTML={{ __html: html }} />
+        <div class="score-layer" ref={layerRef} aria-hidden="true" />
+      </div>
     </div>
   );
 }

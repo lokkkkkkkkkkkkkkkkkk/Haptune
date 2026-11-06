@@ -14,7 +14,7 @@ fs.mkdirSync(out('pages', 'vendor'), { recursive: true });
 fs.mkdirSync(out('pages', 'icons'), { recursive: true });
 
 const result = await build({
-  entryPoints: [path.join(root, 'src/main.jsx')], bundle: true, format: 'iife', minify: true, write: false,
+  entryPoints: [path.join(root, 'src/main.jsx')], bundle: true, format: 'iife', minify: process.env.HAPTUNE_MINIFY !== '0', write: false,
   jsx: 'automatic', jsxImportSource: 'preact', target: ['es2020', 'safari15'], legalComments: 'none',
   loader: { '.css': 'text' },
 });
@@ -60,7 +60,7 @@ const html = `<!doctype html>
 </head>
 <body>
 <div id="haptune"></div>
-<script>window.HAPTUNE_CONFIG=${CONFIG({ pwa: true, verovio: 'vendor/verovio-toolkit-wasm.js', pdfjs: 'vendor/pdf.min.js', pdfWorker: 'vendor/pdf.worker.min.js' })};</script>
+<script>window.HAPTUNE_CONFIG=${CONFIG({ pwa: true, verovio: 'vendor/verovio-toolkit-wasm.js', pdfjs: 'vendor/pdf.min.js', pdfWorker: 'vendor/pdf.worker.min.js', piano: 'piano/' })};</script>
 <script src="app.js?v=${BUILD}"></script>
 </body>
 </html>
@@ -71,6 +71,9 @@ fs.copyFileSync(path.join(root, 'node_modules/verovio/dist/verovio-toolkit-wasm.
 fs.copyFileSync(path.join(root, 'node_modules/pdfjs-dist/build/pdf.min.js'), out('pages', 'vendor', 'pdf.min.js'));
 fs.copyFileSync(path.join(root, 'node_modules/pdfjs-dist/build/pdf.worker.min.js'), out('pages', 'vendor', 'pdf.worker.min.js'));
 for (const f of fs.readdirSync(path.join(root, 'assets/icons'))) fs.copyFileSync(path.join(root, 'assets/icons', f), out('pages', 'icons', f));
+// Salamander Grand Piano V3 (Alexander Holm, CC BY 3.0), one sample every 3 semitones, trimmed (about 0.8 MB)
+fs.mkdirSync(out('pages', 'piano'), { recursive: true });
+for (const f of fs.readdirSync(path.join(root, 'assets/piano'))) fs.copyFileSync(path.join(root, 'assets/piano', f), out('pages', 'piano', f));
 fs.writeFileSync(out('pages', 'manifest.webmanifest'), JSON.stringify({
   name: 'Haptune', short_name: 'Haptune', description: 'Music practice coach', start_url: './', scope: './', display: 'standalone',
   background_color: '#F2F2F7', theme_color: '#F2F2F7', orientation: 'any',
