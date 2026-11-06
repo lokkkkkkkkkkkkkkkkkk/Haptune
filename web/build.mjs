@@ -74,6 +74,8 @@ fs.copyFileSync(path.join(root, 'node_modules/verovio/dist/verovio-toolkit-wasm.
 fs.copyFileSync(path.join(root, 'node_modules/pdfjs-dist/build/pdf.min.js'), out('pages', 'vendor', 'pdf.min.js'));
 fs.copyFileSync(path.join(root, 'node_modules/pdfjs-dist/build/pdf.worker.min.js'), out('pages', 'vendor', 'pdf.worker.min.js'));
 for (const f of fs.readdirSync(path.join(root, 'assets/icons'))) fs.copyFileSync(path.join(root, 'assets/icons', f), out('pages', 'icons', f));
+// the privacy policy (Google Play and the App Store link to it)
+for (const f of fs.readdirSync(path.join(root, 'assets/legal'))) fs.copyFileSync(path.join(root, 'assets/legal', f), out('pages', f));
 // Salamander Grand Piano V3 (Alexander Holm, CC BY 3.0), one sample every 3 semitones, trimmed (about 0.8 MB)
 fs.mkdirSync(out('pages', 'piano'), { recursive: true });
 for (const f of fs.readdirSync(path.join(root, 'assets/piano'))) fs.copyFileSync(path.join(root, 'assets/piano', f), out('pages', 'piano', f));

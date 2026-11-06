@@ -162,7 +162,7 @@ export function ChallengeCard({ ch }) {
         {ch.mine && <span class="cc-mine">{t('yourBest')} <strong>{Math.round(ch.mine.accuracy * 100)}%</strong></span>}
       </div>
       <div class="btn-row">
-        <Button color="orange" icon="mic" onClick={play}>{ch.mine ? t('playAgain') : t('playChallenge')}</Button>
+        <Button color="orange" icon="mic" onClick={play}>{ch.mine ? t('challengeAgain') : t('playChallenge')}</Button>
         <Button kind="secondary" onClick={() => push('challenge')}>{t('leaderboard')}</Button>
       </div>
     </div>

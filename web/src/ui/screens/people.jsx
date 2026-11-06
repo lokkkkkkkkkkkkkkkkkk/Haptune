@@ -201,7 +201,7 @@ export function ChallengeView({ active }) {
             <div class="cc-top"><span class="cc-badge"><Icon name="trophy" size={18} />{t('weeklyChallenge')}</span><span class="cc-left">{timeLeft(ch.ends)}</span></div>
             <h3>{ch.title}</h3>
             <p>{t('challengeRules', { n: ch.rewards.entry, a: ch.rewards.top[0], b: ch.rewards.top[1], c: ch.rewards.top[2] })}</p>
-            <Button color="orange" icon="mic" onClick={play}>{ch.mine ? t('playAgain') : t('playChallenge')}</Button>
+            <Button color="orange" icon="mic" onClick={play}>{ch.mine ? t('challengeAgain') : t('playChallenge')}</Button>
           </div>
           <Section title={t('thisWeek')}>
             {ch.entries.length ? <div class="lb">{ch.entries.map((e, i) => (

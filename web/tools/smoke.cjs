@@ -43,7 +43,7 @@ const DEVICE = {
     await p.waitForSelector('.welcome', { timeout: 15000 });
     await shot('00-welcome');
     for (let i = 0; i < 3; i++) { await V('.welcome .btn.brand').click(); await p.waitForTimeout(350); }
-    await V('.welcome .btn.secondary').click();          // "Let's go"
+    await V('.welcome .btn.plain').filter({ hasText: "Let's go" }).click();
     await p.waitForTimeout(700);
   });
   await step('home', async () => { await shot('01-home'); await overflow('home'); });

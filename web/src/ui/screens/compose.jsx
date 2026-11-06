@@ -166,7 +166,7 @@ function Tips() {
   return (
     <Card class="tips">
       <p class="tips-title"><Icon name="sparkles" size={16} /> {t('tipsTitle')}</p>
-      <ul>{['tip1', 'tip2', 'tip3', 'tip4', 'tip5'].map((k) => <li key={k}>{t(k)}</li>)}</ul>
+      <ul>{['reqTip1', 'reqTip2', 'reqTip3', 'reqTip4', 'reqTip5'].map((k) => <li key={k}>{t(k)}</li>)}</ul>
     </Card>
   );
 }

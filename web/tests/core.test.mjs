@@ -244,3 +244,19 @@ test('auto beams: chord members and rests carry no <beam> (Verovio rejects them)
   assert.equal(notes[2].beams, undefined);
   assert.deepEqual(notes[3].beams, [{ n: 1, v: 'end' }, { n: 2, v: 'backward hook' }]);
 });
+
+test('community text: every entry in all four languages, no key overwrites an existing one', async () => {
+  const fs = await import('node:fs');
+  const { MORE } = await import('../src/core/i18n-community.js');
+  const src = fs.readFileSync(new URL('../src/core/i18n.js', import.meta.url), 'utf8');
+  const body = src.slice(src.indexOf('const S = {'), src.indexOf('Object.assign(S, MORE)'));
+  const old = new Set([...body.matchAll(/(?:^|[,{]\s*)([A-Za-z0-9_]+):\s*\[/gm)].map((m) => m[1]));
+  const clash = Object.keys(MORE).filter((k) => old.has(k));
+  assert.deepEqual(clash, []);
+  const ph = (x) => (x.match(/\{\w+\}/g) || []).sort().join();
+  for (const [k, v] of Object.entries(MORE)) {
+    assert.equal(v.length, 4, k);
+    assert.ok(v.every((x) => typeof x === 'string' && x.length), k);
+    assert.equal(new Set(v.map(ph)).size, 1, `placeholders differ in ${k}`);
+  }
+});

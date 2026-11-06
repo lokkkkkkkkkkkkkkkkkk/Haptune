@@ -1,4 +1,11 @@
-# Haptune (触乐): the practice coach that taps your wrist
+# Haptune (触乐): get any song's score from the community, then practise it with feedback
+
+**What makes Haptune different:** when a score doesn't exist, you ask the community. Paste a YouTube link or a photo of
+the page; musicians make the score, and the faster and better their help, the more credits they earn. Then you practise
+it with an app that listens, marks your notes and plays the other parts. Free for practising and the whole community;
+Plus and Pro add AI help (reading photos and PDFs, finding songs, the Hapi tutor). Android app: see
+[web/ANDROID.md](web/ANDROID.md); the same app runs on any PC in the browser.
+
 
 Play from your sheet music. Your iPhone, iPad or Mac listens, follows the score, and your Apple Watch
 taps you **the moment** a note is wrong, out of tune or out of time. After each take you get a marked-up
@@ -32,9 +39,35 @@ generated scales and arpeggios.
 | Path | What it is | Status |
 |---|---|---|
 | `engine/` | Python engine: score import, pitch tracking, polyphonic analysis, alignment, scoring, live follower, OMR, recording→score, **band split** (source separation, lead-line extraction, chords), reports, CLI, and the **AI sheet-music reader** (`haptune/ai/`) | 49 tests pass (1 skipped) |
-| `server/` | FastAPI service for the heavy jobs (OMR, transcription, band split, full report), the **AI reader, song finder and tutor**, and **Academy classes** + Dockerfile and Fly.io config | 19 API tests pass |
+| `server/` | FastAPI service for the heavy jobs (OMR, transcription, band split, full report), the **AI reader, song finder and tutor**, **accounts and plans** (`accounts.py`), the **community** (`community.py`) and **Academy classes** + Dockerfile and Fly.io config | 34 API tests pass |
 | `apple/` | Swift: `PracticeCore` package (parser, MIDI, DSP, follower; shared with the Watch), the app for iPhone/iPad/Mac, the Watch app, String Catalogs, StoreKit test file | Compiled by GitHub Actions (see `apple/README.md`) |
-| `web/` | The installable web app (Preact): library, Play Along with the microphone, Improvise, Academy with classes, tools | 31 unit tests pass; see `web/README.md` |
+| `web/` | The app (Preact) for Android (Capacitor, `web/android/`), PCs and phones in the browser: library, Play Along, real piano playback with a MuseScore-style cursor, the **Community** (requests, Q&A, library, challenges, leaderboards, profiles), plans, Academy, tools | 32 unit tests + click-through tests pass; see `web/README.md` and `web/ANDROID.md` |
+
+## The community (`server/community.py`, Community tab)
+
+* **Requests.** Ask for any song's score with a link to listen (YouTube is only linked, never downloaded) or photos/PDF
+  of the page. Others tap "I want this too" and can add credits to the reward. A helper taps "I'll make it" (theirs for
+  48 hours), makes the score in any notation app or in Haptune and sends MusicXML. The requester opens it in Haptune,
+  plays it, then accepts it with stars or asks for changes. Closing an unanswered request returns every credit.
+* **Rewards.** The helper gets the whole reward plus a Haptune bonus = size (10 + 1 per 20 notes, up to 60) × speed
+  (×1.5 within a day, ×1.25 within 3 days, ×0.8 after a week) × stars (×0.5 to ×1.5), at most 300 a request and 600 a day
+  per helper. Other useful scores (up to 40) and helpful comments (5) are thanked too. Credits are never bought or paid
+  out, and nothing in the app needs them.
+* **Copyright.** Scores of copyrighted songs are visible only to the requester and the people who wanted it; only
+  public-domain music and people's own work are listed in the Library.
+* **Q&A** (the free alternative to the AI tutor), the **Library** of shared scores, practice **wins**, a **weekly
+  challenge** (a public-domain song, best Play Along accuracy wins), **leaderboards**, **profiles with badges**,
+  follows, blocks, reports (three reports hide a post until reviewed), notifications, and in-app **feedback**.
+* **Developer panel** (unlocked with `HAPTUNE_ADMIN_CODE`): members, AI use this month, reports, the feedback inbox,
+  giving plans or credits.
+
+## Plans (`server/accounts.py`)
+
+Free covers everything that costs nothing to run. Plus (RM 14.90 / US$3.99 a month, RM 99.90 / US$24.99 a year) and
+Pro (RM 29.90 / US$7.99, RM 229.90 / US$59.99) add the features that call the paid AI API, each with a monthly
+allowance checked on the server (30 / 120 AI pages, 15 / 50 song searches, 300 / 1,500 tutor answers), plus all
+improviser styles, more open requests, spotlights and bonus credits. The developer account has no limits. Purchases go
+through Google Play and RevenueCat; see [web/ANDROID.md](web/ANDROID.md).
 
 ## Online features: AI reader, song finder, classes
 
@@ -63,6 +96,8 @@ Claude API key stays on the server. Each device gets a fair daily allowance of A
    `fly volumes create haptune_data --region sin --size 1` for the Academy database.
 2. `fly secrets set ANTHROPIC_API_KEY=sk-ant-...` (from console.anthropic.com). The key never leaves the server.
    In the Anthropic Console, also set a monthly spend limit, so a busy day can't cost more than you planned.
+   Also `fly secrets set HAPTUNE_ADMIN_CODE=<a long code only you know>`: typing it in the app (Account → Developer
+   access) gives your account every feature with no limits and the developer panel.
 3. `fly tokens create deploy`, and save the token as the repository secret **FLY_API_TOKEN**
    (GitHub: Settings → Secrets and variables → Actions → New repository secret).
 4. Add the repository **variable** **HAPTUNE_SERVER_URL** = `https://<app-name>.fly.dev`
