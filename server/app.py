@@ -95,6 +95,25 @@ def _payload(sc: Score, musicxml_path: str | None = None) -> dict:
     return out
 
 
+WEB_APP_URL = os.environ.get("HAPTUNE_WEB_URL", "https://lokkkkkkkkkkkkkkkkkk.github.io/Haptune/")
+
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+def home():
+    """The server is an API for the apps; someone opening its address in a browser gets a pointer to the app."""
+    return (
+        "<!doctype html><html lang='en'><head><meta charset='utf-8'>"
+        "<meta name='viewport' content='width=device-width,initial-scale=1'><title>Haptune server</title>"
+        "<style>body{font-family:system-ui,sans-serif;max-width:32rem;margin:15vh auto;padding:0 16px;"
+        "line-height:1.5;color:#222;background:#fff}a{color:#6d4aff}"
+        "@media(prefers-color-scheme:dark){body{color:#eee;background:#111}a{color:#a996ff}}</style></head>"
+        f"<body><h1>Haptune server is running</h1><p>This address is the engine the Haptune apps talk to "
+        f"(version {__version__}). There is nothing to see here in a browser.</p>"
+        f"<p><a href='{WEB_APP_URL}'>Open the Haptune app &rarr;</a></p>"
+        "<p><small><a href='/health'>health</a> &middot; <a href='/docs'>API docs</a></small></p></body></html>"
+    )
+
+
 @app.get("/health")
 def health():
     return {"ok": True, "version": __version__}

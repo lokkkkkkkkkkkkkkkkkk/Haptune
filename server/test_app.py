@@ -26,6 +26,12 @@ def _wav(y):
     return buf.getvalue()
 
 
+def test_home_page_points_to_the_app():
+    r = client.get("/")
+    assert r.status_code == 200 and "text/html" in r.headers["content-type"]
+    assert "Haptune server is running" in r.text and "github.io/Haptune" in r.text
+
+
 def test_health_and_instruments():
     assert client.get("/health").json()["ok"]
     keys = {i["key"] for i in client.get("/instruments").json()["instruments"]}
