@@ -8,7 +8,7 @@ import { C, attempt, ensureAccount } from '../account.js';
 import { isNative, platform } from '../native.js';
 import { Person, Coins } from './social.jsx';
 import { SheetFrame } from './common.jsx';
-import { saveFile } from './piece.jsx';
+import { saveFile } from '../files.js';
 
 export function AccountSheet() {
   const s = useApp();
@@ -19,8 +19,10 @@ export function AccountSheet() {
   useEffect(() => { if (hasServer()) ensureAccount(); }, []);
   const backup = async () => {
     const json = await makeBackup();
-    const ok = await saveFile(`Haptune backup ${new Date().toISOString().slice(0, 10)}.json`, new TextEncoder().encode(json));
-    if (ok) toast(t('backup') + ' ✓');
+    try {
+      const ok = await saveFile(`Haptune backup ${new Date().toISOString().slice(0, 10)}.json`, new TextEncoder().encode(json));
+      if (ok) toast(t('backup') + ' ✓');
+    } catch { toast(t('saveFailed'), 'err'); }
   };
   const restore = async (e) => {
     const f = e.currentTarget.files?.[0];

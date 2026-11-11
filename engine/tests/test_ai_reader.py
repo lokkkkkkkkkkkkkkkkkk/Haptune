@@ -252,3 +252,72 @@ def test_reader_flags_bars_it_could_not_fix(minuet):
     result = Reader(Claude(client=fake), workers=4).read(pdf, "minuet.pdf")
     assert [f["bar"] for f in result.flags] == [6]
     assert "needs" in result.flags[0]["reasons"][0]
+
+
+def test_a_line_that_cannot_be_read_keeps_its_place(minuet):
+    """Lines used to vanish when a request failed, leaving half a piece. Now the line becomes marked, empty
+    bars: the bars after it keep their numbers and the report says which page and line to look at."""
+    from ai_fixtures import FakeReaderClient
+    path, bars, meta, pdf = minuet
+    fake = FakeReaderClient(bars, meta, bars_per_line=4, fail_lines={1})
+    reader = Reader(Claude(client=fake), workers=4)
+    reader.retry_wait = 0
+    result = reader.read(pdf, "minuet.pdf")
+    assert fake.line_asks[1] == 3                                       # tried three times before giving up
+    assert result.report["bars"] == len(bars)                           # 4 placeholders stand in for the line
+    assert result.report["failed_lines"] == [{"page": 1, "line": 2, "error": "the reader is down", "bars": 4,
+                                              "box": result.report["failed_lines"][0]["box"]}]
+    unread = [f for f in result.flags if f.get("unread")]
+    assert [f["bar"] for f in unread] == [5, 6, 7, 8] and all(f["line"] == 2 for f in unread)
+    got = load_musicxml(result.musicxml.encode())
+    original = load_musicxml(path)
+    after = [(n.pitch, round(n.onset, 3)) for n in sorted(got.notes, key=lambda n: (n.onset, n.pitch)) if n.onset >= 24]
+    assert after == [(n.pitch, round(n.onset, 3)) for n in sorted(original.notes, key=lambda n: (n.onset, n.pitch)) if n.onset >= 24]
+
+
+def test_a_line_that_comes_back_short_is_asked_for_again(minuet):
+    from ai_fixtures import FakeReaderClient
+    path, bars, meta, pdf = minuet
+    fake = FakeReaderClient(bars, meta, bars_per_line=4, short_lines={2})
+    result = Reader(Claude(client=fake), workers=4).read(pdf, "minuet.pdf")
+    assert fake.line_asks[2] == 2                                       # the barlines said 4 bars, 1 came back
+    assert result.report["bars"] == len(bars) and result.report["short_lines"] == [] and result.flags == []
+
+
+def test_a_page_without_measurable_staves_is_split_into_its_lines_first():
+    """A photo whose staff lines can't be measured used to be read whole in one answer (long answers lose bars).
+    The model is asked where the lines are, then each is read on its own."""
+    import numpy as np
+    from PIL import Image
+    from ai_fixtures import FakeReaderClient
+    bars = [[["C4/1"]], [["D4/1"]], [["E4/1"]], [["F4/1"]]]
+    meta = {"fifths": 0, "time": "4/4", "parts": ["Music"]}
+    page = Image.fromarray(np.full((1200, 900), 255, dtype=np.uint8))   # nothing to measure on a blank page
+    buf = __import__("io").BytesIO()
+    page.save(buf, format="PNG")
+    fake = FakeReaderClient(bars, meta, bars_per_line=2, instrument="violin",
+                            locate=[{"top": 200, "bottom": 260, "staves": 1}, {"top": 600, "bottom": 660, "staves": 1}])
+    result = Reader(Claude(client=fake), workers=2).read(buf.getvalue(), "photo.png")
+    assert fake.calls.count("locate") == 1 and fake.calls.count("line") == 2
+    assert result.report["lines"] == 2 and result.report["bars"] == 4
+
+
+def test_barlines_count_the_bars_of_each_line(minuet):
+    from haptune.ai.layout import analyse_page, load_pages
+    path, bars, meta, pdf = minuet
+    pg = analyse_page(load_pages(pdf, "minuet.pdf")[0])
+    assert list(pg.bars.values()) == [4] * (len(bars) // 4) and pg.regions == []
+
+
+def test_photo_cleanup_evens_out_a_shadow():
+    import numpy as np
+    from PIL import Image
+    from haptune.ai.layout import clean_photo, is_photo
+    a = np.full((400, 600), 200, dtype=np.float32)
+    a *= np.linspace(1.0, 0.45, 600)[None, :]                           # a shadow across the page
+    a[100:104, 50:550] *= 0.25                                          # a staff line, darker than the paper everywhere
+    img = Image.fromarray(a.astype(np.uint8))
+    assert is_photo(img)
+    out = np.asarray(clean_photo(img), dtype=np.float32)
+    assert out[50, 60] > 215 and out[50, 540] > 215                     # paper is white on both sides
+    assert out[102, 60] < 120 and out[102, 540] < 120                   # the line is dark on both sides

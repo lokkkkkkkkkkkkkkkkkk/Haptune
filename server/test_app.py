@@ -26,6 +26,23 @@ def _wav(y):
     return buf.getvalue()
 
 
+def test_home_page_points_to_the_website():
+    r = client.get("/")
+    assert r.status_code == 200 and "text/html" in r.headers["content-type"]
+    assert "Haptune server is running" in r.text and "haptune.name.my" in r.text
+
+
+def test_the_website_may_call_the_server_and_change_things():
+    """The web app runs on haptune.name.my and edits profiles and posts with PATCH; browsers ask first."""
+    for origin in ("https://haptune.name.my", "https://www.haptune.name.my", "https://localhost"):
+        r = client.options("/c/me", headers={"Origin": origin, "Access-Control-Request-Method": "PATCH",
+                                             "Access-Control-Request-Headers": "authorization,content-type"})
+        assert r.status_code == 200 and r.headers["access-control-allow-origin"] == origin, origin
+        assert "PATCH" in r.headers["access-control-allow-methods"]
+    r = client.options("/c/me", headers={"Origin": "https://evil.example", "Access-Control-Request-Method": "PATCH"})
+    assert r.status_code == 400
+
+
 def test_health_and_instruments():
     assert client.get("/health").json()["ok"]
     keys = {i["key"] for i in client.get("/instruments").json()["instruments"]}

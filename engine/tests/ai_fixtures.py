@@ -117,8 +117,13 @@ class FakeStream:
 class FakeReaderClient:
     """Answers like a model that reads perfectly, except for the bars in `mistakes` on the first pass."""
 
-    def __init__(self, bars, meta, bars_per_line=4, mistakes=None, instrument="piano"):
+    def __init__(self, bars, meta, bars_per_line=4, mistakes=None, instrument="piano", fail_lines=(), short_lines=(),
+                 locate=None):
         self.bars, self.meta, self.per_line = bars, meta, bars_per_line
+        self.fail_lines = set(fail_lines)       # 0-based lines that can never be read (the request fails)
+        self.short_lines = set(short_lines)     # 0-based lines whose first answer stops after one bar
+        self.locate = locate                    # answer to "where are the lines on this page?"
+        self.line_asks: dict[int, int] = {}
         self.mistakes = mistakes or {}          # bar index -> list of voice strings per part (first reading)
         self.instrument = instrument
         self.calls: list[str] = []
@@ -137,7 +142,10 @@ class FakeReaderClient:
         text = kw["messages"][0]["content"][-1]["text"]
         req = set(schema.get("required", []))
         with self.lock:
-            self.calls.append("overview" if "is_sheet_music" in req else "line" if "staff_count" in req else "reread")
+            self.calls.append("overview" if "is_sheet_music" in req else "line" if "staff_count" in req
+                              else "locate" if "systems" in req else "reread")
+        if "systems" in req:
+            return FakeStream({"systems": self.locate or []})
         if "is_sheet_music" in req:
             n = len(self.meta["parts"])
             return FakeStream({"is_sheet_music": True, "title": "Minuet in G", "subtitle": "", "composer": "Christian Petzold",
@@ -147,7 +155,13 @@ class FakeReaderClient:
                                           "clefs": ["treble" if i == 0 or n == 1 else "bass"]} for i, name in enumerate(self.meta["parts"])]})
         if "staff_count" in req:
             k = int(re.search(r"This is line (\d+) of page (\d+)", text).group(1)) - 1
+            with self.lock:
+                asked = self.line_asks[k] = self.line_asks.get(k, 0) + 1
+            if k in self.fail_lines:
+                raise RuntimeError("the reader is down")
             lo, hi = k * self.per_line, min(len(self.bars), (k + 1) * self.per_line)
+            if k in self.short_lines and asked == 1:
+                hi = lo + 1
             n = len(self.meta["parts"])
             return FakeStream({"staff_count": n, "clefs": ["treble" if i == 0 or n == 1 else "bass" for i in range(n)],
                                "key_fifths": self.meta["fifths"], "warnings": [],

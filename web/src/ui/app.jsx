@@ -1,5 +1,5 @@
 import { render } from 'preact';
-import { useEffect } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { useApp, loadAll, go, pop, push, closeSheet, openSheet, getState, setState, hooks, toast } from './state.js';
 import { t } from '../core/i18n.js';
 import { Icon } from './components.jsx';
@@ -27,7 +27,7 @@ import { ReportSheet, MoreSheet } from './screens/social.jsx';
 import { hasServer } from './api.js';
 import { ensureAccount, C } from './account.js';
 import { initNative } from './native.js';
-import { setSyncOffset } from './audio.js';
+import { setSyncOffset, onAudioProblem } from './audio.js';
 
 // The Academy (courses, classes, the tutor) is inside Community, as "Learn".
 export const TABS = [
@@ -127,6 +127,8 @@ function App() {
     return () => removeEventListener('hashchange', openHash);
   }, []);
   useEffect(() => { setSyncOffset(s.settings.syncMs || 0); }, [s.settings.syncMs]);
+  const [soundTap, setSoundTap] = useState(null);       // the phone paused the sound and wants a tap to carry on
+  useEffect(() => onAudioProblem(setSoundTap), []);
   if (!s.ready) return <div class="splash"><div class="spinner" /></div>;
   const tabBtn = (tab, cls) => (
     <button type="button" key={tab.id} class={`c-${tab.color}${s.tab === tab.id ? ' on' : ''}${tab.center ? ' center' : ''}`} onClick={() => {
@@ -155,6 +157,7 @@ function App() {
       </main>
       <nav class="tabbar" aria-label="Sections">{TABS.map((tab) => tabBtn(tab, 'bar'))}</nav>
       {s.sheet && <SheetHost sheet={s.sheet} />}
+      {soundTap && <button type="button" class="sound-pill" id="sound-pill"><Icon name="speaker" size={18} stroke={2.3} />{t('tapForSound')}</button>}
       {s.toast && <div class={`toast${s.toast.kind === 'err' ? ' err' : ''}`} role="status"><Icon name={s.toast.kind === 'err' ? 'info' : 'check'} size={18} stroke={2.4} />{s.toast.text}</div>}
     </div>
     </>

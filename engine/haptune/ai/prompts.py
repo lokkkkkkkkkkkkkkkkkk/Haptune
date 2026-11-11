@@ -50,6 +50,8 @@ OVERVIEW_PROMPT = """This is page {page} of {pages} of a score{hint}. Before the
 SYSTEM_PROMPT_TMPL = """Transcribe every bar of this line of music (one system: {staves_text}). {context}
 Give x0 and x1 for each bar: the pixel x positions of the bar's left and right barlines in this image (for the first bar, x0 is where the first note area starts, after the clef and key signature)."""
 
+LOCATE_PROMPT = """Before this page is transcribed, find every line of music on it. A line (system) is one staff, or several staves joined at the left by a barline or brace that are played together. For each system, from the top of the page to the bottom, give the pixel y position in this image of its top staff line ("top") and of its bottom staff line ("bottom"), and how many staves it has. Leave out titles, text and anything that is not a staff. If the page holds no music, return an empty list."""
+
 REREAD_PROMPT_TMPL = """This image is a zoomed-in view of {what}. {context}
 The first reading was:
 {first}
@@ -121,6 +123,13 @@ SYSTEM_SCHEMA = {
         "measures": {"type": "array", "items": MEASURE_SCHEMA, "description": MEASURE_DESCRIPTIONS},
         "warnings": {"type": "array", "items": {"type": "string"}},
     },
+}
+
+LOCATE_SCHEMA = {
+    "type": "object", "additionalProperties": False, "required": ["systems"],
+    "properties": {"systems": {"type": "array", "items": {
+        "type": "object", "additionalProperties": False, "required": ["top", "bottom", "staves"],
+        "properties": {"top": {"type": "integer"}, "bottom": {"type": "integer"}, "staves": {"type": "integer"}}}}},
 }
 
 REREAD_SCHEMA = {

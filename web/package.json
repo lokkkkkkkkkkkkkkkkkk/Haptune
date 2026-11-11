@@ -22,7 +22,11 @@
   },
   "dependencies": {
     "@capacitor/app": "8.1.2",
+    "@capacitor/browser": "8.0.5",
     "@capacitor/core": "8.5.0",
+    "@capacitor/filesystem": "8.1.5",
+    "@capacitor/haptics": "8.0.2",
+    "@capacitor/share": "8.0.3",
     "@capacitor/status-bar": "8.0.4",
     "@revenuecat/purchases-capacitor": "13.7.6"
   }

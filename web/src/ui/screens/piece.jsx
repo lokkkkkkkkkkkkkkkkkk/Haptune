@@ -3,7 +3,8 @@ import { useApp, getPiece, updatePiece, deletePiece, markOpened, pop, openSheet,
 import { t, getLang, instrumentName } from '../../core/i18n.js';
 import { Icon, Card, Section, List, Row, Segmented, Stepper, Button, Chip, Stars, FretDiagram, PianoChord, Keyboard, Badge, Toggle } from '../components.jsx';
 import { NavBar, SheetFrame } from './common.jsx';
-import { renderMusicXML, isVerovioReady } from '../verovio.js';
+import { renderMusicXML, isVerovioReady, pageSize } from '../verovio.js';
+import { saveFile, scorePdf, SaveError } from '../files.js';
 import { openPdf } from '../importer.js';
 import { Transport, audioContext, note, listen } from '../audio.js';
 import { ScoreCursor } from '../cursor.js';
@@ -69,54 +70,6 @@ function harmonyList(score) {
     part.measures.forEach((pm, mi) => pm.harmonies.forEach((h) => out.push({ mi, off: h.off, chord: h.chord, pi })));
   });
   return out.sort((a, b) => a.mi - b.mi || a.off.cmp(b.off));
-}
-
-const MIME = { zip: 'application/zip', json: 'application/json', txt: 'text/plain', pdf: 'application/pdf', mid: 'audio/midi', musicxml: 'application/vnd.recordare.musicxml+xml' };
-
-/**
- * Hands a file to the person: the system share sheet on phones (Save to Files, AirDrop, WhatsApp...), the
- * download prompt in the Claude preview, or a normal download on computers. Returns true when it went out.
- */
-async function saveFile(name, bytes) {
-  const type = MIME[name.split('.').pop().toLowerCase()] || 'application/octet-stream';
-  const blob = new Blob([bytes], { type });
-  let dl = null;
-  try { dl = await globalThis.claude?.use?.('downloads'); } catch { dl = null; }
-  if (dl) {
-    try { await dl.save({ filename: name, data: blob }); return true; } catch (e) {
-      if (e?.code !== 'declined') toast(t('saveFailed'), 'err');
-      return false;
-    }
-  }
-  const touch = globalThis.matchMedia?.('(pointer: coarse)').matches;
-  try {
-    const file = new File([blob], name, { type });
-    if (touch && navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: name });
-      return true;
-    }
-  } catch (e) {
-    if (e?.name === 'AbortError') return false;               // the person closed the share sheet
-  }
-  if (globalThis.HAPTUNE_CONFIG?.pwa === false) { toast(t('saveFailed'), 'err'); return false; }
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = name; a.rel = 'noopener'; document.body.appendChild(a); a.click();
-  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 4000);
-  return true;
-}
-
-/** Prints the engraved score (the browser's print dialog also saves a PDF). */
-async function printScore(xml, title) {
-  const { pages } = await renderMusicXML(xml, { width: 760, scale: 40 });
-  const frame = document.createElement('iframe');
-  frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
-  document.body.appendChild(frame);
-  const doc = frame.contentDocument;
-  doc.open();
-  doc.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title.replace(/</g, '&lt;')}</title><style>@page{margin:12mm}body{margin:0}svg{width:100%;height:auto;page-break-inside:avoid;color:#000;fill:#000}</style></head><body>${pages.join('')}</body></html>`);
-  doc.close();
-  setTimeout(() => { try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch { toast(t('saveFailed'), 'err'); } setTimeout(() => frame.remove(), 60000); }, 300);
 }
 
 const matchSel = (sel) => (e) => sel.pi === null || sel.pi === undefined || (e.pi === sel.pi && (!sel.staff || (e.staff || 1) === sel.staff));
@@ -788,7 +741,9 @@ function ResultCard({ result, barNo, onPractise, onAgain, assignment, onSend, ch
 function SheetMusic({ xml, boxRef, layerRef, onDrawn, onTapId, onFallback, flagged = [], changed = null }) {
   const [state, setState2] = useState({ loading: true, pages: [], error: null, first: !isVerovioReady() });
   const wrapRef = useRef(null);
-  const html = useMemo(() => state.pages.join(''), [state.pages]);     // joined once, not on every playing frame
+  // joined once, not on every playing frame; each page keeps its exact shape, so pages off the screen
+  // can be left unpainted (content-visibility) without anything moving when they come into view
+  const html = useMemo(() => state.pages.map((svg) => { const z = pageSize(svg); return `<div class="vrv-page"${z ? ` style="aspect-ratio:${z.w}/${z.h}"` : ''}>${svg}</div>`; }).join(''), [state.pages]);
   const drawn = useRef(onDrawn);
   drawn.current = onDrawn;
   useEffect(() => {
@@ -1082,6 +1037,8 @@ export function FindKeySheet({ pieceId, semis, onPick }) {
 
 export function ExportSheet({ pieceId, semis, title, part = null, partLabel = '' }) {
   const [busy, setBusy] = useState(null);
+  const [progress, setProgress] = useState('');
+  const [ready, setReady] = useState(null);         // a file that is made and waiting for a tap to be saved
   const [onlyPart, setOnlyPart] = useState(!!part);
   const [d, setD] = useState(null);
   useEffect(() => { getPiece(pieceId).then(setD); }, [pieceId]);
@@ -1094,44 +1051,66 @@ export function ExportSheet({ pieceId, semis, title, part = null, partLabel = ''
     const sheet = scoreToSheet(sc, harmonyList(sc));
     return sheet ? toChordsOverLyrics({ ...sheet, title: sc.title, key: concertKey(sc) }) : '';
   };
-  const run = async (kind) => {
-    setBusy(kind);
+  /** Makes the file: {name, data}. Slow ones (the PDF) report progress. */
+  const make = async (kind) => {
+    if (kind === 'musicxml') return { name: `${safe}${suffix}.musicxml`, data: writeMusicXML(scoreNow()) };
+    if (kind === 'midi') return { name: `${safe}${suffix}.mid`, data: writeMIDI(scoreNow()) };
+    if (kind === 'sheetpdf') return { name: `${safe}${suffix}.pdf`, data: await scorePdf(writeMusicXML(scoreNow()), { title: safe + suffix, onProgress: (a, n) => setProgress(`${a}/${n}`) }) };
+    if (kind === 'text') return { name: `${safe} (chords and lyrics).txt`, data: textOf() };
+    if (kind === 'pdf') return { name: `${safe} (original).pdf`, data: new Uint8Array(d.rec.pdf) };
+    const files = [];
+    if (d.score) {
+      files.push({ name: `${safe}${suffix}.musicxml`, data: writeMusicXML(scoreNow()) });
+      files.push({ name: `${safe}${suffix}.mid`, data: writeMIDI(scoreNow()) });
+      files.push({ name: `${safe}${suffix}.pdf`, data: await scorePdf(writeMusicXML(scoreNow()), { title: safe + suffix, onProgress: (a, n) => setProgress(`${a}/${n}`) }) });
+    }
+    const txt = textOf();
+    if (txt) files.push({ name: `${safe} (chords and lyrics).txt`, data: txt });
+    if (d.rec.pdf) files.push({ name: `${safe} (original).pdf`, data: new Uint8Array(d.rec.pdf) });
+    return { name: `${safe}.zip`, data: writeZip(files) };
+  };
+  const hand = async (file) => {
     try {
-      let ok = false;
-      if (kind === 'musicxml') ok = await saveFile(`${safe}${suffix}.musicxml`, writeMusicXML(scoreNow()));
-      else if (kind === 'midi') ok = await saveFile(`${safe}${suffix}.mid`, writeMIDI(scoreNow()));
-      else if (kind === 'print') { await printScore(writeMusicXML(scoreNow()), safe + suffix); ok = true; }
-      else if (kind === 'text') ok = await saveFile(`${safe} (chords and lyrics).txt`, textOf());
-      else if (kind === 'pdf') ok = await saveFile(`${safe}.pdf`, new Uint8Array(d.rec.pdf));
-      else if (kind === 'zip') {
-        const files = [];
-        if (d.score) {
-          files.push({ name: `${safe}${suffix}.musicxml`, data: writeMusicXML(scoreNow()) });
-          files.push({ name: `${safe}${suffix}.mid`, data: writeMIDI(scoreNow()) });
-        }
-        const txt = textOf();
-        if (txt) files.push({ name: `${safe} (chords and lyrics).txt`, data: txt });
-        if (d.rec.pdf) files.push({ name: `${safe}.pdf`, data: new Uint8Array(d.rec.pdf) });
-        ok = await saveFile(`${safe}.zip`, writeZip(files));
-      }
-      if (ok && kind !== 'print') toast(t('export') + ' ✓');
+      const ok = await saveFile(file.name, file.data);
+      if (ok) { toast(t('exportDone', { name: file.name })); setReady(null); }
+    } catch (e) {
+      // a phone browser wants a fresh tap after slow work: keep the file and show a Save button
+      if (e instanceof SaveError && e.code === 'gesture') setReady(file);
+      else toast(t('saveFailed'), 'err');
+    }
+  };
+  const run = async (kind) => {
+    setBusy(kind); setProgress(''); setReady(null);
+    try {
+      const started = performance.now();
+      const file = await make(kind);
+      // phones only allow sharing straight after a tap; after slow work, ask for one more tap
+      if (performance.now() - started > 900 && globalThis.matchMedia?.('(pointer: coarse)').matches && !globalThis.HAPTUNE_CONFIG?.native) setReady(file);
+      else await hand(file);
     } catch (e) { toast(e.message || String(e), 'err'); }
-    setBusy(null);
+    setBusy(null); setProgress('');
   };
   if (!d) return <SheetFrame title={t('export')}><div class="loading"><div class="spinner" /></div></SheetFrame>;
   const hasText = !!(d.sheet || (d.score && scoreToSheet(d.score, harmonyList(d.score))));
   const row = (kind, icon, color, title2, sub) => (
-    <Row key={kind} icon={icon} color={color} title={title2} subtitle={busy === kind ? '…' : sub} onClick={() => !busy && run(kind)} />
+    <Row key={kind} id={`exp-${kind}`} icon={icon} color={color} title={title2} subtitle={busy === kind ? `${t('exportMaking')} ${progress}` : sub}
+      right={busy === kind ? <div class="spinner small" /> : undefined} onClick={() => !busy && run(kind)} />
   );
   return (
     <SheetFrame title={t('export')}>
       {semis !== 0 && <p class="note-text">{t('exportInKey', { key: `${semis > 0 ? '+' : ''}${semis}` })}</p>}
       {part && <List><Row icon="users" color="indigo" title={t('exportPartOnly', { p: partLabel })} right={<Toggle id="exp-part" checked={onlyPart} onChange={setOnlyPart} label={t('exportPartOnly', { p: partLabel })} />} /></List>}
+      {ready && (
+        <Card class="fade-up">
+          <div class="report-line" style={{ alignItems: 'center' }}><Badge icon="check" color="green" size={34} /><div style={{ flex: 1, minWidth: 0 }}><strong>{t('exportReady')}</strong><div class="sub" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ready.name}</div></div></div>
+          <Button full icon="download" kind="brand" onClick={() => hand(ready)}>{t('exportSave')}</Button>
+        </Card>
+      )}
       <Section title={t('exportAs')}>
         <List>
+          {d.score && row('sheetpdf', 'print', 'purple', t('exportSheetPdf'), t('exportSheetPdfSub'))}
           {d.score && row('musicxml', 'doc', 'blue', 'MusicXML', 'MuseScore · Finale · Dorico · Sibelius')}
           {d.score && row('midi', 'piano', 'green', 'MIDI', 'GarageBand · Logic · any keyboard')}
-          {d.score && row('print', 'print', 'purple', t('exportPrint'), 'PDF')}
           {hasText && row('text', 'chords', 'orange', t('exportText'), '.txt')}
           {d.rec.pdf && row('pdf', 'doc', 'red', t('originalPage'), 'PDF')}
           {row('zip', 'folder', 'gray', t('exportAll'), '.zip')}

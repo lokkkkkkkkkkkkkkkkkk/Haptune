@@ -1,5 +1,6 @@
 // Interface text: [English, Bahasa Melayu, 简体中文, 繁體中文]. {name} placeholders are filled by t().
 import { MORE } from './i18n-community.js';
+import { V2 } from './i18n-v2.js';
 export const LANGS = [
   { id: 'en', name: 'English' }, { id: 'ms', name: 'Bahasa Melayu' }, { id: 'zh-Hans', name: '简体中文' }, { id: 'zh-Hant', name: '繁體中文' },
 ];
@@ -82,7 +83,7 @@ const S = {
   tapChord: ['Tap a chord to see how to play it.', 'Ketik kord untuk melihat cara memainkannya.', '点一下和弦查看指法。', '點一下和弦查看指法。'],
   romanNumerals: ['Roman numerals', 'Angka Roman', '级数', '級數'], piano: ['Piano', 'Piano', '钢琴', '鋼琴'], guitar: ['Guitar', 'Gitar', '吉他', '吉他'], ukulele: ['Ukulele', 'Ukulele', '尤克里里', '烏克麗麗'],
   improviseOver: ['Improvise Over This', 'Improvisasi Atas Lagu Ini', '用它即兴', '用它即興'], export: ['Export', 'Eksport', '导出', '匯出'],
-  exportHelp: ['A .zip with MusicXML (for MuseScore, Sibelius, Finale, Dorico), MIDI (for GarageBand and DAWs) and ChordPro text.', 'Fail .zip dengan MusicXML (untuk MuseScore, Sibelius, Finale, Dorico), MIDI (untuk GarageBand dan DAW) dan teks ChordPro.', '一个 .zip 文件，内含 MusicXML（MuseScore、Sibelius、Finale、Dorico 可用）、MIDI（GarageBand 和音乐软件可用）与 ChordPro 文本。', '一個 .zip 檔案，內含 MusicXML（MuseScore、Sibelius、Finale、Dorico 可用）、MIDI（GarageBand 與音樂軟體可用）與 ChordPro 文字。'],
+  exportHelp: ['Files are saved through your phone\'s share menu (Files, Drive, WhatsApp, email) or downloaded on a computer. The .zip holds everything.', 'Fail disimpan melalui menu kongsi telefon anda (Fail, Drive, WhatsApp, e-mel) atau dimuat turun pada komputer. Fail .zip mengandungi semuanya.', '文件通过手机的分享菜单保存（文件、云盘、WhatsApp、邮件），在电脑上则直接下载。.zip 包含全部内容。', '檔案透過手機的分享選單儲存（檔案、雲端硬碟、WhatsApp、郵件），在電腦上則直接下載。.zip 包含全部內容。'],
   exportInKey: ['Exported in the key you are viewing ({key}).', 'Dieksport dalam kunci yang anda lihat ({key}).', '按当前所看的调导出（{key}）。', '按目前所看的調匯出（{key}）。'],
   favourite: ['Favourite', 'Kegemaran', '收藏', '收藏'], unfavourite: ['Remove Favourite', 'Buang Kegemaran', '取消收藏', '取消收藏'],
   practiseMic: ['Practise with Mic', 'Berlatih dengan Mikrofon', '用麦克风练习', '用麥克風練習'], listening: ['Listening…', 'Mendengar…', '正在聆听…', '正在聆聽…'],
@@ -425,7 +426,7 @@ const S = {
 };
 
 
-Object.assign(S, MORE);                // community, accounts, plans and help (i18n-community.js)
+Object.assign(S, MORE, V2);                // community, accounts, plans and help (i18n-community.js)
 
 const INSTR = {
   piano: ['Piano', 'Piano', '钢琴', '鋼琴'], keyboard: ['Keyboard', 'Papan kekunci', '电子琴', '電子琴'], violin: ['Violin', 'Biola', '小提琴', '小提琴'], viola: ['Viola', 'Viola', '中提琴', '中提琴'],

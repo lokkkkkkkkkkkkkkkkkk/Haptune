@@ -222,6 +222,8 @@ input[type="range"] { width: 100%; accent-color: var(--c, var(--blue)); }
 :root[data-theme="dark"] .score-box { background: #F4F1EA; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .score-box { background: #F4F1EA; } }
 .vrv svg { width: 100%; height: auto; display: block; color: #111; fill: #111; }
+/* each page of a score keeps its exact shape, so pages away from the screen are not painted until needed */
+.vrv-page { content-visibility: auto; contain-intrinsic-size: auto 480px; }
 .vrv g.note.on, .vrv g.note.on * { fill: var(--blue) !important; color: var(--blue) !important; stroke: var(--blue) !important; }
 .vrv g.note.ok, .vrv g.note.ok * { fill: #1E9E48 !important; color: #1E9E48 !important; }
 .vrv g.note.bad, .vrv g.note.bad * { fill: #E0352B !important; color: #E0352B !important; }
@@ -962,3 +964,8 @@ textarea.field.prose { min-height: 84px; font-family: var(--font); font-size: 16
 .post-list > :nth-child(2) { animation-delay: .04s; } .post-list > :nth-child(3) { animation-delay: .08s; } .post-list > :nth-child(4) { animation-delay: .12s; }
 .post-list > :nth-child(n+5) { animation-delay: .16s; }
 @media (prefers-reduced-motion: reduce) { .post-list > * { animation: none; } }
+
+/* the phone paused the sound (a call, the lock screen...) and the browser wants a tap before it plays again */
+.sound-pill { position: fixed; left: 50%; transform: translateX(-50%); top: calc(var(--sa-top, 0px) + 10px); z-index: 60; display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px; border-radius: 999px; background: #1C1B22; color: #fff; font-weight: 700; font-size: 14px; box-shadow: 0 8px 28px rgba(0,0,0,.28); animation: fade .25s ease both; max-width: calc(100vw - 24px); }
+.spinner.small { width: 18px; height: 18px; border-width: 2.5px; }
