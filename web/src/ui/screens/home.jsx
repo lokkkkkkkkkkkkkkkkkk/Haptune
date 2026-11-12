@@ -110,9 +110,12 @@ export function HomeView({ active }) {
     const day = Math.floor(Date.now() / 86400000);
     const have = new Set(s.pieces.map((p) => p.catalogId || (p.songId && `song:${p.songId}`)));
     const pool = catalog.filter((r) => !have.has(r.id));
+    // two of each kind of music, different every day
+    const byGenre = new Map();
+    for (const r of pool) { if (!byGenre.has(r.genre)) byGenre.set(r.genre, []); byGenre.get(r.genre).push(r); }
     const out = [];
-    for (let i = 0; i < pool.length && out.length < 12; i++) out.push(pool[(day * 7 + i * 37) % pool.length]);
-    return [...new Set(out)];
+    for (const round of [0, 1]) for (const list of byGenre.values()) out.push(list[(day * 31 + round * 17 + list.length * 7) % list.length]);
+    return [...new Set(out)].slice(0, 14);
   }, [catalog, s.pieces.length]);
 
   const onPick = (e) => { const files = [...(e.currentTarget.files || [])]; e.currentTarget.value = ''; openFiles(files); };

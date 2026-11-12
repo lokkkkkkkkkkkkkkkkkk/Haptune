@@ -15,6 +15,7 @@ import { getLang } from '../core/i18n.js';
 
 const CFG = () => globalThis.HAPTUNE_CONFIG || {};
 let rows = null, loading = null;
+const packs = new Map();
 
 export const GENRES = ['classical', 'piano', 'folk', 'song', 'hymn', 'kids', 'christmas', 'jazz', 'chinese', 'celtic', 'choral', 'dance', 'chamber'];
 
@@ -73,11 +74,22 @@ export async function addCatalogPiece(entry) {
   if (entry.songId) return addSongbookSong(entry.songId, { silent: true });
   const have = getState().pieces.find((p) => p.catalogId === entry.id);
   if (have) return have;
-  const res = await fetch(`catalog/${entry.file}`);
+  const [file, at] = entry.file.split('#');
+  const f = file.toLowerCase();
+  let score;
+  if (at !== undefined) {
+    // tune books are kept as packs of 120 tunes: one small download, then every tune in it opens at once
+    if (!packs.has(file)) packs.set(file, fetch(`catalog/${file}`).then((r) => { if (!r.ok) throw new Error('offline'); return r.json(); }).catch((e) => { packs.delete(file); throw e; }));
+    let pack;
+    try { pack = await packs.get(file); } catch { throw new Error('This piece could not be downloaded. Check your connection.'); }
+    score = parseABC(pack[Number(at)], { instrument: entry.instrument || 'violin' });
+    score.title = entry.title;
+    if (entry.composer && !score.composer) score.composer = entry.composer;
+    return addScore(score, { source: 'catalog', fmt: 'abc', title: entry.title, extra: { catalogId: entry.id, license: entry.licence, tags: [entry.genre], level: entry.level || undefined } });
+  }
+  const res = await fetch(`catalog/${file}`);
   if (!res.ok) throw new Error('This piece could not be downloaded. Check your connection.');
   const bytes = await res.arrayBuffer();
-  const f = entry.file.toLowerCase();
-  let score;
   if (f.endsWith('.mxl')) score = parseMusicXML(await mxlToXml(bytes));
   else if (f.endsWith('.abc')) score = parseABC(decodeText(bytes), { instrument: entry.instrument || 'voice' });
   else if (/\.midi?$/.test(f)) score = readMIDI(bytes, { title: entry.title }).score;
