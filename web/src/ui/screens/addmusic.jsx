@@ -280,6 +280,29 @@ export function ImportWizardSheet({ files: initial = [], title = '', youtube = n
     );
   }
 
+  // --- reading pages with AI is a Pro tool: say so before anything is uploaded, and offer the free ways
+  const me = s.me;
+  const allowance = me?.usage?.read_pages;
+  if (hasServer() && me && me.tier !== 'dev' && allowance && allowance.limit === 0 && phase === 'setup') {
+    return (
+      <SheetFrame title={t('readMusic')}>
+        <div class="pro-gate">
+          <span class="pro-tag">Pro</span>
+          <h2>{t('proGateTitle')}</h2>
+          <p>{t('proGateSub')}</p>
+        </div>
+        <Button kind="brand" full icon="crown" onClick={() => openSheet('plans', { reason: { feature: 'read_pages', need: 'pro' } })} id="gate-pro">{t('seePro')}</Button>
+        <Section title={t('freeWays')}>
+          <List>
+            <Row icon="stage" color="violet" title={t('askStage')} subtitle={t('askStageSub')} onClick={() => openSheet('compose', { type: 'request', title: baseName(files[0]?.name || '') })} />
+            {files.some(isPdf) && <Row icon="doc" color="blue" title={t('keepAsPdf')} subtitle={t('keepAsPdfSub')} onClick={keepPdf} />}
+            <Row icon="gift" color="orange" title={t('passWithNotes')} subtitle={t('passWithNotesSub')} onClick={() => { closeSheet(); push('wallet'); }} />
+          </List>
+        </Section>
+      </SheetFrame>
+    );
+  }
+
   return (
     <SheetFrame title={t('readMusic')} full>
       <div class="steps" aria-hidden="true">{steps.map((x, i) => <i key={x} class={i <= stepIdx ? 'on' : ''} />)}</div>

@@ -357,3 +357,33 @@ body { font: 16px/1.4 var(--font); letter-spacing: -.006em; }
 .rw-r strong { font-size: 14px; color: var(--ink2); } .rw-r span.num { font-size: 12px; }
 .rw-r.on { color: var(--violet); } .rw-r.on strong { color: var(--ink); }
 .rw-r.cur { border-color: var(--violet); background: var(--violet-soft); }
+
+/* ---------- plans and paying ---------- */
+.plans-top h2 { font: 800 26px/1.12 var(--display); letter-spacing: -.035em; }
+.plans-top p { color: var(--ink2); font-size: 15px; margin-top: 6px; }
+.plans-pick { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.plans-pick .segmented:first-child { flex: 1; min-width: 220px; }
+.plan-card { border-radius: 24px; padding: 18px; background: var(--card) !important; border: 1px solid var(--line); box-shadow: none; }
+.plan-card.best { border: 2px solid var(--violet); box-shadow: 0 18px 44px rgba(106,77,255,.18); }
+.plan-card.need { box-shadow: 0 0 0 4px color-mix(in srgb, var(--violet) 22%, transparent); }
+.plan-card.current { box-shadow: 0 0 0 2px var(--green); }
+.plan-card .ribbon { top: -12px; left: 18px; right: auto; border-radius: 8px; font: 800 10.5px var(--display); letter-spacing: .07em; text-transform: uppercase; padding: 4px 9px; }
+.pcard-head h3 { font: 800 21px/1.1 var(--display); color: var(--ink); letter-spacing: -.02em; }
+.pcard-price { font: 800 22px/1.1 var(--display); letter-spacing: -.03em; }
+.pfeat li svg { color: var(--green); }
+.pay-btns { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
+.plan-card > .btn { margin-top: auto; }
+.pay-amount { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 16px 18px; border-radius: 20px; background: var(--brand-soft); border: 1px solid var(--line); }
+.pay-amount span { font-weight: 650; color: var(--ink2); } .pay-amount strong { font: 800 28px var(--display); letter-spacing: -.03em; }
+.pay-qr { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px; border-radius: 20px; background: #fff; border: 1px solid var(--line); color: #14121F; font-size: 13.5px; font-weight: 600; }
+.pay-qr img { width: min(260px, 70vw); height: auto; border-radius: 10px; }
+.copy-val { display: inline-flex; align-items: center; gap: 8px; color: var(--violet); }
+.copy-val strong { color: var(--ink); font-size: 16px; letter-spacing: .02em; }
+.progress { height: 7px; border-radius: 99px; background: var(--fill2); overflow: hidden; }
+.progress span { display: block; height: 100%; border-radius: 99px; background: var(--brand); }
+
+.pro-gate { border-radius: 24px; padding: 22px 18px; background: #14121F; color: #fff; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; position: relative; overflow: hidden; }
+.pro-gate::before { content: ""; position: absolute; right: -70px; top: -90px; width: 240px; height: 240px; border-radius: 50%; background: radial-gradient(circle, rgba(140,100,255,.8), rgba(140,100,255,0) 70%); }
+.pro-gate > * { position: relative; }
+.pro-gate h2 { font: 800 23px/1.15 var(--display); letter-spacing: -.03em; }
+.pro-gate p { font-size: 14.5px; opacity: .8; line-height: 1.45; }

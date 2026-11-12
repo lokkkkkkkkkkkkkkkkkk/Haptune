@@ -21,7 +21,7 @@ import { CommunityView, DailyView, StageGuideSheet } from './screens/community.j
 import { PostView, AcceptSheet, ChangesSheet, AddCreditsSheet, SubmitScoreSheet, ImageSheet } from './screens/post.jsx';
 import { ComposeSheet } from './screens/compose.jsx';
 import { ProfileView, LeaderboardView, NotificationsView, WalletView, ChallengeView, EditProfileView } from './screens/people.jsx';
-import { PlansSheet } from './screens/plans.jsx';
+import { PlansSheet, ManualPaySheet } from './screens/plans.jsx';
 import { HelpView, FeedbackSheet, GuidelinesSheet, AboutSheet, captureErrors } from './screens/help.jsx';
 import { AdminView } from './screens/admin.jsx';
 import { ReportSheet, MoreSheet } from './screens/social.jsx';
@@ -53,7 +53,7 @@ const SHEETS = {
   export: ExportSheet, lesson: LessonSheet, challenge: ChallengeSheet, account: AccountSheet, paywall: PaywallSheet,
   importWizard: ImportWizardSheet, finder: FinderSheet, welcome: WelcomeSheet, playAlong: PlayAlongSheet, keySheet: KeySheet, details: DetailsSheet,
   joinClass: JoinClassSheet, newClass: NewClassSheet, newAssignment: NewAssignmentSheet, review: ReviewSheet,
-  plans: PlansSheet, compose: ComposeSheet, accept: AcceptSheet, changes: ChangesSheet, addCredits: AddCreditsSheet, submitScore: SubmitScoreSheet,
+  plans: PlansSheet, manualPay: ManualPaySheet, compose: ComposeSheet, accept: AcceptSheet, changes: ChangesSheet, addCredits: AddCreditsSheet, submitScore: SubmitScoreSheet,
   image: ImageSheet, reportPost: ReportSheet, more: MoreSheet, feedback: FeedbackSheet, guidelines: GuidelinesSheet, about: AboutSheet, installHelp: InstallHelpSheet, stageGuide: StageGuideSheet,
   setPassword: SetPasswordSheet, signIn: SignInSheet, deleteAccount: DeleteAccountSheet, devCode: DevCodeSheet,
 };
@@ -75,6 +75,19 @@ function reportPractice(minutes) {
   const m = practiceMinutes;
   practiceMinutes = 0;
   C.practice(m).then((r) => { if (r.credits) { toast(t('practiceCredits', { n: r.credits, s: r.streak })); ensureAccount({ fresh: true }); } }).catch(() => { practiceMinutes += m; });
+}
+
+/** Back from Stripe's checkout page (…/app/?paid=<session>): switch the plan on straight away. */
+async function backFromCheckout() {
+  let session = '';
+  try { session = new URLSearchParams(location.search).get('paid') || ''; } catch { return; }
+  if (!session) return;
+  history.replaceState(null, '', location.pathname);
+  try {
+    const me = await C.billing.sync(session);
+    if (me.tier !== 'free') toast(t('welcomePlan', { plan: t(`plan_${me.tier}`) }));
+    go('me');
+  } catch (e) { toast(e.message || String(e), 'err'); openSheet('plans'); }
 }
 
 /** Links like …/#post/<id> (shared from the community) open that post. */
@@ -130,7 +143,7 @@ function App() {
     hooks.practice = reportPractice;
     loadAll().then(() => {
       if (!local.get('welcomed', false)) openSheet('welcome');
-      if (hasServer()) ensureAccount();
+      if (hasServer()) ensureAccount().then(backFromCheckout);
       openHash();
       warmVerovio();
     });

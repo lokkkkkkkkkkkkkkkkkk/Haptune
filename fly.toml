@@ -10,6 +10,14 @@ primary_region = "sin"            # Singapore: closest region to Malaysia
 [env]
   HAPTUNE_DATA = "/data"           # Academy database (SQLite) lives on the volume below
   HAPTUNE_WORKERS = "1"
+  # The website. Card payments (Stripe) come back to it, and the server's own address points people to it.
+  HAPTUNE_SITE_URL = "https://haptune.name.my"
+  HAPTUNE_WEB_URL = "https://haptune.name.my/"
+  # DuitNow / bank transfer details shown to people in Malaysia (the account name is optional but reassuring):
+  HAPTUNE_PAY_BANK = "CIMB Bank"
+  HAPTUNE_PAY_ACCOUNT = "7647680094"
+  # HAPTUNE_PAY_NAME = "<the name on the bank account>"
+  # Secrets, set with `fly secrets set`: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET (card payments)
   # Which Claude model each AI feature uses (the plans' allowances follow their cost, see server/accounts.py).
   # Short tutor answers: Haiku costs 1/40 of Opus per token. The song finder needs web search: Sonnet, half the price.
   HAPTUNE_AI_MODEL_TUTOR = "claude-haiku-5-5"

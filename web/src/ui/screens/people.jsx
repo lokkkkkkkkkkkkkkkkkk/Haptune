@@ -101,7 +101,7 @@ export function LeaderboardView({ active, board: b0 = 'helpers' }) {
 const NOTE_ICON = {
   submission: ['staff', 'green'], accepted: ['check', 'green'], changes: ['pencil', 'orange'], helpful: ['heart', 'pink'], comment: ['chat', 'blue'],
   answer: ['quiz', 'blue'], want: ['users', 'purple'], follow: ['plus', 'purple'], ready: ['bell', 'green'], challenge: ['trophy', 'yellow'],
-  credits: ['star', 'yellow'], mod: ['info', 'red'], claim: ['pencil', 'orange'], like: ['heart', 'pink'], new_post: ['bell', 'blue'], nudge: ['bolt', 'orange'],
+  credits: ['star', 'yellow'], mod: ['info', 'red'], claim: ['pencil', 'orange'], like: ['heart', 'pink'], new_post: ['bell', 'blue'], nudge: ['bolt', 'orange'], paid_ok: ['crown', 'purple'], paid_no: ['info', 'red'],
   expired: ['info', 'gray'], plan: ['crown', 'purple'], published: ['books', 'green'],
 };
 
