@@ -1,5 +1,5 @@
 import { Fragment } from 'preact';
-import { useState, useRef, useMemo } from 'preact/hooks';
+import { useState, useRef, useMemo, useEffect } from 'preact/hooks';
 import { useApp, push, openSheet, closeSheet, toast, addSongbookSong, addScore, getState } from '../state.js';
 import { t, getLang, instrumentName, INSTRUMENTS } from '../../core/i18n.js';
 import { Icon, Badge, List, Row, Chip, Button, Card, Section, Stars, Empty, Segmented } from '../components.jsx';
@@ -7,6 +7,8 @@ import { LargeTitle, NavBar, SheetFrame } from './common.jsx';
 import { Mascot } from '../mascot.jsx';
 import { importFile, importText, ACCEPT } from '../importer.js';
 import { SONGS, songTitle } from '../../data/songs.js';
+import { loadCatalog, searchCatalog, addCatalogPiece, GENRES } from '../catalog.js';
+import { parseJianpu, isJianpu } from '../../core/jianpu.js';
 import { parseChordSheet, sheetChords } from '../../core/chordsheet.js';
 import { keyName, parseName, nameOf } from '../../core/pitch.js';
 import { scaleScore } from '../../core/exercises.js';
@@ -55,11 +57,11 @@ export function LibraryView() {
   return (
     <div class="scroll">
       <div class="wrap">
-        <LargeTitle title={t('library')} color="blue" actions={<button type="button" class="circle-btn c-blue" onClick={() => openSheet('add')} aria-label={t('add')}><Icon name="plus" size={20} stroke={2.6} /></button>} />
-        <button type="button" class="add-hero fade-up" onClick={() => openSheet('add')} id="lib-add">
-          <Mascot mood="happy" size={58} />
-          <span><strong>{t('addMusic')}</strong><span>{t('addMusicSub')}</span></span>
-          <span class="plus"><Icon name="plus" size={22} stroke={2.8} /></span>
+        <LargeTitle title={t('library')} actions={<button type="button" class="btn brand small" onClick={() => openSheet('add')} id="lib-add"><Icon name="plus" size={18} stroke={2.6} />{t('add')}</button>} />
+        <button type="button" class="sr-cta fade-up" id="lib-free" onClick={() => push('catalog')}>
+          <span class="hm-art sm"><Icon name="books" size={21} stroke={2.1} /></span>
+          <div><strong>{t('freeLibrary')}</strong><span>{t('freeLibrarySub')}</span></div>
+          <Icon name="chevronR" size={16} stroke={2.4} />
         </button>
         <label class="search" for="lib-search"><Icon name="search" size={18} /><input id="lib-search" type="search" placeholder={t('searchPrompt')} value={q} onInput={(e) => setQ(e.currentTarget.value)} /></label>
         <div class="chips">{FILTERS.map((f) => <Chip key={f.id} on={filter === f.id} color={f.color} onClick={() => setFilter(f.id)}>{t(f.label)}</Chip>)}</div>
@@ -141,11 +143,14 @@ export function ImportReportSheet({ pieceId, report, error, name }) {
   );
 }
 
+const JIANPU_EXAMPLE = 'title: 茉莉花\nkey: 1=F\ntime: 2/4\ntempo: 72\n---\n3 3_ 5_ | 6_ 1\'_ 1\'_ 6_ | 5 5_ 6_ | 5 - |\nw: 好 一 朵 美 丽 的 茉 莉 花\n5 5_ 6_ | 1\' 1\'_ 6_ | 5 5_ 6_ | 5 - ||\nw: 好 一 朵 美 丽 的 茉 莉 花';
+
 export function PasteSheet({ initial = '' }) {
   const [text, setText] = useState(initial);
   const preview = useMemo(() => {
     if (!text.trim()) return null;
     if (/^X:\s*\d/m.test(text) && /^K:/m.test(text)) return 'ABC';
+    if (isJianpu(text)) { try { const sc = parseJianpu(text); return `簡譜 · ${sc.measures.length} ${t('bars').toLowerCase()}`; } catch (e) { return null; } }
     try { const s = parseChordSheet(text); const n = sheetChords(s).length; return n ? t('detected', { n, key: keyName(s.key) }) : null; } catch { return null; }
   }, [text]);
   const add = async () => {
@@ -156,8 +161,13 @@ export function PasteSheet({ initial = '' }) {
     } catch (e) { toast(e.message, 'err'); }
   };
   return (
-    <SheetFrame title={t('pasteChords')} right={t('add')} onRight={add} rightDisabled={!preview} full>
-      <p class="note-text">{t('pasteChordsSub')}. ChordPro, ABC.</p>
+    <SheetFrame title={t('wayType')} right={t('add')} onRight={add} rightDisabled={!preview} full>
+      <p class="note-text">{t('typeItSub')}</p>
+      <div class="chips">
+        <Chip onClick={() => setText(JIANPU_EXAMPLE)} >簡譜 {t('example')}</Chip>
+        <Chip onClick={() => setText('{title: Amazing Grace}\n{key: G}\nA[G]mazing [G7]grace, how [C]sweet the [G]sound\nThat saved a wretch like [D]me')}>{t('viewChords')} {t('example')}</Chip>
+        <Chip onClick={() => setText('X:1\nT:Ode to Joy\nM:4/4\nL:1/4\nK:D\nF F G A|A G F E|D D E F|F3/2 E/2 E2|]')}>ABC {t('example')}</Chip>
+      </div>
       <textarea class="field" id="paste-text" placeholder={`${t('pasteHere')}\n\nG            G7         C         G\nAmazing grace, how sweet the sound`} value={text} onInput={(e) => setText(e.currentTarget.value)} onPaste={(e) => { const v = e.clipboardData?.getData('text'); if (v) { e.preventDefault(); setText((x) => x + v); } }} />
       {preview && <div class="report-line"><span class="t-green"><Icon name="check" size={20} stroke={2.4} /></span><strong>{preview}</strong></div>}
       <Button onClick={add} disabled={!preview} full>{t('addToLibrary')}</Button>
@@ -249,6 +259,67 @@ export function ScaleSheet() {
       <Section title={t('octaves')}><Segmented value={oct} onChange={setOct} options={[{ value: 1, label: '1' }, { value: 2, label: '2' }]} /></Section>
       <List><Row title={t('instrument')} right={<select id="scale-inst" value={inst} onChange={(e) => setInst(e.currentTarget.value)}>{INSTRUMENTS.map((k) => <option key={k} value={k}>{instrumentName(k)}</option>)}</select>} /></List>
       <Button onClick={add} color="teal" full>{t('addToLibrary')}</Button>
+    </SheetFrame>
+  );
+}
+
+
+// ---------------------------------------------------------------------------- the free library
+const GENRE_ICON = { classical: 'staff', piano: 'piano', folk: 'guitar', song: 'mic', hymn: 'book', kids: 'star', christmas: 'star', jazz: 'sparkles', chinese: 'globe', celtic: 'violin', choral: 'users', dance: 'metronome', chamber: 'violin' };
+
+/** Every piece of the free library: search, filter by kind of music, tap to add and open. */
+export function CatalogView({ genre: genre0 = '' }) {
+  const s = useApp();
+  const [list, setList] = useState(null);
+  const [q, setQ] = useState('');
+  const [genre, setGenre] = useState(genre0);
+  const [busy, setBusy] = useState(null);
+  const [shown, setShown] = useState(60);
+  useEffect(() => { loadCatalog().then(setList); }, []);
+  useEffect(() => { setShown(60); }, [q, genre]);
+  const genres = useMemo(() => (list ? GENRES.filter((g) => list.some((r) => r.genre === g)) : []), [list]);
+  const found = useMemo(() => (list ? searchCatalog(list, q, { limit: 5000, genre }) : []), [list, q, genre]);
+  const have = new Set(s.pieces.map((p) => p.catalogId || (p.songId && `song:${p.songId}`)));
+  const open = async (r) => {
+    setBusy(r.id);
+    try { const rec = await addCatalogPiece(r); if (rec) push('piece', { id: rec.id }, 'library'); } catch (e) { toast(e.message || String(e), 'err'); }
+    setBusy(null);
+  };
+  return (
+    <div class="scroll">
+      <NavBar title={t('freeLibrary')} backLabel={t('library')} />
+      <div class="wrap" style={{ paddingTop: 12 }}>
+        <label class="search" for="cat-search"><Icon name="search" size={18} /><input id="cat-search" type="search" placeholder={t('homeSearchPh')} value={q} onInput={(e) => setQ(e.currentTarget.value)} /></label>
+        <div class="chips">
+          <Chip on={!genre} onClick={() => setGenre('')}>{t('genre_all')}</Chip>
+          {genres.map((g) => <Chip key={g} on={genre === g} onClick={() => setGenre(g)}>{t(`genre_${g}`)}</Chip>)}
+        </div>
+        {!list ? <div class="loading"><div class="spinner" /></div>
+          : found.length ? (
+            <List>
+              {found.slice(0, shown).map((r) => (
+                <Row key={r.id} icon={GENRE_ICON[r.genre] || 'library'} color="violet" title={r.title} subtitle={[r.composer, t(`genre_${r.genre}`)].filter(Boolean).join(' · ')}
+                  right={busy === r.id ? <div class="spinner small" /> : have.has(r.id) ? <span class="t-green"><Icon name="check" size={17} stroke={2.6} /></span> : <span class="t-violet"><Icon name="download" size={17} stroke={2.2} /></span>}
+                  onClick={() => open(r)} />
+              ))}
+            </List>
+          ) : <Empty icon="search" title={t('noResults', { q })} />}
+        {found.length > shown && <Button kind="secondary" full onClick={() => setShown(shown + 120)}>{t('loadMore')}</Button>}
+        <p class="section-foot">{t('freeLibraryNote', { n: list?.length || 0 })}</p>
+      </div>
+    </div>
+  );
+}
+
+export function InstallHelpSheet() {
+  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  return (
+    <SheetFrame title={t('installApp')}>
+      <List>
+        {ios ? [1, 2, 3].map((n) => <Row key={n} icon={n === 2 ? 'share' : n === 3 ? 'plus' : 'globe'} color="violet" title={t(`installIOS${n}`)} />)
+          : <Row icon="download" color="violet" title={t('installOther')} />}
+      </List>
+      <p class="note-text">{t('installAppSub')}</p>
     </SheetFrame>
   );
 }

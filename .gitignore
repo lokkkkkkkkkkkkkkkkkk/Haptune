@@ -1,3 +1,6 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+web/shots/
+web/dist/
+web/node_modules/

@@ -10,7 +10,7 @@ import { parseMusicXML, writeMusicXML } from '../../core/musicxml.js';
 import { C, attempt, ensureAccount } from '../account.js';
 import { youtubeId } from '../api.js';
 import { openExternal } from '../native.js';
-import { TYPE, PersonLine, Person, Coins, StatusPill, InstrumentChips, StarsInput, timeAgo, timeLeft, openReport } from './social.jsx';
+import { Reactions, TYPE, PersonLine, Person, Coins, StatusPill, InstrumentChips, StarsInput, timeAgo, timeLeft, openReport } from './social.jsx';
 
 const live = { reload: null };            // the open post refreshes itself after a sheet changes it
 export const reloadPost = () => live.reload?.();
@@ -82,11 +82,7 @@ export function PostView({ id, active }) {
         {p.type === 'request' && <RequestBox p={p} busy={busy} run={run} />}
         {p.type === 'question' && p.pot > 0 && <Card><div class="report-line"><Coins n={p.pot} /><p class="sub">{t('bountyNote')}</p></div></Card>}
         {p.type === 'share' && <ShareBox p={p} run={run} />}
-        {(p.type === 'show' || p.type === 'share') && (
-          <div class="btn-row">
-            <Button kind={p.me.liked ? 'primary' : 'secondary'} color="pink" icon="heart" onClick={() => run(() => C.react(`p:${p.id}`, 'like'))}>{p.likes || ''} {t('clap')}</Button>
-          </div>
-        )}
+        <Reactions target={`p:${p.id}`} />
 
         <Section title={p.type === 'request' ? t('scoresAndComments', { n: p.replies_list.length }) : p.type === 'question' ? t('answersN', { n: p.replies_list.length }) : t('commentsN', { n: p.replies_list.length })}>
           {p.replies_list.length === 0 && <p class="note-text">{t(p.type === 'request' ? 'noScoresYet' : p.type === 'question' ? 'noAnswersYet' : 'noCommentsYet')}</p>}
@@ -107,7 +103,7 @@ export function PostView({ id, active }) {
 }
 
 function copyLink(p) {
-  const base = (globalThis.HAPTUNE_CONFIG?.native ? 'https://lokkkkkkkkkkkkkkkkkk.github.io/Haptune/' : location.href.split('#')[0]);
+  const base = (globalThis.HAPTUNE_CONFIG?.native ? `${globalThis.HAPTUNE_CONFIG?.site || 'https://haptune.name.my'}/app/` : location.href.split('#')[0]);
   const url = `${base}#post/${p.id}`;
   try { navigator.clipboard.writeText(url); toast(t('copied')); } catch { toast(url); }
 }
@@ -243,7 +239,7 @@ function Reply({ r, p, run, onAccepted }) {
       {r.note && (accepted || r.status === 'changes') && <p class="r-note"><Icon name={accepted ? 'heart' : 'pencil'} size={14} /> {r.note}</p>}
       {r.reward > 0 && <p class="r-reward"><Coins n={r.reward} size="sm" /> {t('earned')}</p>}
       <div class="r-actions">
-        <button type="button" class={`clap${r.liked ? ' on' : ''}`} onClick={() => run(() => C.react(`r:${r.id}`, 'like'))}><Icon name="heart" size={15} fill={r.liked} />{r.likes || ''}</button>
+        <button type="button" class={`clap${r.liked ? ' on' : ''}`} onClick={() => run(() => C.emoji(`r:${r.id}`, 'like'))}><Icon name="heart" size={15} fill={r.liked} />{r.likes || ''}</button>
         {r.can.accept && <Button small color="green" icon="check" onClick={() => openSheet('accept', { reply: r, post: p, onDone: onAccepted })}>{t(r.kind === 'answer' ? 'acceptAnswer' : 'acceptScore')}</Button>}
         {r.can.changes && <Button small kind="secondary" onClick={() => openSheet('changes', { reply: r })}>{t('askChanges')}</Button>}
         {r.can.helpful && <Button small kind="plain" onClick={() => run(() => C.helpful(r.id), t('thanked'))}>{t('markHelpful')}</Button>}

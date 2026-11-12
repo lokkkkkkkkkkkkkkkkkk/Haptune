@@ -1,5 +1,6 @@
 // Interface text: [English, Bahasa Melayu, 简体中文, 繁體中文]. {name} placeholders are filled by t().
 import { MORE } from './i18n-community.js';
+import { V2 } from './i18n-v2.js';
 export const LANGS = [
   { id: 'en', name: 'English' }, { id: 'ms', name: 'Bahasa Melayu' }, { id: 'zh-Hans', name: '简体中文' }, { id: 'zh-Hant', name: '繁體中文' },
 ];
@@ -82,7 +83,7 @@ const S = {
   tapChord: ['Tap a chord to see how to play it.', 'Ketik kord untuk melihat cara memainkannya.', '点一下和弦查看指法。', '點一下和弦查看指法。'],
   romanNumerals: ['Roman numerals', 'Angka Roman', '级数', '級數'], piano: ['Piano', 'Piano', '钢琴', '鋼琴'], guitar: ['Guitar', 'Gitar', '吉他', '吉他'], ukulele: ['Ukulele', 'Ukulele', '尤克里里', '烏克麗麗'],
   improviseOver: ['Improvise Over This', 'Improvisasi Atas Lagu Ini', '用它即兴', '用它即興'], export: ['Export', 'Eksport', '导出', '匯出'],
-  exportHelp: ['A .zip with MusicXML (for MuseScore, Sibelius, Finale, Dorico), MIDI (for GarageBand and DAWs) and ChordPro text.', 'Fail .zip dengan MusicXML (untuk MuseScore, Sibelius, Finale, Dorico), MIDI (untuk GarageBand dan DAW) dan teks ChordPro.', '一个 .zip 文件，内含 MusicXML（MuseScore、Sibelius、Finale、Dorico 可用）、MIDI（GarageBand 和音乐软件可用）与 ChordPro 文本。', '一個 .zip 檔案，內含 MusicXML（MuseScore、Sibelius、Finale、Dorico 可用）、MIDI（GarageBand 與音樂軟體可用）與 ChordPro 文字。'],
+  exportHelp: ['Files are saved through your phone\'s share menu (Files, Drive, WhatsApp, email) or downloaded on a computer. The .zip holds everything.', 'Fail disimpan melalui menu kongsi telefon anda (Fail, Drive, WhatsApp, e-mel) atau dimuat turun pada komputer. Fail .zip mengandungi semuanya.', '文件通过手机的分享菜单保存（文件、云盘、WhatsApp、邮件），在电脑上则直接下载。.zip 包含全部内容。', '檔案透過手機的分享選單儲存（檔案、雲端硬碟、WhatsApp、郵件），在電腦上則直接下載。.zip 包含全部內容。'],
   exportInKey: ['Exported in the key you are viewing ({key}).', 'Dieksport dalam kunci yang anda lihat ({key}).', '按当前所看的调导出（{key}）。', '按目前所看的調匯出（{key}）。'],
   favourite: ['Favourite', 'Kegemaran', '收藏', '收藏'], unfavourite: ['Remove Favourite', 'Buang Kegemaran', '取消收藏', '取消收藏'],
   practiseMic: ['Practise with Mic', 'Berlatih dengan Mikrofon', '用麦克风练习', '用麥克風練習'], listening: ['Listening…', 'Mendengar…', '正在聆听…', '正在聆聽…'],
@@ -425,18 +426,27 @@ const S = {
 };
 
 
-Object.assign(S, MORE);                // community, accounts, plans and help (i18n-community.js)
+Object.assign(S, MORE, V2);                // community, accounts, plans and help (i18n-community.js)
 
 const INSTR = {
   piano: ['Piano', 'Piano', '钢琴', '鋼琴'], keyboard: ['Keyboard', 'Papan kekunci', '电子琴', '電子琴'], violin: ['Violin', 'Biola', '小提琴', '小提琴'], viola: ['Viola', 'Viola', '中提琴', '中提琴'],
   cello: ['Cello', 'Selo', '大提琴', '大提琴'], voice: ['Voice', 'Vokal', '人声', '人聲'], guitar: ['Guitar', 'Gitar', '吉他', '吉他'], ukulele: ['Ukulele', 'Ukulele', '尤克里里', '烏克麗麗'],
-  flute: ['Flute', 'Flut', '长笛', '長笛'], recorder: ['Recorder', 'Rekoder', '竖笛', '直笛'], clarinet: ['Clarinet', 'Klarinet', '单簧管', '單簧管'], sax: ['Saxophone', 'Saksofon', '萨克斯', '薩克斯'],
+  flute: ['Flute', 'Flut', '长笛', '長笛'], recorder: ['Recorder', 'Rekoder', '竖笛', '直笛'], clarinet: ['Clarinet', 'Klarinet', '单簧管', '單簧管'], sax: ['Alto sax', 'Saksofon alto', '中音萨克斯', '中音薩克斯'],
   trumpet: ['Trumpet', 'Trompet', '小号', '小號'], erhu: ['Erhu', 'Erhu', '二胡', '二胡'], dizi: ['Dizi', 'Dizi', '笛子', '笛子'], bassguitar: ['Bass guitar', 'Gitar bes', '贝斯', '貝斯'],
+  organ: ['Organ', 'Organ', '管风琴', '管風琴'], harp: ['Harp', 'Harpa', '竖琴', '豎琴'], doublebass: ['Double bass', 'Dobel bes', '低音提琴', '低音提琴'],
+  mandolin: ['Mandolin', 'Mandolin', '曼陀林', '曼陀林'], soprano: ['Soprano', 'Soprano', '女高音', '女高音'], alto: ['Alto', 'Alto', '女低音', '女低音'],
+  tenor: ['Tenor', 'Tenor', '男高音', '男高音'], bass: ['Bass (voice)', 'Bes (vokal)', '男低音', '男低音'], piccolo: ['Piccolo', 'Pikolo', '短笛', '短笛'],
+  oboe: ['Oboe', 'Obo', '双簧管', '雙簧管'], bassoon: ['Bassoon', 'Basun', '巴松管', '低音管'], sopranosax: ['Soprano sax', 'Saksofon soprano', '高音萨克斯', '高音薩克斯'],
+  tenorsax: ['Tenor sax', 'Saksofon tenor', '次中音萨克斯', '次中音薩克斯'], horn: ['French horn', 'Hon Perancis', '圆号', '法國號'], trombone: ['Trombone', 'Trombon', '长号', '長號'],
+  tuba: ['Tuba', 'Tuba', '大号', '低音號'], guzheng: ['Guzheng', 'Guzheng', '古筝', '古箏'], pipa: ['Pipa', 'Pipa', '琵琶', '琵琶'],
+  harmonica: ['Harmonica', 'Harmonika', '口琴', '口琴'], xylophone: ['Xylophone', 'Xilofon', '木琴', '木琴'],
 };
 
 let lang = 'en';
 export function setLang(l) { lang = I[l] !== undefined ? l : 'en'; }
 export function getLang() { return lang; }
+/** True when the key has a translation row (used by tools/i18n-check.mjs). */
+export const hasKey = (k) => Object.prototype.hasOwnProperty.call(S, k);
 export function t(key, vars) {
   const row = S[key];
   let s = row ? (row[I[lang]] ?? row[0]) : key;

@@ -26,7 +26,7 @@ function stepKey(fifths, minor, dir) {
   return k.fifths;
 }
 
-export function ImproviseView({ active }) {
+export function ImproviseView({ active, pushed = false }) {
   const s = useApp();
   const lang = getLang();
   const [mode, setMode] = useState(() => (s.pieces.some((p) => p.kind === 'score') ? 'vary' : 'solo'));
@@ -194,7 +194,7 @@ export function ImproviseView({ active }) {
   return (
     <div class="scroll">
       <div class="wrap">
-        <LargeTitle title={t('improvise')} color="purple" />
+        <LargeTitle title={t('improvise')} back={pushed} />
         <div class="hero improv">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon name="sparkles" size={22} stroke={2.2} /><h2>AI {t('improvise')}</h2></div>
           <p>{mode === 'vary' ? t('varyIntro') : t('improviseIntro')}</p>

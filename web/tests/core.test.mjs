@@ -260,3 +260,20 @@ test('community text: every entry in all four languages, no key overwrites an ex
     assert.equal(new Set(v.map(ph)).size, 1, `placeholders differ in ${k}`);
   }
 });
+
+test('a PDF file is written with one picture per page', async () => {
+  const { writePdf, jpegSize } = await import('../src/core/pdf.js');
+  // the smallest JPEG frame header that says "3 x 2 pixels, 3 colours"
+  const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xc0, 0x00, 0x11, 0x08, 0x00, 0x02, 0x00, 0x03, 0x03, 0x01, 0x11, 0x00, 0x02, 0x11, 0x01, 0x03, 0x11, 0x01, 0xff, 0xd9]);
+  assert.deepEqual(jpegSize(jpeg), { w: 3, h: 2, comps: 3 });
+  const pdf = writePdf([{ jpeg }, { jpeg }], { title: '月亮代表我的心' });
+  const text = new TextDecoder('latin1').decode(pdf);
+  assert.ok(text.startsWith('%PDF-1.4') && text.trimEnd().endsWith('%%EOF'));
+  assert.equal((text.match(/\/Type \/Page /g) || []).length, 2);
+  assert.ok(text.includes('/Count 2') && text.includes('/Filter /DCTDecode') && text.includes('/Width 3 /Height 2'));
+  // every object offset in the table points at that object
+  const xref = Number(/startxref\n(\d+)/.exec(text)[1]);
+  assert.ok(text.slice(xref).startsWith('xref'));
+  const rows = [...text.slice(xref).matchAll(/(\d{10}) 00000 n /g)].map((m) => Number(m[1]));
+  rows.forEach((off, i) => assert.ok(text.slice(off).startsWith(`${i + 1} 0 obj`), `object ${i + 1}`));
+});

@@ -240,7 +240,7 @@ export function ImportWizardSheet({ files: initial = [], title = '', youtube = n
     if (hints.title) score.title = hints.title;
     const pdf = files.find(isPdf);
     const extra = {
-      aiFlags: (result.flags || []).map((f) => ({ bar: f.bar, page: f.page, box: f.box, reasons: f.reasons })),
+      aiFlags: (result.flags || []).map((f) => ({ bar: f.bar, page: f.page, line: f.line, box: f.box, reasons: f.reasons, unread: !!f.unread })),
       aiPages: thumbs.pages, youtube: youtube || null,
     };
     if (pdf && files.length === 1) extra.pdf = await pdf.arrayBuffer();
@@ -276,6 +276,29 @@ export function ImportWizardSheet({ files: initial = [], title = '', youtube = n
         <div class="reading"><Mascot mood="sleep" size={110} /><p class="note-text">{t(ai.unreachable ? 'aiUnreachable' : 'aiOff')}</p></div>
         {ai.unreachable && <Button kind="brand" full icon="sparkles" onClick={() => { setAi(null); aiStatus({ fresh: true }).then(setAi); }}>{t('tryAgain')}</Button>}
         {files.some(isPdf) ? <Button onClick={keepPdf} full icon="doc">{t('keepAsPdf')}</Button> : <Button kind="secondary" onClick={closeSheet} full>{t('close')}</Button>}
+      </SheetFrame>
+    );
+  }
+
+  // --- reading pages with AI is a Pro tool: say so before anything is uploaded, and offer the free ways
+  const me = s.me;
+  const allowance = me?.usage?.read_pages;
+  if (hasServer() && me && me.tier !== 'dev' && allowance && allowance.limit === 0 && phase === 'setup') {
+    return (
+      <SheetFrame title={t('readMusic')}>
+        <div class="pro-gate">
+          <span class="pro-tag">Pro</span>
+          <h2>{t('proGateTitle')}</h2>
+          <p>{t('proGateSub')}</p>
+        </div>
+        <Button kind="brand" full icon="crown" onClick={() => openSheet('plans', { reason: { feature: 'read_pages', need: 'pro' } })} id="gate-pro">{t('seePro')}</Button>
+        <Section title={t('freeWays')}>
+          <List>
+            <Row icon="stage" color="violet" title={t('askStage')} subtitle={t('askStageSub')} onClick={() => openSheet('compose', { type: 'request', title: baseName(files[0]?.name || '') })} />
+            {files.some(isPdf) && <Row icon="doc" color="blue" title={t('keepAsPdf')} subtitle={t('keepAsPdfSub')} onClick={keepPdf} />}
+            <Row icon="gift" color="orange" title={t('passWithNotes')} subtitle={t('passWithNotesSub')} onClick={() => { closeSheet(); push('wallet'); }} />
+          </List>
+        </Section>
       </SheetFrame>
     );
   }
@@ -371,6 +394,15 @@ export function ImportWizardSheet({ files: initial = [], title = '', youtube = n
               {' · '}{(result.flags || []).length === 0 ? t('allBarsOk') : result.flags.length === 1 ? t('oneBarToCheck') : t('barsToCheck', { n: result.flags.length })}</span>
           </div>
         </div>
+        {(result.report?.failed_lines || []).length > 0 && (
+          <div class="banner warn" id="unread-lines"><Icon name="info" size={20} stroke={2.2} /><div>
+            <strong>{t('linesNotRead', { n: result.report.failed_lines.length })}</strong>
+            <div class="sub">{result.report.failed_lines.map((f) => t('pageLine', { p: f.page, l: f.line })).join(' · ')}. {t('linesNotReadSub')}</div>
+          </div></div>
+        )}
+        {result.report?.pages_left_out > 0 && (
+          <div class="banner warn"><Icon name="doc" size={20} stroke={2.2} /><div class="sub">{t('pagesLeftOut', { n: result.report.pages, m: result.report.pages_in_file })}</div></div>
+        )}
         <div class="score-box vrv" ref={boxRef} dangerouslySetInnerHTML={{ __html: svg }} />
         {!svg && <div class="loading"><div class="spinner" /></div>}
         {(result.flags || []).length > 0 && (
@@ -406,9 +438,9 @@ export function ImportWizardSheet({ files: initial = [], title = '', youtube = n
 // ---------------------------------------------------------------------------- song finder
 const READY = new Set(['musicxml', 'mxl', 'midi', 'abc']);
 
-export function FinderSheet({ initial = '' }) {
+export function FinderSheet({ initial = '', query = '' }) {
   const s = useApp();
-  const [q, setQ] = useState(initial);
+  const [q, setQ] = useState(query || initial);
   const [inst, setInst] = useState(s.settings.instrument || 'piano');
   const [st, setSt] = useState({ phase: 'idle' });
   const [yt, setYt] = useState(false);

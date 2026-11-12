@@ -101,7 +101,7 @@ export function LeaderboardView({ active, board: b0 = 'helpers' }) {
 const NOTE_ICON = {
   submission: ['staff', 'green'], accepted: ['check', 'green'], changes: ['pencil', 'orange'], helpful: ['heart', 'pink'], comment: ['chat', 'blue'],
   answer: ['quiz', 'blue'], want: ['users', 'purple'], follow: ['plus', 'purple'], ready: ['bell', 'green'], challenge: ['trophy', 'yellow'],
-  credits: ['star', 'yellow'], mod: ['info', 'red'], claim: ['pencil', 'orange'], like: ['heart', 'pink'], new_post: ['bell', 'blue'],
+  credits: ['star', 'yellow'], mod: ['info', 'red'], claim: ['pencil', 'orange'], like: ['heart', 'pink'], new_post: ['bell', 'blue'], nudge: ['bolt', 'orange'], paid_ok: ['crown', 'purple'], paid_no: ['info', 'red'], lesson: ['calendar', 'green'], tutor: ['academy', 'orange'],
   expired: ['info', 'gray'], plan: ['crown', 'purple'], published: ['books', 'green'],
 };
 
@@ -119,7 +119,7 @@ export function NotificationsView({ active }) {
           <div class="notes">
             {items.map((n) => {
               const [icon, color] = NOTE_ICON[n.kind] || ['bell', 'gray'];
-              const open = () => (n.post_id ? push('post', { id: n.post_id }) : n.actor?.handle ? push('profile', { handle: n.actor.handle }) : n.kind === 'credits' ? push('wallet') : null);
+              const open = () => (n.kind === 'lesson' ? push('lessons') : n.kind === 'tutor' ? push('tutorMe') : n.kind === 'nudge' ? push('daily') : n.kind === 'paid_ok' || n.kind === 'paid_no' ? openSheet('plans') : n.post_id ? push('post', { id: n.post_id }) : n.actor?.handle ? push('profile', { handle: n.actor.handle }) : n.kind === 'credits' ? push('wallet') : null);
               return (
                 <button type="button" key={n.id} class={`note-row${n.read ? '' : ' unread'}`} onClick={open}>
                   {n.actor ? <Person user={n.actor} size={38} /> : <span class={`note-ic c-${color}`}><Icon name={icon} size={18} stroke={2.2} /></span>}
@@ -136,50 +136,87 @@ export function NotificationsView({ active }) {
 }
 
 const REASON = { welcome: 'r_welcome', practice: 'r_practice', help: 'r_help', help_pot: 'r_help_pot', helpful: 'r_helpful', answer: 'r_answer', pot: 'r_pot', refund: 'r_refund',
-  share: 'r_share', saved: 'r_saved', challenge: 'r_challenge', challenge_top: 'r_challenge_top', plan_bonus: 'r_plan_bonus', spotlight: 'r_spotlight', plus_week: 'r_plus_week', admin: 'r_admin' };
+  share: 'r_share', saved: 'r_saved', challenge: 'r_challenge', challenge_top: 'r_challenge_top', plan_bonus: 'r_plan_bonus', spotlight: 'r_spotlight', plus_week: 'r_plus_week', admin: 'r_admin', daily: 'r_daily', daily_top: 'r_daily_top', pass: 'r_pass' };
 
+const RANK_ICON = { listener: 'ear', player: 'library', soloist: 'mic', arranger: 'pencil', virtuoso: 'sparkles', maestro: 'crown' };
+
+/** Rewards: Notes you earned, your rank, what Notes unlock, and how to earn more. */
 export function WalletView({ active }) {
   const s = useApp();
   const [w, setW] = useState(null);
-  const load = () => C.wallet().then(setW).catch(() => setW(null));
+  const [busy, setBusy] = useState(null);
+  const load = () => C.rewards().then(setW).catch(() => setW(null));
   useEffect(() => { if (active) load(); }, [active]);
-  const redeem = async () => { const r = await attempt(() => C.plusWeek()); if (r) { toast(t('plusWeekOn')); load(); } };
-  const rules = w?.rules;
+  const redeem = async (it) => {
+    setBusy(it.id);
+    const r = await attempt(() => C.redeem(it.id));
+    setBusy(null);
+    if (r) { toast(t('passOn', { plan: t(`plan_${it.tier}`), n: it.days })); load(); }
+  };
+  const rank = w?.rank;
+  const pct = rank && rank.next_at ? Math.min(100, ((rank.lifetime - rank.from) / (rank.next_at - rank.from)) * 100) : 100;
+  const why = (it) => (it.why === 'wait' ? t('redeemWait', { d: new Date(it.again).toLocaleDateString() }) : it.why === 'notes' ? t('redeemNeed', { n: it.cost - (w?.notes || 0) })
+    : it.why === 'have' ? t('redeemHave') : it.why === 'paid' ? t('redeemPaid') : it.why === 'sold_out' ? t('redeemSoldOut') : '');
   return (
-    <div class="scroll">
-      <NavBar title={t('credits')} backLabel={t('community')} color="yellow" />
+    <div class="scroll" id="rewards">
+      <NavBar title={t('rewards')} backLabel={t('back')} />
       <div class="wrap">
-        <div class="wallet-hero fade-up">
-          <Coins n={w?.credits ?? s.me?.credits ?? 0} size="xl" />
-          <p>{t('creditsBlurb')}</p>
+        <div class="rw-hero fade-up">
+          <div class="rw-bal"><Icon name="gift" size={30} stroke={2.1} /><strong class="num">{w?.notes ?? s.me?.credits ?? 0}</strong><span>Notes</span></div>
+          {rank && <>
+            <div class="rw-rank"><span class="ic"><Icon name={RANK_ICON[rank.id] || 'star'} size={18} stroke={2.3} /></span>
+              <div><strong>{t(`rank_${rank.id}`)}</strong><span>{rank.next ? t('rankNext', { n: rank.next_at - rank.lifetime, r: t(`rank_${rank.next}`) }) : t('rankTop')}</span></div></div>
+            <div class="rw-bar"><span style={{ width: `${pct}%` }} /></div>
+          </>}
+          <p>{t('rewardsBlurb')}</p>
         </div>
-        {rules && <>
-          <Section title={t('howToEarn')}>
-            <List>
-              <Row icon="staff" color="green" title={t('earnRequest')} subtitle={t('earnRequestSub', { max: rules.bonus_cap })} />
-              <Row icon="quiz" color="blue" title={t('earnAnswer')} subtitle={t('earnAnswerSub', { n: rules.answer })} />
-              <Row icon="heart" color="pink" title={t('earnHelpful')} subtitle={t('earnHelpfulSub', { n: rules.helpful_comment, m: rules.runner_up_cap })} />
-              <Row icon="books" color="green" title={t('earnShare')} subtitle={t('earnShareSub', { n: rules.share, m: rules.share_saved })} />
-              <Row icon="flame" color="red" title={t('earnPractice')} subtitle={t('earnPracticeSub', { n: rules.daily_practice, m: rules.streak_week })} />
-              <Row icon="trophy" color="orange" title={t('earnChallenge')} subtitle={t('earnChallengeSub', { n: rules.challenge_entry, a: rules.challenge_top[0] })} />
-            </List>
-          </Section>
-          <Section title={t('howToSpend')} footer={t('noCashOut')}>
+
+        {w && <>
+          <Section title={t('useNotes')} footer={t('noCashOut')}>
+            <div class="rw-grid">
+              {w.redeem.map((it) => (
+                <div class={`rw-item${it.available ? '' : ' off'}`} key={it.id}>
+                  <span class={`plan-chip ${it.tier}`}><Icon name="crown" size={11} stroke={2.6} />{t(`plan_${it.tier}`)}</span>
+                  <strong>{t('passTitle', { plan: t(`plan_${it.tier}`), n: it.days })}</strong>
+                  <span class="sub">{it.available ? t(it.tier === 'pro' ? 'passProSub' : 'passPlusSub') : why(it)}</span>
+                  <Button small kind={it.available ? 'brand' : 'secondary'} disabled={!it.available || busy === it.id} onClick={() => redeem(it)} id={`redeem-${it.id}`}>
+                    <Icon name="gift" size={15} stroke={2.3} />{it.cost}
+                  </Button>
+                </div>
+              ))}
+            </div>
             <List>
               <Row icon="flag" color="pink" title={t('spendReward')} subtitle={t('spendRewardSub')} />
-              <Row icon="star" color="yellow" title={t('spendSpotlight')} subtitle={t('spendSpotlightSub', { n: rules.spotlight_cost })} />
-              <Row icon="crown" color="purple" title={t('spendPlus', { n: rules.plus_week_cost })} subtitle={w.plus_week_available ? t('spendPlusSub') : t('spendPlusUsed')}
-                right={<Button small color="purple" disabled={!w.plus_week_available || (w.credits < rules.plus_week_cost)} onClick={redeem}>{t('redeem')}</Button>} />
+              <Row icon="star" color="yellow" title={t('spendSpotlight')} subtitle={t('spendSpotlightSub', { n: w.spotlight_cost })} />
             </List>
           </Section>
+
+          <Section title={t('earnNotes')} footer={t('earnedThisWeek', { n: w.week })}>
+            <List>
+              {w.earn.map((e) => (
+                <Row key={e.id} icon={e.icon} color="violet" title={t(`earn_${e.id}`)} subtitle={t(`earn_${e.id}_sub`, { top: e.top, streak: e.streak, save: e.per_save })}
+                  right={<span class="rw-amt">+{e.amount}</span>} />
+              ))}
+            </List>
+          </Section>
+
+          <Section title={t('ranks')}>
+            <div class="rw-ranks">
+              {w.ranks.map((r, i) => (
+                <div key={r.id} class={`rw-r${i <= rank.index ? ' on' : ''}${i === rank.index ? ' cur' : ''}`}>
+                  <span class="ic"><Icon name={RANK_ICON[r.id]} size={17} stroke={2.2} /></span><strong>{t(`rank_${r.id}`)}</strong><span class="num">{r.at}</span>
+                </div>
+              ))}
+            </div>
+          </Section>
         </>}
+
         <Section title={t('history')}>
           {w?.history?.length ? <List>{w.history.map((h, i) => (
             <Row key={i} title={t(REASON[h.reason] || 'r_other')} subtitle={[h.note, timeAgo(h.at)].filter(Boolean).join(' · ')}
               right={<span class={`num ${h.delta >= 0 ? 't-green' : 't-red'}`}>{h.delta > 0 ? '+' : ''}{h.delta}</span>} />
           ))}</List> : <p class="note-text">{t('noHistory')}</p>}
         </Section>
-        <button type="button" class="link" onClick={() => push('help', { topic: 'credits' })}>{t('creditsFaq')}</button>
       </div>
     </div>
   );

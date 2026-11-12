@@ -14,8 +14,10 @@ export function AdminView({ active }) {
     <div class="scroll">
       <NavBar title={t('devPanel')} backLabel={t('back')} color="purple" />
       <div class="wrap">
-        <Segmented value={tab} onChange={setTab} options={[{ value: 'overview', label: t('overview') }, { value: 'reports', label: t('reports') }, { value: 'feedback', label: t('feedback') }, { value: 'tools', label: t('tools') }]} />
+        <Segmented value={tab} onChange={setTab} options={[{ value: 'overview', label: t('overview') }, { value: 'payments', label: t('payments') }, { value: 'tutors', label: t('tutorsTab') }, { value: 'reports', label: t('reports') }, { value: 'feedback', label: t('feedback') }, { value: 'tools', label: t('tools') }]} />
         {tab === 'overview' && <Overview active={active} />}
+        {tab === 'payments' && <Payments active={active} />}
+        {tab === 'tutors' && <TutorsAdmin active={active} />}
         {tab === 'reports' && <Reports active={active} />}
         {tab === 'feedback' && <Inbox active={active} />}
         {tab === 'tools' && <Tools />}
@@ -40,6 +42,59 @@ function Overview({ active }) {
       </Section>
     </>
   );
+}
+
+/** DuitNow / bank transfers people say they made: check the bank for the code and amount, then approve. */
+function Payments({ active }) {
+  const [items, setItems] = useState(null);
+  const [notes, setNotes] = useState({});
+  const load = () => C.admin.payments().then((r) => setItems(r.items)).catch((e) => toast(e.message, 'err'));
+  useEffect(() => { if (active) load(); }, [active]);
+  const act = async (id, action) => { if (await attempt(() => C.admin.decidePayment(id, action, notes[id] || ''))) { toast(t('done')); load(); } };
+  if (!items) return <div class="loading"><div class="spinner" /></div>;
+  if (!items.length) return <Empty icon="check" title={t('noPayments')} sub={t('noPaymentsSub')} />;
+  return items.map((p) => (
+    <Card key={p.id}>
+      <div class="report-line" style={{ alignItems: 'center' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <strong class="num">RM {p.amount} · {p.code}</strong>
+          <div class="sub">{p.product === 'teacher' ? t('teacherFee') : `${t(`plan_${p.product}`)} · ${t(p.period)}`} · {p.method} · {timeAgo(p.created)}</div>
+          <div class="sub">{t('payPayer')}: <b>{p.payer}</b> · @{p.user?.handle} ({p.user?.name})</div>
+          {p.note && <div class="note-text">“{p.note}”</div>}
+        </div>
+      </div>
+      {p.receipt && <img src={p.receipt} alt={t('payReceipt')} style={{ maxWidth: '100%', maxHeight: 320, borderRadius: 12, objectFit: 'contain', background: '#fff' }} />}
+      <input class="field" type="text" placeholder={t('payAdminNote')} value={notes[p.id] || ''} onInput={(e) => setNotes((n) => ({ ...n, [p.id]: e.currentTarget.value }))} aria-label={t('payAdminNote')} />
+      <div class="btn-row">
+        <Button small color="green" icon="check" onClick={() => act(p.id, 'approve')}>{t('approve')}</Button>
+        <Button small kind="secondary" color="red" onClick={() => act(p.id, 'reject')}>{t('reject')}</Button>
+      </div>
+    </Card>
+  ));
+}
+
+/** Teaching profiles that are paid for and waiting to be looked at before they are listed. */
+function TutorsAdmin({ active }) {
+  const [items, setItems] = useState(null);
+  const [notes, setNotes] = useState({});
+  const load = () => C.admin.tutors().then((r) => setItems(r.items)).catch((e) => toast(e.message, 'err'));
+  useEffect(() => { if (active) load(); }, [active]);
+  const act = async (h, action) => { if (await attempt(() => C.admin.decideTutor(h, action, notes[h] || ''))) { toast(t('done')); load(); } };
+  if (!items) return <div class="loading"><div class="spinner" /></div>;
+  if (!items.length) return <Empty icon="check" title={t('noTutorsWaiting')} />;
+  return items.map((x) => (
+    <Card key={x.user.id}>
+      <PersonLine user={x.user} sub={x.paid ? x.paid_ref : '—'} />
+      <strong>{x.headline}</strong>
+      <p class="sub">{x.instruments.join(', ')} · {x.city} · {x.rate} · {x.times}</p>
+      <p class="r-body" style={{ whiteSpace: 'pre-wrap' }}>{x.bio}</p>
+      <input class="field" type="text" placeholder={t('payAdminNote')} value={notes[x.user.handle] || ''} onInput={(e) => setNotes((n) => ({ ...n, [x.user.handle]: e.currentTarget.value }))} aria-label={t('payAdminNote')} />
+      <div class="btn-row">
+        <Button small color="green" icon="shield" onClick={() => act(x.user.handle, 'verify')}>{t('verify')}</Button>
+        <Button small kind="secondary" color="red" onClick={() => act(x.user.handle, 'reject')}>{t('reject')}</Button>
+      </div>
+    </Card>
+  ));
 }
 
 function Reports({ active }) {

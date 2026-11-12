@@ -54,7 +54,9 @@ def test_guest_account_has_welcome_credits_and_free_plan():
     assert me["credits"] == 100 and me["tier"] == "free" and me["handle"].startswith("aina")
     assert me["usage"]["tutor"] == {"used": 0, "limit": 0}
     plans = client.get("/c/plans").json()
-    assert plans["plans"]["plus"]["read_pages"] >= 1 and plans["plans"]["free"]["read_pages"] == 0
+    # reading printed music with AI is a Pro tool; Plus has the song finder and the tutor
+    assert plans["plans"]["pro"]["read_pages"] >= 1 and plans["plans"]["plus"]["read_pages"] == 0 and plans["plans"]["free"]["read_pages"] == 0
+    assert plans["plans"]["plus"]["find"] >= 1 and plans["plans"]["plus"]["tutor"] >= 1
     assert plans["prices"]["plus"]["monthly"]["myr"] == "14.90"
     assert client.get("/c/me").status_code == 401
 
@@ -289,16 +291,18 @@ def test_allowances_follow_the_cost_of_the_models(monkeypatch):
     """A plan's AI budget stays the same; a cheaper model gives more pages, searches and answers."""
     for k in ("HAPTUNE_AI_MODEL", "HAPTUNE_AI_MODEL_READ", "HAPTUNE_AI_MODEL_REREAD", "HAPTUNE_AI_MODEL_TUTOR"):
         monkeypatch.delenv(k, raising=False)
-    opus = accounts.ai_allowance("plus", "read_pages")
+    opus = accounts.ai_allowance("pro", "read_pages")
     monkeypatch.setenv("HAPTUNE_AI_MODEL_READ", "claude-haiku-5-5")
     monkeypatch.setenv("HAPTUNE_AI_MODEL_REREAD", "claude-opus-5-5")
-    cascade = accounts.ai_allowance("plus", "read_pages")
+    cascade = accounts.ai_allowance("pro", "read_pages")
     monkeypatch.setenv("HAPTUNE_AI_MODEL_REREAD", "claude-haiku-5-5")
-    haiku = accounts.ai_allowance("plus", "read_pages")
+    haiku = accounts.ai_allowance("pro", "read_pages")
     assert 1 <= opus < cascade < haiku
-    for kind in ("read_pages", "find", "tutor"):                  # within the plan's budget (but at least one use)
-        n, per_use = accounts.ai_allowance("plus", kind), accounts.unit_cost(kind)
-        assert n == 1 or n * per_use <= accounts.AI_BUDGET["plus"] * accounts.BUDGET_SPLIT[kind] + 1e-9
+    for tier in ("plus", "pro"):
+        for kind in ("read_pages", "find", "tutor"):              # within the plan's budget (but at least one use)
+            n, per_use = accounts.ai_allowance(tier, kind), accounts.unit_cost(kind)
+            assert n <= 1 or n * per_use <= accounts.AI_BUDGET[tier] * accounts.BUDGET_SPLIT[tier][kind] + 1e-9
+    assert accounts.ai_allowance("plus", "read_pages") == 0        # Pro only
     assert accounts.ai_allowance("free", "tutor") == 0 and accounts.ai_allowance("pro", "tutor") > accounts.ai_allowance("plus", "tutor")
     monkeypatch.setitem(accounts.OVERRIDES, "free", {"tutor": 3})
     assert accounts.ai_allowance("free", "tutor") == 3

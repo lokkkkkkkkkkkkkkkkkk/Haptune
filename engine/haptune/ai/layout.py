@@ -39,6 +39,10 @@ class Page:
     image: Image.Image                       # grayscale, deskewed
     systems: list[System]
     skew: float = 0.0
+    bars: dict = field(default_factory=dict)          # system index -> bars counted from its barlines
+    barlines: dict = field(default_factory=dict)      # system index -> x of each barline
+    regions: list = field(default_factory=list)       # inked areas outside every system: (x0, y0, x1, y1)
+    photo: bool = False
 
     @property
     def size(self) -> tuple[int, int]:
@@ -65,6 +69,38 @@ def load_pages(path_or_bytes, filename: str = "", max_pages: int = 20, target_wi
     if img.width > 3400:
         img = img.resize((3000, round(img.height * 3000 / img.width)), Image.LANCZOS)
     return [img]
+
+
+def count_pages(path_or_bytes, filename: str = "") -> int:
+    """How many pages a file has (a photo is one page)."""
+    data = path_or_bytes if isinstance(path_or_bytes, (bytes, bytearray)) else open(path_or_bytes, "rb").read()
+    name = (filename or (path_or_bytes if isinstance(path_or_bytes, str) else "")).lower()
+    if name.endswith(".pdf") or data[:5] == b"%PDF-":
+        try:
+            import pymupdf
+            with pymupdf.open(stream=data, filetype="pdf") as doc:
+                return doc.page_count
+        except Exception:
+            return 1
+    return 1
+
+
+def is_photo(img: Image.Image) -> bool:
+    """A camera photo or a grey scan (paper is not pure white), as opposed to a page made on a computer."""
+    a = np.asarray(img, dtype=np.uint8)
+    return bool(a.std() > 0 and np.percentile(a, 90) < 235)
+
+
+def clean_photo(img: Image.Image) -> Image.Image:
+    """Evens out the lighting of a photo (shadows, a darker corner, yellow paper) and stretches the contrast,
+    so faint lines and small accidentals are as clear to the reader as on a clean scan."""
+    from PIL import ImageFilter
+    a = np.asarray(img, dtype=np.float32)
+    bg = np.asarray(img.filter(ImageFilter.GaussianBlur(radius=max(8, img.width // 50))), dtype=np.float32)
+    flat = a / np.maximum(bg, 1.0)                               # 1.0 = the paper around each spot
+    white = max(0.5, float(np.percentile(flat, 92)))
+    out = np.clip(flat / white, 0.0, 1.0) ** 1.3 * 255.0          # paper to white, ink a little darker
+    return Image.fromarray(out.astype(np.uint8))
 
 
 def _otsu(a: np.ndarray) -> int:
@@ -260,6 +296,74 @@ def find_systems(dark: np.ndarray) -> list[System]:
     return systems
 
 
+def find_barlines(dark: np.ndarray, system: System) -> list[int]:
+    """x positions (page pixels) of the barlines of a system: thin vertical lines that cross every staff from
+    its top line to its bottom line. Double barlines, final barlines and repeat signs count once, and the
+    line that opens the system is left out, so the number found is the number of bars in the line."""
+    staves = system.staves
+    if not staves:
+        return []
+    sp = float(np.median([s.space for s in staves]))
+    x0 = max(0, min(s.x0 for s in staves))
+    x1 = min(dark.shape[1] - 1, max(s.x1 for s in staves))
+    if x1 - x0 < 8 * sp:
+        return []
+    ok = np.ones(x1 - x0 + 1, dtype=bool)
+    for st in staves:
+        top, bot = int(round(st.top)), int(round(st.bottom))
+        band = dark[max(0, top):bot + 1, x0:x1 + 1]
+        if band.size == 0:
+            return []
+        ok &= band.mean(axis=0) >= 0.93
+    runs, x = [], 0
+    n = len(ok)
+    while x < n:
+        if ok[x]:
+            a = x
+            while x < n and ok[x]:
+                x += 1
+            if x - a <= max(3.0, 1.2 * sp):                    # wider than that is not a barline (a beam, a blot)
+                runs.append((a, x - 1))
+        else:
+            x += 1
+    merged: list[list[int]] = []
+    for a, b in runs:
+        if merged and a - merged[-1][1] <= 1.6 * sp:            # double / final barline, repeat sign
+            merged[-1][1] = b
+        else:
+            merged.append([a, b])
+    return [x0 + (a + b) // 2 for a, b in merged if (a + b) / 2 > 1.5 * sp]
+
+
+def uncovered_regions(dark: np.ndarray, systems: list[System]) -> list[tuple[int, int, int, int]]:
+    """Tall areas of a page that hold staff-like ink but belong to no system that was found (faint or curved
+    lines in a photo, an odd layout). They are read as a whole so that nothing on the page is skipped."""
+    if not systems:
+        return []
+    h, w = dark.shape
+    sp = float(np.median([st.space for s in systems for st in s.staves]))
+    staff_w = float(np.median([st.x1 - st.x0 for s in systems for st in s.staves]))
+    edges = [(0, systems[0].box[1], True)]
+    for a, b in zip(systems, systems[1:]):
+        edges.append((a.box[3], b.box[1], False))
+    edges.append((systems[-1].box[3], h, False))
+    out = []
+    for y0, y1, top in edges:
+        if y1 - y0 < (16 if top else 10) * sp:                  # the top of a page usually holds the title
+            continue
+        band = dark[y0:y1]
+        strong = band.sum(axis=1) >= 0.3 * staff_w              # rows with a long line of ink
+        if int(strong.sum()) < 5:
+            continue
+        ys = np.where(band.any(axis=1))[0]
+        xs = np.where(band.any(axis=0))[0]
+        if len(ys) == 0 or len(xs) == 0 or xs[-1] - xs[0] < 0.5 * staff_w:
+            continue
+        pad = int(1.5 * sp)
+        out.append((max(0, int(xs[0]) - pad), max(y0, y0 + int(ys[0]) - pad), min(w, int(xs[-1]) + pad), min(y1, y0 + int(ys[-1]) + pad)))
+    return out
+
+
 def analyse_page(img: Image.Image, index: int = 0) -> Page:
     dark = binarize(img)
     skew = estimate_skew(dark)
@@ -267,7 +371,12 @@ def analyse_page(img: Image.Image, index: int = 0) -> Page:
         img = img.rotate(skew, resample=Image.BICUBIC, expand=False, fillcolor=255)
         dark = binarize(img)
     systems = find_systems(dark)          # systems split by a missed barline are joined in find_systems
-    return Page(index=index, image=img, systems=systems, skew=skew)
+    page = Page(index=index, image=img, systems=systems, skew=skew)
+    page.bars = {s.index: len(find_barlines(dark, s)) for s in systems}
+    page.barlines = {s.index: find_barlines(dark, s) for s in systems}
+    page.regions = uncovered_regions(dark, systems)
+    page.photo = is_photo(img)
+    return page
 
 
 def encode_png(img: Image.Image, max_edge: int = MAX_EDGE, min_space: float | None = None, space: float | None = None) -> bytes:

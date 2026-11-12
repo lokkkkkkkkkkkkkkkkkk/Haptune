@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'preact/hooks';
-import { useApp, getPiece, updatePiece, deletePiece, markOpened, pop, openSheet, closeSheet, toast, logMinutes, recordTake, go, awardBadge, getState, setState, addXP } from '../state.js';
-import { t, getLang, instrumentName } from '../../core/i18n.js';
+import { useApp, getPiece, updatePiece, deletePiece, markOpened, pop, push, openSheet, closeSheet, toast, logMinutes, recordTake, go, awardBadge, getState, setState, addXP, addScore } from '../state.js';
+import { t, getLang, instrumentName, INSTRUMENTS } from '../../core/i18n.js';
 import { Icon, Card, Section, List, Row, Segmented, Stepper, Button, Chip, Stars, FretDiagram, PianoChord, Keyboard, Badge, Toggle } from '../components.jsx';
 import { NavBar, SheetFrame } from './common.jsx';
-import { renderMusicXML, isVerovioReady } from '../verovio.js';
+import { renderMusicXML, isVerovioReady, pageSize } from '../verovio.js';
+import { saveFile, scorePdf, SaveError } from '../files.js';
 import { openPdf } from '../importer.js';
 import { Transport, audioContext, note, listen } from '../audio.js';
 import { ScoreCursor } from '../cursor.js';
@@ -11,6 +12,10 @@ import { writeMusicXML } from '../../core/musicxml.js';
 import { writeMIDI } from '../../core/midi.js';
 import { writeZip } from '../../core/zip.js';
 import { transposeScore, performance as perfOf, secondsAt, quartersAt, chordTrack, concertKey, pitchRange, timeAt, measureLength, beatLength, extractPart, partChoices } from '../../core/score.js';
+import { jianpuModel, renderJianpu } from '../../core/jianpu.js';
+import { arrangeFor, INSTRUMENT_DEFS, FAMILIES, soundOf } from '../../core/instruments.js';
+import { buzz, canBuzz } from '../native.js';
+import { local } from '../storage.js';
 import { transposeSheet, toChordPro, toChordsOverLyrics, sheetChords, sheetInfo } from '../../core/chordsheet.js';
 import { keyName, transposeInterval, transposeKey, midiOf, spellMidi, pitchName } from '../../core/pitch.js';
 import { formatChord, romanNumeral, chordNotes, capoOptions, pianoVoicing, chordPcs, rootPc } from '../../core/chords.js';
@@ -22,8 +27,7 @@ import { academy, hasServer } from '../api.js';
 import { C, attempt } from '../account.js';
 import { dueText } from './classes.jsx';
 
-export const SOUND = { violin: 'strings', viola: 'strings', cello: 'strings', erhu: 'strings', doublebass: 'bass', voice: 'piano', flute: 'flute', recorder: 'flute', dizi: 'flute',
-  clarinet: 'clarinet', sax: 'clarinet', trumpet: 'flute', piano: 'piano', keyboard: 'piano', organ: 'organ', guitar: 'guitar', ukulele: 'guitar', bassguitar: 'bass', harp: 'piano', guzheng: 'guitar' };
+export const SOUND = new Proxy({}, { get: (_, k) => soundOf(k) });
 const SINGING = new Set(['voice', 'voice_soprano', 'voice_alto', 'voice_tenor', 'voice_bass']);
 
 // ---------- helpers ----------
@@ -71,54 +75,6 @@ function harmonyList(score) {
   return out.sort((a, b) => a.mi - b.mi || a.off.cmp(b.off));
 }
 
-const MIME = { zip: 'application/zip', json: 'application/json', txt: 'text/plain', pdf: 'application/pdf', mid: 'audio/midi', musicxml: 'application/vnd.recordare.musicxml+xml' };
-
-/**
- * Hands a file to the person: the system share sheet on phones (Save to Files, AirDrop, WhatsApp...), the
- * download prompt in the Claude preview, or a normal download on computers. Returns true when it went out.
- */
-async function saveFile(name, bytes) {
-  const type = MIME[name.split('.').pop().toLowerCase()] || 'application/octet-stream';
-  const blob = new Blob([bytes], { type });
-  let dl = null;
-  try { dl = await globalThis.claude?.use?.('downloads'); } catch { dl = null; }
-  if (dl) {
-    try { await dl.save({ filename: name, data: blob }); return true; } catch (e) {
-      if (e?.code !== 'declined') toast(t('saveFailed'), 'err');
-      return false;
-    }
-  }
-  const touch = globalThis.matchMedia?.('(pointer: coarse)').matches;
-  try {
-    const file = new File([blob], name, { type });
-    if (touch && navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: name });
-      return true;
-    }
-  } catch (e) {
-    if (e?.name === 'AbortError') return false;               // the person closed the share sheet
-  }
-  if (globalThis.HAPTUNE_CONFIG?.pwa === false) { toast(t('saveFailed'), 'err'); return false; }
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = name; a.rel = 'noopener'; document.body.appendChild(a); a.click();
-  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 4000);
-  return true;
-}
-
-/** Prints the engraved score (the browser's print dialog also saves a PDF). */
-async function printScore(xml, title) {
-  const { pages } = await renderMusicXML(xml, { width: 760, scale: 40 });
-  const frame = document.createElement('iframe');
-  frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
-  document.body.appendChild(frame);
-  const doc = frame.contentDocument;
-  doc.open();
-  doc.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title.replace(/</g, '&lt;')}</title><style>@page{margin:12mm}body{margin:0}svg{width:100%;height:auto;page-break-inside:avoid;color:#000;fill:#000}</style></head><body>${pages.join('')}</body></html>`);
-  doc.close();
-  setTimeout(() => { try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch { toast(t('saveFailed'), 'err'); } setTimeout(() => frame.remove(), 60000); }, 300);
-}
-
 const matchSel = (sel) => (e) => sel.pi === null || sel.pi === undefined || (e.pi === sel.pi && (!sel.staff || (e.staff || 1) === sel.staff));
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const toQ = (x) => (x instanceof Q ? x : Q.approx(Number(x) || 0));
@@ -126,7 +82,7 @@ const idle = (fn) => (globalThis.requestIdleCallback ? requestIdleCallback(fn, {
 
 // ---------- the piece screen ----------
 
-export function PieceView({ id, active, start, assignment, challenge }) {
+export function PieceView({ id, active, start, assignment, challenge, daily }) {
   const s = useApp();
   const meta = s.pieces.find((p) => p.id === id);
   const [data, setData] = useState(null);
@@ -143,20 +99,26 @@ export function PieceView({ id, active, start, assignment, challenge }) {
     });
     return () => { alive = false; };
   }, [id]);
+  const reload = () => getPiece(id).then((d) => setData(d));       // after the editor saved changes
   if (!meta) return <div class="scroll"><NavBar title="" backLabel={t('library')} /></div>;
   if (!data) return <div class="scroll"><NavBar title={meta.title} backLabel={t('library')} /><div class="loading"><Mascot mood="think" size={80} /></div></div>;
   return <PieceBody meta={meta} data={data} semis={semis} setSemis={(v) => { setSemis(v); updatePiece(id, { transpose: v }); if (v) awardBadge('transposer'); }}
-    view={view} setView={setView} active={active} start={start} assignment={assignment} challenge={challenge} />;
+    view={view} setView={setView} active={active} start={start} assignment={assignment} challenge={challenge} daily={daily} reload={reload} />;
 }
 
-function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, assignment, challenge }) {
+function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, assignment, challenge, daily, reload }) {
   const s = useApp();
   const { score, sheet: baseSheet, rec } = data;
   const tScore = useMemo(() => (score ? transposeScore(score, semis) : null), [score, semis]);
   const choices = useMemo(() => partChoices(tScore), [tScore]);
   const [partSel, setPartSel] = useState(assignment?.part || 'all');
   const sel = choices.find((c) => c.id === partSel) || { id: 'all', pi: null, staff: null };
-  const shown = useMemo(() => (tScore && sel.pi !== null ? extractPart(tScore, sel.pi, sel.staff) : tScore), [tScore, sel.id]);
+  const [forInst, setForInst] = useState(null);                 // show the part as written for this instrument
+  const arranged = useMemo(() => (tScore && forInst ? arrangeFor(tScore, sel.pi ?? 0, sel.pi !== null ? sel.staff : null, forInst) : null), [tScore, sel.id, forInst]);
+  const shown = useMemo(() => (arranged ? arranged.score : tScore && sel.pi !== null ? extractPart(tScore, sel.pi, sel.staff) : tScore), [tScore, sel.id, arranged]);
+  const [mix, setMix] = useState({});                             // per part: {vol 0..1, mute, solo}
+  const [others, setOthers] = useState(false);                    // with one part chosen: play the other parts quietly too
+  const [tap, setTap] = useState(null);                           // the part of the note just tapped
   const xml = useMemo(() => (shown ? writeMusicXML(shown) : null), [shown]);
   const written = useMemo(() => (tScore ? harmonyList(tScore) : []), [tScore]);
   const suggested = useMemo(() => (tScore && !written.length ? suggestChords(tScore).map((x) => ({ ...x, suggested: true })) : []), [tScore, written.length]);
@@ -167,7 +129,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
   const originalKey = score ? concertKey(score) : baseSheet?.key;
   const hasOriginal = !!(rec.pdf || rec.photos?.length);
   const views = [];
-  if (tScore) views.push({ value: 'sheet', label: t('viewSheet') }, { value: 'roll', label: t('viewRoll') });
+  if (tScore) views.push({ value: 'sheet', label: t('viewSheet') }, { value: 'jianpu', label: '簡譜' }, { value: 'roll', label: t('viewRoll') });
   if (rec.kind === 'pdf') views.push({ value: 'pdf', label: t('viewPdf') });
   if (harmonies.length || (tSheet && sheetChords(tSheet).length)) views.push({ value: 'chords', label: t('viewChords') });
   if (tSheet && tSheet.sections?.some((sec) => sec.lines.some((l) => l.segs?.some((g) => g.text.trim())))) views.push({ value: 'lyrics', label: t('viewLyrics') });
@@ -188,6 +150,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
   const [result, setResult] = useState(null);   // the last Play Along result
   const [yt, setYt] = useState(false);
   const transport = useRef(null);
+  const tapTimer = useRef(null);
   const scoreBox = useRef(null);
   const layerRef = useRef(null);
   const cursorRef = useRef(null);
@@ -223,8 +186,10 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
   // prepare the notes for playing while the player reads the page, so the first Play starts at once
   useEffect(() => { if (perf) idle(() => { try { timeline(); } catch { /* built again on Play */ } }); }, [perf]);
   useEffect(() => () => cursorRef.current?.destroy(), []);
+  const jpRef = useRef(null);
   const highlight = (qNow, scroll = true, notes = true) => {
     if (viewRef.current === 'sheet') return cursorRef.current?.update(qNow, { scroll, notes });
+    if (viewRef.current === 'jianpu') jpRef.current?.light(qNow, notes);
     return null;
   };
 
@@ -245,15 +210,23 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
   /** Every note (plus chords and metronome clicks) of the piece, in seconds from the start at speed `sp`.
    *  Built once per setting, so starting and jumping to a bar are instant. `mute` = the part the player plays. */
   const timeline = (mute = null, sp = speed, click = metro) => {
-    const key = `${sp}|${click ? 1 : 0}|${withChords ? 1 : 0}|${mute ? mute.id : '-'}`;
+    const key = `${practice.current?.buzzBeat ? 'b' : ''}${sp}|${click ? 1 : 0}|${withChords ? 1 : 0}|${mute ? mute.id : '-'}|${sel.id}|${others ? 1 : 0}|${JSON.stringify(mix)}`;
     if (tlRef.current && tlRef.current.key === key && tlRef.current.perf === perf) return tlRef.current;
     const tempos = perf.tempos;
     const sec = (x) => secondsAt(tempos, x, sp);
     const evs = [];
+    const anySolo = Object.values(mix).some((m) => m.solo);
+    const idOf = (e) => (tScore.parts[e.pi]?.staves > 1 ? `${e.pi}:${e.staff || 1}` : `${e.pi}`);
+    const only = !mute && sel.pi !== null ? matchSel(sel) : null;         // a part is chosen: it is what you hear
     for (const e of perf.events) {
       if (mute && matchSel(mute)(e)) continue;
+      const m = mix[idOf(e)] || {};
+      if (m.mute || (anySolo && !m.solo)) continue;
+      let gain = m.vol ?? 1;
+      if (only && !only(e)) { if (!others) continue; gain *= 0.4; }
+      if (gain <= 0.01) continue;
       const a = sec(e.t);
-      evs.push({ time: a, dur: sec(e.t.add(e.dur)) - a, midi: e.midi, vel: e.vel || 80, inst: instFor(e), pan: e.pi === 0 ? 0 : -0.2 });
+      evs.push({ time: a, dur: sec(e.t.add(e.dur)) - a, midi: e.midi, vel: Math.max(8, Math.round((e.vel || 80) * gain)), inst: instFor(e), pan: e.pi === 0 ? 0 : -0.2 });
     }
     if (withChords && harmonies.length && tScore.parts.length === 1 && !mute) {
       let prev = null;
@@ -271,6 +244,14 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
           const a = sec(at);
           pianoVoicing(h.chord, 3).map((m) => (m < 48 ? m + 12 : m)).forEach((m) => evs.push({ time: a, dur: sec(at.add(end.sub(h.off))) - a - 0.02, midi: m, vel: hs.length ? 44 : 38, inst: 'epiano', pan: 0.25 }));
         });
+      }
+    }
+    if (practice.current?.buzzBeat && mute) {
+      // a silent metronome you feel: a tap on every beat, stronger on the first of the bar
+      for (const span of perf.spans) {
+        const beat = beatLength(timeAt(tScore, span.mi));
+        let k = 0;
+        for (let b = ZERO; b.lt(span.dur); b = b.add(beat), k++) { const first = k === 0; evs.push({ time: sec(span.t.add(b)), onFire: (at) => { const ms = Math.max(0, (at - audioContext().currentTime) * 1000); setTimeout(() => buzz(first ? 'bar' : 'beat'), ms); } }); }
       }
     }
     if (click) {
@@ -336,7 +317,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
   };
 
   // new settings while listening: carry on from the same place with them
-  useEffect(() => { if (transport.current?.playing && player.mode === 'listen') play(lastQ.current, { mode: 'listen', ci: false }); }, [speed, metro, loop, withChords, semis]);
+  useEffect(() => { if (transport.current?.playing && player.mode === 'listen') play(lastQ.current, { mode: 'listen', ci: false }); }, [speed, metro, loop, withChords, semis, mix, others, sel.id]);
 
   const toggleListen = () => {
     if (transport.current?.playing || player.playing) { setCursorQ(lastQ.current); stop(); return; }
@@ -378,7 +359,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
     });
   };
 
-  const startPractice = async ({ part, mode, speed: sp, countIn: ci, range: rng }) => {
+  const startPractice = async ({ part, mode, speed: sp, countIn: ci, range: rng, buzzWrong = true, buzzBeat = false }) => {
     const psel = choices.find((c) => c.id === part) || { id: 'all', pi: null, staff: null };
     setSpeed(sp); setCountIn(ci);
     setResult(null);
@@ -393,11 +374,12 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
       toast(t(e.code === 'denied' ? 'micDenied' : 'micUnavailable'), 'err');
       return;
     }
-    practice.current = { mode, sel: psel, started: performance.now(), range, speed: sp };
+    practice.current = { mode, sel: psel, started: performance.now(), range, speed: sp, buzzWrong, buzzBeat, octaves: !!arranged?.octaves };
+    if (hasServer()) C.pulse(true).catch(() => {});             // counted in "practising now" on Stage
     if (mode === 'wait') {
       const exp = expectedNotes(perf, matchSel(psel), range);
       const singer = SINGING.has(s.settings.instrument) || tScore.parts[psel.pi ?? 0]?.instrument === 'voice';
-      follower.current = new Follower(exp, { octaveOk: singer });
+      follower.current = new Follower(exp, { octaveOk: singer || !!arranged?.octaves });
       setPa({ mode, sel: psel, msg: null, k: 0, n: exp.length });
       markNow();
     } else {
@@ -448,7 +430,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
       if (f.done) finishWait();
       else markNow();
     } else {
-      try { navigator.vibrate?.(90); } catch { /* no vibration here */ }
+      if (pr.buzzWrong) buzz('wrong');
       setPa((x) => x && ({ ...x, msg: { played: r.played, want: exp.top } }));
     }
   };
@@ -483,6 +465,12 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
     if (r.accuracy >= 0.85) addXP(20);
     const barsList = [...r.bars.entries()].sort((x, y) => x[0] - y[0]).map(([mi, b]) => ({ bar: barNo(mi), accuracy: b.total ? b.right / b.total : 1 }));
     setResult({ ...r, seconds: secs, tricky: trickyBars(r.bars), barsList, mode: pr?.mode, speed: pr?.speed ?? speed, part: pr?.sel?.id });
+    // today's tune: the try goes on the board by itself (the best one of the day counts)
+    if (daily && hasServer() && !pr?.range) {
+      C.enterDaily({ song: daily, accuracy: Math.round(r.accuracy * 1000) / 1000, tempo_pct: Math.round((pr?.speed ?? speed) * 100), seconds: secs })
+        .then((d) => { setResult((x) => x && ({ ...x, dailyRank: d.mine?.rank, dailyOf: d.players })); toast(d.earned ? t('dailyIn', { n: d.earned, r: d.mine?.rank }) : t('dailyRank', { r: d.mine?.rank, m: d.players })); })
+        .catch(() => {});
+    }
   };
   const finishWait = () => { const f = follower.current; if (f) showResult(f.result()); follower.current = null; };
   const endWait = (silent) => {
@@ -588,6 +576,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
   return (
     <div class={`scroll${showPlayer ? ' has-player' : ''}`}>
       <NavBar title={meta.title} backLabel={assignment ? t('back') : t('library')} actions={<>
+        {score && <button type="button" id="edit-notes" onClick={() => { stop(true); push('editor', { id: meta.id, bar: curMi, onSaved: reload }); }} aria-label={t('editNotes')}><Icon name="pencil" size={21} /></button>}
         <button type="button" onClick={() => updatePiece(meta.id, { favorite: !meta.favorite })} aria-label={t('favourite')} class={meta.favorite ? 't-yellow' : ''}><Icon name="star" size={22} fill={meta.favorite} /></button>
         <button type="button" onClick={() => openSheet('export', { pieceId: meta.id, semis, title: meta.title, part: sel.pi !== null ? sel : null, partLabel: sel.pi !== null ? handLabel(sel) : '' })} aria-label={t('export')}><Icon name="share" size={22} /></button>
       </>} />
@@ -627,13 +616,33 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
           </div>
         )}
 
-        {choices.length > 0 && (
-          <div class="part-row">
-            <span class="sub" style={{ fontWeight: 600 }}>{t('part')}</span>
-            <div class="chips">
-              <Chip on={sel.pi === null} color="indigo" onClick={() => setPartSel('all')}>{t('allParts')}</Chip>
-              {choices.map((c) => <Chip key={c.id} on={sel.id === c.id} color="indigo" onClick={() => setPartSel(c.id)}>{handLabel(c)}</Chip>)}
+        {tScore && (
+          <div class="part-box">
+            {choices.length > 0 && (
+              <div class="part-row">
+                <span class="k">{t('part')}</span>
+                <div class="chips">
+                  <Chip on={sel.pi === null} onClick={() => { setPartSel('all'); setTap(null); }}>{t('allParts')}</Chip>
+                  {choices.map((c) => <Chip key={c.id} on={sel.id === c.id} onClick={() => setPartSel(c.id)}>{handLabel(c)}</Chip>)}
+                  {sel.pi !== null && <Chip on={others} color="green" onClick={() => setOthers(!others)}><Icon name="speaker" size={14} /> {t('withOthers')}</Chip>}
+                </div>
+              </div>
+            )}
+            <div class="part-row">
+              <span class="k">{t('writtenFor')}</span>
+              <div class="chips">
+                <Chip on={!forInst} onClick={() => setForInst(null)}>{t('asWritten')}</Chip>
+                {[...new Set([s.settings.instrument, forInst].filter((x) => x && INSTRUMENT_DEFS[x]))].map((k) => <Chip key={k} on={forInst === k} onClick={() => setForInst(k)} >{instrumentName(k)}{INSTRUMENT_DEFS[k].pitch ? ` (${INSTRUMENT_DEFS[k].pitch})` : ''}</Chip>)}
+                <Chip onClick={() => openSheet('instrumentPick', { value: forInst, onPick: setForInst })}><Icon name="chevronD" size={14} /> {t('otherInstrument')}</Chip>
+              </div>
             </div>
+            {arranged && (
+              <div class="banner" id="arr-note"><Icon name="info" size={18} stroke={2.2} /><div class="sub" style={{ flex: 1 }}>
+                {t('arrNote', { inst: instrumentName(forInst) })}{arranged.octaves ? ` ${t('arrOctave', { n: Math.abs(arranged.octaves), dir: t(arranged.octaves > 0 ? 'higher' : 'lower') })}` : ''}
+                {arranged.outOfRange ? ` ${t('arrOut', { n: arranged.outOfRange })}` : ''}</div>
+                <Button small kind="secondary" icon="plus" onClick={async () => { const rec = await addScore(arranged.score, { source: 'import', fmt: 'musicxml', title: `${meta.title} (${instrumentName(forInst)})` }); toast(t('added')); push('piece', { id: rec.id }); }}>{t('saveAsPiece')}</Button>
+              </div>
+            )}
           </div>
         )}
 
@@ -645,6 +654,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
           <Card>
             <div class="report-line"><Mascot mood="think" size={40} /><div><strong>{flags.length === 1 ? t('oneBarToCheck') : t('barsToCheck', { n: flags.length })}</strong>
               <div class="chips wrap" style={{ marginTop: 6 }}>{flags.slice(0, 12).map((f) => <Chip key={f.bar} color="orange" onClick={() => { goToBar(Math.max(0, f.bar - 1)); }}>{t('bar', { n: f.bar })}</Chip>)}</div></div></div>
+            <Button small icon="pencil" onClick={() => { stop(true); push('editor', { id: meta.id, bar: Math.max(0, (flags[0]?.bar || 1) - 1), onSaved: reload }); }} id="fix-flags">{t('fixInEditor')}</Button>
           </Card>
         )}
 
@@ -658,8 +668,9 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
         {views.length > 1 && <Segmented id="piece-views" value={view} onChange={setView} options={views} />}
 
         {view === 'sheet' && xml && <SheetMusic xml={xml} boxRef={scoreBox} layerRef={layerRef} onDrawn={onSheetDrawn} flagged={flags.map((f) => f.bar - 1)} changed={rec.changedIds}
-          onFallback={() => setView('roll')} onTapId={(nid) => { const e = perf?.events.find((x) => x.ids.includes(nid)); if (e) goToBar(e.mi); }} />}
+          onFallback={() => setView('roll')} onTapId={(nid) => { const e = perf?.events.find((x) => x.ids.includes(nid)); if (!e) return; goToBar(e.mi); if (sel.pi === null && choices.length) { const c = choices.find((x) => x.pi === e.pi && (!x.staff || x.staff === (e.staff || 1))); if (c) { setTap(c); clearTimeout(tapTimer.current); tapTimer.current = setTimeout(() => setTap(null), 8000); } } }} />}
         {view === 'sheet' && tScore && <p class="note-text" style={{ textAlign: 'center' }}>{t('tapBarHint')}</p>}
+        {view === 'jianpu' && shown && <JianpuSheet score={shown} title={meta.title} apiRef={jpRef} perf={perf} sel={arranged ? { pi: sel.pi ?? 0, staff: sel.pi !== null ? sel.staff : null } : sel} onBar={goToBar} />}
         {view === 'roll' && perf && <PianoRoll score={tScore} perf={perf} q={player.q} harmonies={harmonies} />}
         {view === 'chords' && <ChordChart harmonies={harmonies} sheet={tSheet} keySig={sheetKey} suggested={!written.length && !!tScore} playingBar={player.playing ? player.mi + 1 : null} />}
         {view === 'lyrics' && tSheet && <LyricsView sheet={tSheet} playing={player.playing ? player.chordIndex : null} />}
@@ -679,6 +690,12 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
           <div class="player-inner">
             {pa && <PracticeBanner pa={pa} f={follower.current} piano={['piano', 'keyboard'].includes(tScore?.parts[pa.sel.pi ?? 0]?.instrument)} keyFifths={sheetKey?.fifths || 0}
               onStop={() => { if (pa.mode === 'wait') finishWait(); else stop(); }} onSkip={() => { follower.current?.skip(); markNow(); if (follower.current?.done) finishWait(); }} />}
+            {!pa && tap && (
+              <div class="tap-part" id="tap-part"><strong>{handLabel(tap)}</strong>
+                <button type="button" class="ptag" onClick={() => { setPartSel(tap.id); setTap(null); }}><Icon name="eye" size={15} />{t('onlyThisPart')}</button>
+                <button type="button" class="ptag" onClick={() => { setTap(null); stop(true); openSheet('playAlong', { choices, part: tap.id, mode: 'beat', speed, countIn, instrument: tScore.parts[tap.pi]?.instrument, onStart: (o) => { closeSheet(); startPractice(o); } }); }}><Icon name="mic" size={15} />{t('illPlayThis')}</button>
+              </div>
+            )}
             {!pa && tScore && <>
               <div class="transport">
                 <button type="button" class="tbtn" onClick={() => stepBar(-1)} aria-label="−1 bar"><Icon name="skipBack" size={20} stroke={2.2} /></button>
@@ -698,6 +715,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
                 <button type="button" class={`ptag${loop ? ' on' : ''}`} onClick={toggleLoop} aria-pressed={!!loop}><Icon name="loop" size={16} />{loop ? t('loopBars', { a: barNo(loop.from), b: barNo(loop.to) }) : t('loop')}</button>
                 <button type="button" class={`ptoggle${metro ? ' on' : ''}`} onClick={() => setMetro(!metro)} aria-pressed={metro} aria-label={t('metronome')}><Icon name="metronome" size={19} /></button>
                 <button type="button" class={`ptoggle${countIn ? ' on' : ''}`} onClick={() => setCountIn(!countIn)} aria-pressed={countIn} aria-label={t('countIn')}><span style={{ fontWeight: 800, fontSize: 12 }}>1·2</span></button>
+                {choices.length > 0 && <button type="button" id="mixer-btn" class={`ptoggle${Object.values(mix).some((m) => m.mute || m.solo || (m.vol ?? 1) < 1) ? ' on' : ''}`} onClick={() => openSheet('mixer', { choices, mix, onChange: setMix, label: handLabel })} aria-label={t('mixer')}><Icon name="mixer" size={19} /></button>}
                 {harmonies.length > 0 && tScore.parts.length === 1 && <button type="button" class={`ptoggle${withChords ? ' on' : ''}`} onClick={() => setWithChords(!withChords)} aria-pressed={withChords} aria-label={t('viewChords')}><Icon name="piano" size={19} /></button>}
               </div>
             </>}
@@ -788,7 +806,9 @@ function ResultCard({ result, barNo, onPractise, onAgain, assignment, onSend, ch
 function SheetMusic({ xml, boxRef, layerRef, onDrawn, onTapId, onFallback, flagged = [], changed = null }) {
   const [state, setState2] = useState({ loading: true, pages: [], error: null, first: !isVerovioReady() });
   const wrapRef = useRef(null);
-  const html = useMemo(() => state.pages.join(''), [state.pages]);     // joined once, not on every playing frame
+  // joined once, not on every playing frame; each page keeps its exact shape, so pages off the screen
+  // can be left unpainted (content-visibility) without anything moving when they come into view
+  const html = useMemo(() => state.pages.map((svg) => { const z = pageSize(svg); return `<div class="vrv-page"${z ? ` style="aspect-ratio:${z.w}/${z.h}"` : ''}>${svg}</div>`; }).join(''), [state.pages]);
   const drawn = useRef(onDrawn);
   drawn.current = onDrawn;
   useEffect(() => {
@@ -1008,6 +1028,97 @@ function InfoCard({ tScore, sheet, keySig, originalKey, harmonies }) {
   );
 }
 
+/** 簡譜 of the part being shown. Lights the note being played and jumps to a bar when it is tapped. */
+function JianpuSheet({ score, title, apiRef, perf, sel, onBar }) {
+  const wrap = useRef(null);
+  const [w, setW] = useState(0);
+  useEffect(() => {
+    const el = wrap.current;
+    const set = () => setW(Math.max(280, Math.min(980, el.clientWidth - 16)));
+    set();
+    if (!globalThis.ResizeObserver) return undefined;
+    const ro = new ResizeObserver(set);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const model = useMemo(() => jianpuModel(score, 0, null), [score]);
+  const svg = useMemo(() => (w ? renderJianpu(model, { width: w, title }).svg : ''), [model, w, title]);
+  useEffect(() => {
+    const el = wrap.current;
+    const mine = (e) => (sel.pi === null || sel.pi === undefined ? e.pi === 0 : e.pi === sel.pi && (!sel.staff || (e.staff || 1) === sel.staff));
+    const evs = perf ? perf.events.filter(mine) : [];
+    let lit = null;
+    apiRef.current = {
+      light(qNow, on = true) {
+        let node = null;
+        if (on) {
+          for (const e of evs) {
+            const a = e.t.num();
+            if (a > qNow + 1e-9) break;
+            if (qNow < a + e.dur.num() - 1e-9) { const g = el.querySelector(`[id="jp-${e.ids[0]}"]`); if (g) node = g; }
+          }
+        }
+        if (node === lit) return;
+        lit?.classList.remove('on');
+        node?.classList.add('on');
+        lit = node;
+        if (node) {
+          const r = node.getBoundingClientRect();
+          if (r.top < 90 || r.bottom > innerHeight - 250) el.closest('.scroll')?.scrollBy({ top: r.top - innerHeight * 0.3, behavior: 'smooth' });
+        }
+      },
+    };
+    return () => { apiRef.current = null; };
+  }, [svg, perf, sel.pi, sel.staff]);
+  const onClick = (e) => { const b = e.target.closest?.('.jbar'); if (b) onBar?.(Number(b.dataset.mi)); };
+  return <div class="jp-box" ref={wrap} onClick={onClick} dangerouslySetInnerHTML={{ __html: svg }} />;
+}
+
+/** Volume, mute and solo for every part (and each hand of a piano part). */
+export function MixerSheet({ choices = [], mix: mix0 = {}, onChange, label }) {
+  const [mix, setMix] = useState(mix0);
+  const set = (id, patch) => {
+    const next = { ...mix, [id]: { vol: 1, mute: false, solo: false, ...mix[id], ...patch } };
+    setMix(next); onChange?.(next);
+  };
+  return (
+    <SheetFrame title={t('mixer')} right={t('done')} onRight={closeSheet}>
+      <div class="mixer">
+        {choices.map((c) => {
+          const m = { vol: 1, mute: false, solo: false, ...mix[c.id] };
+          return (
+            <div class="mix-row" key={c.id}>
+              <strong>{label ? label(c) : c.name}</strong>
+              <button type="button" class={`mix-b${m.mute ? ' on m' : ''}`} aria-pressed={m.mute} onClick={() => set(c.id, { mute: !m.mute })} aria-label={t('mute')}>M</button>
+              <button type="button" class={`mix-b${m.solo ? ' on s' : ''}`} aria-pressed={m.solo} onClick={() => set(c.id, { solo: !m.solo })} aria-label={t('solo')}>S</button>
+              <input type="range" min="0" max="100" step="5" value={Math.round(m.vol * 100)} onInput={(e) => set(c.id, { vol: Number(e.currentTarget.value) / 100 })} aria-label={t('volume')} />
+            </div>
+          );
+        })}
+      </div>
+      <p class="note-text">{t('mixerHelp')}</p>
+      <Button kind="secondary" full icon="loop" onClick={() => { setMix({}); onChange?.({}); }}>{t('mixerReset')}</Button>
+    </SheetFrame>
+  );
+}
+
+/** Pick any instrument to see the part written for it. */
+export function InstrumentPickSheet({ value = null, onPick }) {
+  return (
+    <SheetFrame title={t('writtenFor')}>
+      {FAMILIES.map((f) => (
+        <Section key={f} title={t(`fam_${f}`)}>
+          <div class="chips wrap">
+            {INSTRUMENTS.filter((k) => INSTRUMENT_DEFS[k]?.family === f).map((k) => (
+              <Chip key={k} on={value === k} onClick={() => { onPick?.(k); closeSheet(); }}>{instrumentName(k)}{INSTRUMENT_DEFS[k].pitch ? ` (${INSTRUMENT_DEFS[k].pitch})` : ''}</Chip>
+            ))}
+          </div>
+        </Section>
+      ))}
+    </SheetFrame>
+  );
+}
+
 // ---------- sheets ----------
 
 export function ChordSheet({ chord, keySig }) {
@@ -1082,6 +1193,8 @@ export function FindKeySheet({ pieceId, semis, onPick }) {
 
 export function ExportSheet({ pieceId, semis, title, part = null, partLabel = '' }) {
   const [busy, setBusy] = useState(null);
+  const [progress, setProgress] = useState('');
+  const [ready, setReady] = useState(null);         // a file that is made and waiting for a tap to be saved
   const [onlyPart, setOnlyPart] = useState(!!part);
   const [d, setD] = useState(null);
   useEffect(() => { getPiece(pieceId).then(setD); }, [pieceId]);
@@ -1094,44 +1207,66 @@ export function ExportSheet({ pieceId, semis, title, part = null, partLabel = ''
     const sheet = scoreToSheet(sc, harmonyList(sc));
     return sheet ? toChordsOverLyrics({ ...sheet, title: sc.title, key: concertKey(sc) }) : '';
   };
-  const run = async (kind) => {
-    setBusy(kind);
+  /** Makes the file: {name, data}. Slow ones (the PDF) report progress. */
+  const make = async (kind) => {
+    if (kind === 'musicxml') return { name: `${safe}${suffix}.musicxml`, data: writeMusicXML(scoreNow()) };
+    if (kind === 'midi') return { name: `${safe}${suffix}.mid`, data: writeMIDI(scoreNow()) };
+    if (kind === 'sheetpdf') return { name: `${safe}${suffix}.pdf`, data: await scorePdf(writeMusicXML(scoreNow()), { title: safe + suffix, onProgress: (a, n) => setProgress(`${a}/${n}`) }) };
+    if (kind === 'text') return { name: `${safe} (chords and lyrics).txt`, data: textOf() };
+    if (kind === 'pdf') return { name: `${safe} (original).pdf`, data: new Uint8Array(d.rec.pdf) };
+    const files = [];
+    if (d.score) {
+      files.push({ name: `${safe}${suffix}.musicxml`, data: writeMusicXML(scoreNow()) });
+      files.push({ name: `${safe}${suffix}.mid`, data: writeMIDI(scoreNow()) });
+      files.push({ name: `${safe}${suffix}.pdf`, data: await scorePdf(writeMusicXML(scoreNow()), { title: safe + suffix, onProgress: (a, n) => setProgress(`${a}/${n}`) }) });
+    }
+    const txt = textOf();
+    if (txt) files.push({ name: `${safe} (chords and lyrics).txt`, data: txt });
+    if (d.rec.pdf) files.push({ name: `${safe} (original).pdf`, data: new Uint8Array(d.rec.pdf) });
+    return { name: `${safe}.zip`, data: writeZip(files) };
+  };
+  const hand = async (file) => {
     try {
-      let ok = false;
-      if (kind === 'musicxml') ok = await saveFile(`${safe}${suffix}.musicxml`, writeMusicXML(scoreNow()));
-      else if (kind === 'midi') ok = await saveFile(`${safe}${suffix}.mid`, writeMIDI(scoreNow()));
-      else if (kind === 'print') { await printScore(writeMusicXML(scoreNow()), safe + suffix); ok = true; }
-      else if (kind === 'text') ok = await saveFile(`${safe} (chords and lyrics).txt`, textOf());
-      else if (kind === 'pdf') ok = await saveFile(`${safe}.pdf`, new Uint8Array(d.rec.pdf));
-      else if (kind === 'zip') {
-        const files = [];
-        if (d.score) {
-          files.push({ name: `${safe}${suffix}.musicxml`, data: writeMusicXML(scoreNow()) });
-          files.push({ name: `${safe}${suffix}.mid`, data: writeMIDI(scoreNow()) });
-        }
-        const txt = textOf();
-        if (txt) files.push({ name: `${safe} (chords and lyrics).txt`, data: txt });
-        if (d.rec.pdf) files.push({ name: `${safe}.pdf`, data: new Uint8Array(d.rec.pdf) });
-        ok = await saveFile(`${safe}.zip`, writeZip(files));
-      }
-      if (ok && kind !== 'print') toast(t('export') + ' ✓');
+      const ok = await saveFile(file.name, file.data);
+      if (ok) { toast(t('exportDone', { name: file.name })); setReady(null); }
+    } catch (e) {
+      // a phone browser wants a fresh tap after slow work: keep the file and show a Save button
+      if (e instanceof SaveError && e.code === 'gesture') setReady(file);
+      else toast(t('saveFailed'), 'err');
+    }
+  };
+  const run = async (kind) => {
+    setBusy(kind); setProgress(''); setReady(null);
+    try {
+      const started = performance.now();
+      const file = await make(kind);
+      // phones only allow sharing straight after a tap; after slow work, ask for one more tap
+      if (performance.now() - started > 900 && globalThis.matchMedia?.('(pointer: coarse)').matches && !globalThis.HAPTUNE_CONFIG?.native) setReady(file);
+      else await hand(file);
     } catch (e) { toast(e.message || String(e), 'err'); }
-    setBusy(null);
+    setBusy(null); setProgress('');
   };
   if (!d) return <SheetFrame title={t('export')}><div class="loading"><div class="spinner" /></div></SheetFrame>;
   const hasText = !!(d.sheet || (d.score && scoreToSheet(d.score, harmonyList(d.score))));
   const row = (kind, icon, color, title2, sub) => (
-    <Row key={kind} icon={icon} color={color} title={title2} subtitle={busy === kind ? '…' : sub} onClick={() => !busy && run(kind)} />
+    <Row key={kind} id={`exp-${kind}`} icon={icon} color={color} title={title2} subtitle={busy === kind ? `${t('exportMaking')} ${progress}` : sub}
+      right={busy === kind ? <div class="spinner small" /> : undefined} onClick={() => !busy && run(kind)} />
   );
   return (
     <SheetFrame title={t('export')}>
       {semis !== 0 && <p class="note-text">{t('exportInKey', { key: `${semis > 0 ? '+' : ''}${semis}` })}</p>}
       {part && <List><Row icon="users" color="indigo" title={t('exportPartOnly', { p: partLabel })} right={<Toggle id="exp-part" checked={onlyPart} onChange={setOnlyPart} label={t('exportPartOnly', { p: partLabel })} />} /></List>}
+      {ready && (
+        <Card class="fade-up">
+          <div class="report-line" style={{ alignItems: 'center' }}><Badge icon="check" color="green" size={34} /><div style={{ flex: 1, minWidth: 0 }}><strong>{t('exportReady')}</strong><div class="sub" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ready.name}</div></div></div>
+          <Button full icon="download" kind="brand" onClick={() => hand(ready)}>{t('exportSave')}</Button>
+        </Card>
+      )}
       <Section title={t('exportAs')}>
         <List>
+          {d.score && row('sheetpdf', 'print', 'purple', t('exportSheetPdf'), t('exportSheetPdfSub'))}
           {d.score && row('musicxml', 'doc', 'blue', 'MusicXML', 'MuseScore · Finale · Dorico · Sibelius')}
           {d.score && row('midi', 'piano', 'green', 'MIDI', 'GarageBand · Logic · any keyboard')}
-          {d.score && row('print', 'print', 'purple', t('exportPrint'), 'PDF')}
           {hasText && row('text', 'chords', 'orange', t('exportText'), '.txt')}
           {d.rec.pdf && row('pdf', 'doc', 'red', t('originalPage'), 'PDF')}
           {row('zip', 'folder', 'gray', t('exportAll'), '.zip')}
@@ -1147,6 +1282,8 @@ export function PlayAlongSheet({ choices = [], part, mode = 'wait', speed = 1, c
   const [m, setM] = useState(mode);
   const [sp, setSp] = useState(speed);
   const [ci, setCi] = useState(countIn);
+  const [bw, setBw] = useState(local.get('buzzWrong', true));
+  const [bb, setBb] = useState(local.get('buzzBeat', false));
   const label = (c) => (c.hand === 'right' ? t('rightHand') : c.hand === 'left' ? t('leftHand') : c.name);
   return (
     <SheetFrame title={t('playAlong')}>
@@ -1166,8 +1303,14 @@ export function PlayAlongSheet({ choices = [], part, mode = 'wait', speed = 1, c
       </div>
       <Stepper label={t('speed')} value={`${Math.round(sp * 100)}%`} onDec={() => setSp((x) => Math.max(0.3, Math.round((x - 0.05) * 100) / 100))} onInc={() => setSp((x) => Math.min(1.5, Math.round((x + 0.05) * 100) / 100))} />
       <List><Row icon="metronome" color="teal" title={t('countIn')} right={<Toggle id="pa-ci" checked={ci} onChange={setCi} label={t('countIn')} />} /></List>
-      <p class="note-text" style={{ display: 'flex', gap: 8 }}><Icon name="watch" size={18} />{t('buzzHint')}</p>
-      <Button kind="brand" full icon="play" onClick={() => onStart?.({ part: p, mode: m, speed: sp, countIn: ci })}>{t('start')}</Button>
+      <Section title={t('feelIt')}>
+        <List>
+          <Row icon="watch" color="pink" title={t('buzzWrong')} subtitle={t('buzzWrongSub')} right={<Toggle id="pa-bw" checked={bw} onChange={(v) => { setBw(v); local.set('buzzWrong', v); }} label={t('buzzWrong')} />} />
+          {m === 'beat' && <Row icon="metronome" color="orange" title={t('buzzBeat')} subtitle={t('buzzBeatSub')} right={<Toggle id="pa-bb" checked={bb} onChange={(v) => { setBb(v); local.set('buzzBeat', v); }} label={t('buzzBeat')} />} />}
+        </List>
+        <p class="note-text">{t(canBuzz() ? 'buzzNote' : 'buzzNoteIOS')}</p>
+      </Section>
+      <Button kind="brand" full icon="play" onClick={() => onStart?.({ part: p, mode: m, speed: sp, countIn: ci, buzzWrong: bw, buzzBeat: bb && m === 'beat' })}>{t('start')}</Button>
     </SheetFrame>
   );
 }

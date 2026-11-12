@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Haptune: sheet music for any song, and practice that listens</title>
+<meta name="description" content="Search a song or drop a PDF and get sheet music you can play, transpose and practise with an app that listens. Free library, 簡譜, every instrument, and Stage, the community that writes the scores you ask for.">
+<meta name="theme-color" content="#0C0A14">
+<link rel="canonical" href="{{SITE}}/">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta property="og:title" content="Haptune: sheet music for any song">
+<meta property="og:description" content="Search a song or drop a PDF. Practise with an app that listens. Ask the Stage community for any score.">
+<meta property="og:image" content="{{SITE}}/icons/icon-512.png">
+<meta property="og:url" content="{{SITE}}/">
+<meta name="twitter:card" content="summary">
+<script>
+// People who installed Haptune from the old address, or who follow a shared link, go straight to the app.
+(function () {
+  try {
+    var standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
+    var h = location.hash.replace('#', '');
+    if (standalone || /^(post|u)\//.test(h)) { location.replace('app/' + location.hash); return; }
+    // the app used to live at this address: remove its old offline copy so this page is never shown stale
+    if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(function (rs) {
+      rs.forEach(function (r) { if (!/\/app\/$/.test(r.scope)) r.unregister(); });
+    });
+    if (window.caches) caches.keys().then(function (ks) { ks.forEach(function (k) { if (/^haptune-/.test(k) && !/^haptune-app-/.test(k)) caches.delete(k); }); });
+  } catch (e) { /* carry on with the page */ }
+})();
+</script>
+<style>
+:root { --ink: #14121F; --ink2: #5F5B76; --bg: #F6F5FB; --card: #fff; --line: rgba(22,18,52,.09); --violet: #6A4DFF; --coral: #FF5C8A; --sun: #FFB020;
+  --brand: linear-gradient(135deg, #6A4DFF 0%, #A24DFF 52%, #FF5C8A 100%); --night: #0C0A14; --night2: #16131F;
+  --font: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body { margin: 0; font: 17px/1.55 var(--font); color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; letter-spacing: -.008em; overflow-x: hidden; }
+a { color: inherit; text-decoration: none; }
+h1, h2, h3, p { margin: 0; }
+h1, h2, h3 { letter-spacing: -.035em; line-height: 1.08; text-wrap: balance; }
+.w { max-width: 1140px; margin: 0 auto; padding: 0 22px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 9px; height: 54px; padding: 0 26px; border-radius: 16px; font-weight: 750; font-size: 16.5px; border: 0; cursor: pointer; font-family: inherit; transition: transform .15s, box-shadow .2s, background .2s; white-space: nowrap; }
+.btn:active { transform: scale(.97); }
+.btn.brand { color: #fff; background: var(--brand); box-shadow: 0 12px 34px rgba(120,70,255,.45); }
+.btn.brand:hover { box-shadow: 0 16px 44px rgba(120,70,255,.6); }
+.btn.glass { color: #fff; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18); }
+.btn.glass:hover { background: rgba(255,255,255,.16); }
+.btn.dark { color: #fff; background: var(--ink); }
+.btn.line { color: var(--ink); background: transparent; border: 1.5px solid var(--line); }
+.btn.sm { height: 42px; padding: 0 18px; font-size: 14.5px; border-radius: 999px; }
+svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+/* ---------- top bar ---------- */
+.nav { position: fixed; top: 0; left: 0; right: 0; z-index: 30; transition: background .25s, box-shadow .25s; }
+.nav .w { display: flex; align-items: center; gap: 26px; height: 68px; }
+.logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 21px; letter-spacing: -.04em; color: #fff; }
+.logo i { width: 32px; height: 32px; border-radius: 10px; background: var(--brand); display: grid; place-items: center; box-shadow: 0 6px 18px rgba(120,70,255,.5); }
+.logo svg { width: 18px; height: 18px; stroke: #fff; stroke-width: 2.4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.nav nav { display: flex; gap: 24px; margin-left: auto; font-size: 15px; font-weight: 600; color: rgba(255,255,255,.76); }
+.nav nav a:hover { color: #fff; }
+.nav.solid { background: rgba(12,10,20,.86); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); box-shadow: 0 1px 0 rgba(255,255,255,.07); }
+@media (max-width: 820px) { .nav nav { display: none; } .nav .btn { margin-left: auto; } }
+
+/* ---------- hero ---------- */
+.hero { background: var(--night); color: #fff; position: relative; overflow: hidden; padding: 128px 0 0; }
+.hero::before { content: ""; position: absolute; width: 900px; height: 900px; left: -320px; top: -420px; border-radius: 50%; background: radial-gradient(circle, rgba(106,77,255,.55), rgba(106,77,255,0) 65%); }
+.hero::after { content: ""; position: absolute; width: 760px; height: 760px; right: -260px; top: 60px; border-radius: 50%; background: radial-gradient(circle, rgba(255,92,138,.34), rgba(255,92,138,0) 65%); }
+.hero .w { position: relative; z-index: 1; display: grid; grid-template-columns: 1.05fr .95fr; gap: 40px; align-items: center; }
+.kicker { display: inline-flex; align-items: center; gap: 8px; padding: 7px 13px; border-radius: 999px; font-size: 13.5px; font-weight: 650; background: rgba(255,255,255,.09); border: 1px solid rgba(255,255,255,.14); color: rgba(255,255,255,.9); }
+.kicker b { width: 8px; height: 8px; border-radius: 50%; background: #3DD68C; box-shadow: 0 0 0 4px rgba(61,214,140,.22); }
+.hero h1 { font-size: clamp(42px, 6.3vw, 76px); font-weight: 800; margin: 22px 0 18px; }
+.hero h1 em { font-style: normal; background: linear-gradient(100deg, #A893FF, #FF8FB2 60%, #FFC56B); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero p.lead { font-size: clamp(17px, 1.6vw, 20px); color: rgba(255,255,255,.74); max-width: 33em; }
+.try { display: flex; align-items: center; gap: 8px; height: 62px; margin-top: 30px; padding: 0 7px 0 18px; border-radius: 18px; background: #fff; max-width: 540px; box-shadow: 0 18px 50px rgba(0,0,0,.4); }
+.try svg { color: #14121F; }
+.try input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; font: 600 17px var(--font); color: #14121F; background: none; }
+.try input::placeholder { color: #8A879C; font-weight: 500; }
+.try button { height: 48px; padding: 0 20px; border-radius: 13px; border: 0; background: var(--brand); color: #fff; font: 750 15.5px var(--font); cursor: pointer; }
+.cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+.hero small { display: block; margin-top: 16px; color: rgba(255,255,255,.5); font-size: 14px; }
+.hero .stores { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 26px; color: rgba(255,255,255,.62); font-size: 14px; font-weight: 600; }
+.hero .stores span { display: inline-flex; align-items: center; gap: 7px; }
+
+/* phone with a live score */
+.device { justify-self: center; width: min(340px, 78vw); aspect-ratio: 340 / 690; border-radius: 48px; background: #1B1826; padding: 11px; box-shadow: 0 50px 120px rgba(0,0,0,.6), inset 0 0 0 1.5px rgba(255,255,255,.14); position: relative; margin-bottom: -70px; }
+.screen { width: 100%; height: 100%; border-radius: 38px; background: #F5F5FA; overflow: hidden; color: var(--ink); display: flex; flex-direction: column; position: relative; }
+.screen .bar { padding: 16px 16px 8px; display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 15px; letter-spacing: -.03em; }
+.screen .bar i { width: 22px; height: 22px; border-radius: 7px; background: var(--brand); }
+.screen .bar span { margin-left: auto; font-size: 12px; font-weight: 750; color: #F5821F; background: #fff; border: 1px solid var(--line); border-radius: 99px; padding: 3px 9px; }
+.demo-title { padding: 2px 16px 0; font-weight: 800; font-size: 20px; letter-spacing: -.035em; }
+.demo-sub { padding: 0 16px; font-size: 12.5px; color: var(--ink2); }
+.demo-chips { display: flex; gap: 6px; padding: 9px 16px 2px; flex-wrap: wrap; }
+.demo-chips b { font-size: 11px; font-weight: 700; padding: 4px 9px; border-radius: 99px; background: #fff; border: 1px solid var(--line); }
+.demo-chips b.on { background: var(--violet); color: #fff; border-color: transparent; }
+.sheet { margin: 10px 12px 0; border-radius: 16px; background: #fff; border: 1px solid var(--line); padding: 10px 8px 4px; position: relative; flex: 1; min-height: 0; overflow: hidden; }
+.sheet { display: flex; align-items: center; }
+.sheet svg { width: 100%; display: block; }
+.sheet .st { stroke: #B9B6C9; stroke-width: 1; }
+.sheet .bl { stroke: #6E6A86; stroke-width: 1.2; }
+.sheet .n ellipse { fill: #14121F; transition: fill .2s; }
+.sheet .n line { stroke: #14121F; stroke-width: 1.5; transition: stroke .2s; }
+.sheet .n.ok ellipse { fill: #17A865; } .sheet .n.ok line { stroke: #17A865; }
+.sheet .n.now ellipse { fill: #6A4DFF; } .sheet .n.now line { stroke: #6A4DFF; }
+.sheet .cur { fill: rgba(106,77,255,.13); stroke: rgba(106,77,255,.5); stroke-width: 1; transition: x .28s ease, y .28s ease; }
+.sheet .jp { font: 700 11px var(--font); fill: #6A4DFF; }
+.listen { margin: 10px 12px 12px; border-radius: 18px; background: #fff; border: 1px solid var(--line); padding: 10px 12px; display: flex; align-items: center; gap: 10px; box-shadow: 0 10px 30px rgba(40,24,120,.12); }
+.listen i { width: 40px; height: 40px; border-radius: 50%; background: var(--brand); display: grid; place-items: center; color: #fff; flex-shrink: 0; }
+.listen strong { display: block; font-size: 13.5px; letter-spacing: -.02em; } .listen span { font-size: 11.5px; color: var(--ink2); }
+.wave { margin-left: auto; display: flex; gap: 3px; align-items: center; height: 26px; }
+.wave b { width: 3px; border-radius: 2px; background: var(--violet); animation: wave 1s ease-in-out infinite; }
+.wave b:nth-child(2) { animation-delay: .15s; } .wave b:nth-child(3) { animation-delay: .3s; } .wave b:nth-child(4) { animation-delay: .45s; } .wave b:nth-child(5) { animation-delay: .6s; }
+@keyframes wave { 0%, 100% { height: 6px; } 50% { height: 24px; } }
+.float { position: absolute; z-index: 2; padding: 10px 14px; border-radius: 16px; background: #fff; color: var(--ink); font-size: 13.5px; font-weight: 700; box-shadow: 0 18px 50px rgba(0,0,0,.35); display: flex; align-items: center; gap: 8px; animation: bob 5s ease-in-out infinite; }
+.float small { display: block; font-weight: 550; color: var(--ink2); font-size: 12px; margin: 0; }
+.float i { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; color: #fff; flex-shrink: 0; }
+.float.a { left: -64px; top: 27%; } .float.a i { background: #17A865; }
+.float.b { right: -56px; top: 46%; animation-delay: -2s; } .float.b i { background: var(--coral); }
+.float.c { left: -40px; bottom: 19%; animation-delay: -3.4s; } .float.c i { background: var(--violet); }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+@media (max-width: 900px) {
+  .hero { padding-top: 104px; }
+  .hero .w { grid-template-columns: 1fr; }
+  .device { margin-top: 26px; }
+  .float.a { left: -14px; } .float.b { right: -14px; } .float.c { left: -8px; }
+}
+@media (prefers-reduced-motion: reduce) { .float, .wave b { animation: none; } html { scroll-behavior: auto; } }
+
+/* ---------- sections ---------- */
+section { padding: 96px 0; }
+.eyebrow { font-size: 13px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--violet); }
+h2 { font-size: clamp(32px, 4.4vw, 52px); font-weight: 800; margin: 12px 0 16px; }
+.lead2 { font-size: 19px; color: var(--ink2); max-width: 36em; }
+.center { text-align: center; } .center .lead2 { margin: 0 auto; }
+.reveal { opacity: 0; transform: translateY(22px); transition: opacity .6s ease, transform .6s ease; }
+.reveal.in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; } }
+
+.ways { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 48px; }
+.way { background: var(--card); border: 1px solid var(--line); border-radius: 28px; padding: 28px; display: flex; flex-direction: column; gap: 10px; position: relative; overflow: hidden; }
+.way .no { font: 800 13px var(--font); letter-spacing: .08em; color: var(--violet); }
+.way h3 { font-size: 24px; font-weight: 800; }
+.way p { color: var(--ink2); font-size: 16px; }
+.way .art { height: 132px; border-radius: 18px; margin-top: 10px; background: linear-gradient(135deg, #F0ECFF, #FFEDF3); display: grid; place-items: center; position: relative; overflow: hidden; }
+.pill { display: inline-flex; align-items: center; gap: 7px; padding: 10px 14px; border-radius: 14px; background: #fff; font-weight: 700; font-size: 14.5px; box-shadow: 0 8px 24px rgba(40,24,120,.12); }
+.pill svg { color: var(--violet); }
+.tag { display: inline-block; font: 800 10.5px var(--font); letter-spacing: .07em; text-transform: uppercase; padding: 3px 7px; border-radius: 6px; background: var(--sun); color: #3A2500; vertical-align: 3px; margin-left: 6px; }
+.tag.v { background: #EFEBFF; color: var(--violet); }
+@media (max-width: 900px) { .ways { grid-template-columns: 1fr; } section { padding: 72px 0; } }
+
+.bento { display: grid; grid-template-columns: repeat(6, 1fr); gap: 18px; margin-top: 48px; }
+.cell { background: var(--card); border: 1px solid var(--line); border-radius: 28px; padding: 26px; display: flex; flex-direction: column; gap: 8px; min-height: 190px; position: relative; overflow: hidden; }
+.cell h3 { font-size: 22px; font-weight: 800; }
+.cell p { color: var(--ink2); font-size: 15.5px; }
+.cell .ic { width: 46px; height: 46px; border-radius: 15px; display: grid; place-items: center; color: #fff; margin-bottom: 8px; }
+.cell.s3 { grid-column: span 3; } .cell.s2 { grid-column: span 2; } .cell.s4 { grid-column: span 4; }
+.cell.dark { background: var(--night); color: #fff; border-color: transparent; }
+.cell.dark p { color: rgba(255,255,255,.7); }
+.cell.grad { background: var(--brand); color: #fff; border-color: transparent; }
+.cell.grad p { color: rgba(255,255,255,.86); }
+.jian { font: 800 30px/1.2 var(--font); letter-spacing: .12em; margin-top: auto; opacity: .95; }
+.jian small { font-size: 14px; font-weight: 650; letter-spacing: 0; opacity: .7; display: block; }
+.insts { display: flex; flex-wrap: wrap; gap: 7px; margin-top: auto; }
+.insts span { font-size: 13px; font-weight: 650; padding: 5px 11px; border-radius: 99px; background: rgba(106,77,255,.09); color: var(--violet); }
+.keys { display: flex; gap: 8px; align-items: center; margin-top: auto; font-weight: 800; font-size: 26px; letter-spacing: -.03em; }
+.keys span { padding: 6px 14px; border-radius: 14px; background: rgba(255,255,255,.12); }
+@media (max-width: 900px) { .bento { grid-template-columns: 1fr; } .cell.s3, .cell.s2, .cell.s4 { grid-column: auto; } }
+
+/* Stage */
+.stage { background: var(--night); color: #fff; position: relative; overflow: hidden; }
+.stage::before { content: ""; position: absolute; width: 800px; height: 800px; right: -300px; top: -300px; border-radius: 50%; background: radial-gradient(circle, rgba(162,77,255,.42), rgba(162,77,255,0) 65%); }
+.stage .w { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
+.stage .eyebrow { color: #B9A8FF; }
+.stage .lead2 { color: rgba(255,255,255,.72); }
+.stage ul { list-style: none; padding: 0; margin: 28px 0 0; display: grid; gap: 14px; }
+.stage li { display: flex; gap: 13px; align-items: flex-start; font-size: 16.5px; color: rgba(255,255,255,.86); }
+.stage li i { width: 26px; height: 26px; border-radius: 9px; background: rgba(255,255,255,.1); display: grid; place-items: center; flex-shrink: 0; margin-top: 1px; color: #B9A8FF; }
+.stage li b { color: #fff; }
+.feed { display: grid; gap: 12px; }
+.post { background: var(--night2); border: 1px solid rgba(255,255,255,.09); border-radius: 22px; padding: 16px; display: flex; gap: 13px; align-items: center; }
+.post .av { width: 42px; height: 42px; border-radius: 14px; flex-shrink: 0; display: grid; place-items: center; font-weight: 800; color: #fff; }
+.post strong { display: block; font-size: 15.5px; letter-spacing: -.02em; } .post span { font-size: 13.5px; color: rgba(255,255,255,.6); }
+.post .r { margin-left: auto; font-size: 13px; font-weight: 750; padding: 6px 11px; border-radius: 99px; background: rgba(255,255,255,.09); white-space: nowrap; }
+.post .r.hot { color: #FF8FB2; } .post .r.ok { color: #6BE3A4; } .post .r.go { background: var(--brand); }
+@media (max-width: 900px) { .stage .w { grid-template-columns: 1fr; gap: 36px; } }
+
+/* pricing */
+.plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 48px; align-items: stretch; }
+.plan { background: var(--card); border: 1px solid var(--line); border-radius: 28px; padding: 28px; display: flex; flex-direction: column; gap: 6px; position: relative; }
+.plan.best { border: 2px solid var(--violet); box-shadow: 0 24px 60px rgba(106,77,255,.2); }
+.plan .ribbon { position: absolute; top: -13px; left: 26px; font: 800 11px var(--font); letter-spacing: .08em; text-transform: uppercase; padding: 5px 10px; border-radius: 8px; background: var(--brand); color: #fff; }
+.plan h3 { font-size: 22px; font-weight: 800; }
+.plan .price { font-size: 42px; font-weight: 800; letter-spacing: -.045em; margin-top: 8px; }
+.plan .price small { font-size: 15px; font-weight: 600; color: var(--ink2); letter-spacing: 0; }
+.plan .yr { font-size: 14px; color: var(--ink2); min-height: 22px; }
+.plan ul { list-style: none; padding: 0; margin: 16px 0 22px; display: grid; gap: 10px; font-size: 15.5px; }
+.plan li { display: flex; gap: 10px; align-items: flex-start; }
+.plan li svg { color: #17A865; margin-top: 3px; width: 17px; height: 17px; stroke-width: 2.8; }
+.plan .btn { margin-top: auto; width: 100%; }
+.cur { display: inline-flex; background: rgba(22,18,52,.06); border-radius: 12px; padding: 3px; margin-top: 22px; }
+.cur button { border: 0; background: none; font: 700 14px var(--font); padding: 8px 14px; border-radius: 9px; color: var(--ink2); cursor: pointer; }
+.cur button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 4px rgba(20,16,50,.14); }
+.paynote { margin-top: 22px; font-size: 14.5px; color: var(--ink2); }
+@media (max-width: 900px) { .plans { grid-template-columns: 1fr; } }
+
+/* FAQ */
+.faq { max-width: 780px; margin: 40px auto 0; display: grid; gap: 10px; }
+details { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 0 20px; }
+summary { cursor: pointer; font-weight: 750; font-size: 17px; padding: 18px 0; list-style: none; display: flex; justify-content: space-between; gap: 12px; letter-spacing: -.02em; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; font-weight: 500; font-size: 24px; line-height: 1; color: var(--violet); }
+details[open] summary::after { content: "–"; }
+details p { padding: 0 0 18px; color: var(--ink2); font-size: 16px; }
+
+.final { background: var(--brand); color: #fff; text-align: center; border-radius: 40px; padding: 72px 24px; margin: 0 22px; position: relative; overflow: hidden; }
+.final h2 { margin-top: 0; }
+.final p { opacity: .9; font-size: 19px; max-width: 30em; margin: 0 auto 28px; }
+.final .btn { background: #fff; color: var(--ink); }
+footer { padding: 46px 0 60px; font-size: 14.5px; color: var(--ink2); }
+footer .w { display: flex; flex-wrap: wrap; gap: 14px 26px; align-items: center; }
+footer .logo { color: var(--ink); font-size: 18px; margin-right: auto; }
+footer a:hover { color: var(--ink); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-note" viewBox="0 0 24 24"><path d="M9 18V6l10-2v12M9 18a2.500 2.500 0 1 1-5 0 2.500 2.500 0 0 1 5 0zM19 16a2.500 2.500 0 1 1-5 0 2.500 2.500 0 0 1 5 0zM9 10l10-2"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><path d="M10.500 17a6.500 6.500 0 1 1 0-13 6.500 6.500 0 0 1 0 13zM15.500 15.500 20 20"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.500l4.500 4.500L19 7.500"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 3.500a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0v-5a3 3 0 0 1 3-3zM5.500 11a6.500 6.500 0 0 0 13 0M12 17.500v3"/></symbol>
+  <symbol id="i-cam" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4zM12 16.500a3.500 3.500 0 1 0 0-7 3.500 3.500 0 0 0 0 7z"/></symbol>
+  <symbol id="i-stage" viewBox="0 0 24 24"><path d="M3.500 19.500h17M6.500 19.500V15a5.500 5.500 0 0 1 11 0v4.500M12 3.500v3M5 6l2 2M19 6l-2 2"/></symbol>
+  <symbol id="i-arrows" viewBox="0 0 24 24"><path d="M8 4v16M4 8l4-4 4 4M16 20V4M12 16l4 4 4-4"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 3.500V15M7.500 10.500 12 15l4.500-4.500M5.500 19.500h13"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 21c3.600 0 6-2.400 6-5.800 0-3.400-2.600-5.300-3.600-8.700-.4 1.900-1.400 3.100-2.600 3.800.2-2.900-1-5.600-3.400-7.300.3 3.500-4.400 6.300-4.400 11.200C4 18.600 7.400 21 12 21z"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M9 11a3.500 3.500 0 1 0 0-7 3.500 3.500 0 0 0 0 7zM2.500 20c.9-3.400 3.400-5.500 6.500-5.500s5.600 2.100 6.500 5.500M16.500 11.500a3 3 0 1 0 0-6M17.500 14.500c2.200.4 3.600 2.400 4 5.500"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4.500 19.500l1-4.500 10.500-10.500 3.500 3.500L9 18.500zM14 6.500l3.500 3.500"/></symbol>
+  <symbol id="i-mix" viewBox="0 0 24 24"><path d="M6 4v6M6 14v6M12 4v2M12 10v10M18 4v9M18 17v3M4 12h4M10 8h4M16 15h4"/></symbol>
+  <symbol id="i-gift" viewBox="0 0 24 24"><path d="M4.500 10.500h15v9h-15zM3.500 7h17v3.500h-17zM12 7v12.500M12 7c-1.500-3.500-5-3.500-5-1.500S10 7 12 7zM12 7c1.500-3.500 5-3.500 5-1.500S14 7 12 7z"/></symbol>
+</svg>
+
+<header class="nav" id="nav">
+  <div class="w">
+    <a class="logo" href="#top"><i><svg><use href="#i-note"/></svg></i>Haptune</a>
+    <nav><a href="#how">How it works</a><a href="#practice">Practice</a><a href="#stage">Stage</a><a href="#pricing">Pricing</a><a href="#faq">Questions</a></nav>
+    <a class="btn brand sm" href="app/">Open Haptune</a>
+  </div>
+</header>
+
+<main id="top">
+<section class="hero">
+  <div class="w">
+    <div>
+      <span class="kicker"><b></b>Free to start. No account needed.</span>
+      <h1>Any song.<br>On your stand <em>in seconds.</em></h1>
+      <p class="lead">Search a song or drop a PDF, and get sheet music you can play, transpose and practise, with an app that listens to every note. If the score doesn't exist yet, the Stage community writes it for you.</p>
+      <form class="try" id="try" role="search">
+        <svg class="i"><use href="#i-search"/></svg>
+        <input id="try-q" type="search" placeholder="Try &quot;Canon in D&quot; or 茉莉花" aria-label="Search a song" autocomplete="off">
+        <button type="submit">Find it</button>
+      </form>
+      <div class="cta">
+        <a class="btn glass" id="get" href="app/"><svg class="i"><use href="#i-down"/></svg><span id="get-text">Get the app</span></a>
+      </div>
+      <small id="get-note">Works on Android, iPhone, iPad and any computer. Your music stays on your device.</small>
+      <div class="stores"><span><svg class="i"><use href="#i-check"/></svg>4,900 free pieces</span><span><svg class="i"><use href="#i-check"/></svg>Staff notation and 簡譜</span><span><svg class="i"><use href="#i-check"/></svg>20+ instruments</span></div>
+    </div>
+    <div class="device" aria-hidden="true">
+      <div class="float a"><i><svg class="i"><use href="#i-check"/></svg></i><div>Right note!<small>94% so far</small></div></div>
+      <div class="float b"><i><svg class="i"><use href="#i-flame"/></svg></i><div>12-day streak<small>3 friends playing</small></div></div>
+      <div class="float c"><i><svg class="i"><use href="#i-arrows"/></svg></i><div>Key: D → C<small>one tap</small></div></div>
+      <div class="screen">
+        <div class="bar"><i></i>Haptune<span>🔥 12</span></div>
+        <div class="demo-title">Canon in D</div>
+        <div class="demo-sub">Johann Pachelbel · violin · ♩ 60</div>
+        <div class="demo-chips"><b class="on">Sheet</b><b>簡譜</b><b>Chords</b><b>Key D</b></div>
+        <div class="sheet"><svg id="demo" viewBox="0 0 300 300"></svg></div>
+        <div class="listen"><i><svg class="i"><use href="#i-mic"/></svg></i><div><strong>Listening…</strong><span>Wait for me · bar <b id="demo-bar">1</b> of 8</span></div><div class="wave"><b></b><b></b><b></b><b></b><b></b></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="w">
+    <div class="center reveal">
+      <div class="eyebrow">Three ways in</div>
+      <h2>From "I want to play that"<br>to playing it</h2>
+      <p class="lead2">No menus to learn. Type, drop or ask.</p>
+    </div>
+    <div class="ways">
+      <div class="way reveal"><span class="no">01</span><h3>Search a song</h3><p>Your library, the free library and Stage are searched at once. Tap a result and the score opens, ready to play.</p>
+        <div class="art"><span class="pill"><svg class="i"><use href="#i-search"/></svg>Ode to Joy</span></div></div>
+      <div class="way reveal"><span class="no">02</span><h3>Bring the page <span class="tag">Pro</span></h3><p>A PDF or a phone photo becomes a real score: every bar checked, doubtful bars marked so you can fix them in the editor.</p>
+        <div class="art"><span class="pill"><svg class="i"><use href="#i-cam"/></svg>PDF · photo · MusicXML · MIDI</span></div></div>
+      <div class="way reveal"><span class="no">03</span><h3>Ask Stage</h3><p>Paste a YouTube link. Musicians in the community write the score, and you rate it when it arrives. It's free.</p>
+        <div class="art"><span class="pill"><svg class="i"><use href="#i-stage"/></svg>"I'll make it" · 2 h ago</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="practice" style="padding-top:0">
+  <div class="w">
+    <div class="reveal">
+      <div class="eyebrow">Practice that listens</div>
+      <h2>Made for the hour<br>you actually practise</h2>
+      <p class="lead2">Everything on the song screen is there to help you play it better, today.</p>
+    </div>
+    <div class="bento">
+      <div class="cell s3 dark reveal"><span class="ic" style="background:var(--brand)"><svg class="i"><use href="#i-mic"/></svg></span><h3>Play Along</h3><p>The app hears your instrument through the microphone. <b>Wait for me</b> holds the music until you find the note; <b>Keep the beat</b> plays the other parts in time. Afterwards you see which bars to loop.</p></div>
+      <div class="cell s3 grad reveal"><h3>Change the key in one tap</h3><p>Every score, chord sheet and part moves up or down. Notes, key signature and chords are respelled properly. Find My Key suggests what fits your voice.</p><div class="keys"><span>D</span>→<span>C</span>→<span>B♭</span></div></div>
+      <div class="cell s2 reveal"><span class="ic" style="background:#F5821F">簡</span><h3>簡譜 for every score</h3><p>Switch any piece to numbered notation, or type 簡譜 to make a score.</p><div class="jian">1 1 5 5 | 6 6 5 -<small>1=C 4/4</small></div></div>
+      <div class="cell s2 reveal"><span class="ic" style="background:#17A865"><svg class="i"><use href="#i-mix"/></svg></span><h3>Your part, your mix</h3><p>Tap a part to hear it alone, mute your own line and play with the rest, set each part's volume.</p></div>
+      <div class="cell s2 reveal"><span class="ic" style="background:#2F7DF6"><svg class="i"><use href="#i-pen"/></svg></span><h3>Fix any note</h3><p>Tap a note to change its pitch or length, add or delete, undo. AI imports open with the doubtful bars highlighted.</p></div>
+      <div class="cell s4 reveal"><h3>Every common instrument</h3><p>Parts are shown in the right clef and transposition for your instrument, with sound to match.</p><div class="insts"><span>Piano</span><span>Violin</span><span>Guitar</span><span>Voice</span><span>Flute</span><span>Cello</span><span>Clarinet</span><span>Alto sax</span><span>Trumpet</span><span>Ukulele</span><span>Erhu 二胡</span><span>Dizi 笛子</span><span>Guzheng 古筝</span><span>+ more</span></div></div>
+      <div class="cell s2 reveal"><span class="ic" style="background:#8E4EC6"><svg class="i"><use href="#i-down"/></svg></span><h3>Take it with you</h3><p>Export PDF, MusicXML and MIDI. Works offline once a piece is in your library.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="stage" id="stage">
+  <div class="w">
+    <div class="reveal">
+      <div class="eyebrow">Stage · the community</div>
+      <h2>Where the score you can't find gets written</h2>
+      <p class="lead2">Stage is a music social network built around one thing: helping each other play the songs we love.</p>
+      <ul>
+        <li><i><svg class="i"><use href="#i-search"/></svg></i><span><b>Request any song.</b> Others tap "me too" and the request climbs the trending list.</span></li>
+        <li><i><svg class="i"><use href="#i-pen"/></svg></i><span><b>Help write it.</b> Claim a request, make the score, earn Notes and a place on the helpers board.</span></li>
+        <li><i><svg class="i"><use href="#i-flame"/></svg></i><span><b>Daily challenge.</b> One short tune, everyone plays it, friends compare scores.</span></li>
+        <li><i><svg class="i"><use href="#i-gift"/></svg></i><span><b>Rewards that are useful.</b> Notes turn into Pro days, AI page reads and spotlights. Never bought, never ads.</span></li>
+      </ul>
+    </div>
+    <div class="feed reveal">
+      <div class="post"><span class="av" style="background:#FF5C8A">M</span><div><strong>Wanted: 稻香 (Jay Chou), easy piano</strong><span>mei_plays · 38 want this</span></div><span class="r hot">🔥 Trending</span></div>
+      <div class="post"><span class="av" style="background:#6A4DFF">A</span><div><strong>River Flows in You, violin + piano</strong><span>delivered by arif.strings · ★ 4.9</span></div><span class="r ok">Delivered</span></div>
+      <div class="post"><span class="av" style="background:#17A865">J</span><div><strong>Daily challenge: Minuet in G</strong><span>212 playing today · best 99%</span></div><span class="r go">Play</span></div>
+      <div class="post"><span class="av" style="background:#F5821F">S</span><div><strong>How do I count this 6/8 bar?</strong><span>4 answers · solved in 12 min</span></div><span class="r">Q&amp;A</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="pricing">
+  <div class="w">
+    <div class="center reveal">
+      <div class="eyebrow">Pricing</div>
+      <h2>Free for practising.<br>Pay only for the AI.</h2>
+      <p class="lead2">Practice, the free library and all of Stage cost nothing. Plans add the features that cost us money to run.</p>
+      <div class="cur" role="group" aria-label="Currency"><button type="button" id="cur-myr" class="on">RM</button><button type="button" id="cur-usd">US$</button></div>
+    </div>
+    <div class="plans">
+      <div class="plan reveal"><h3>Free</h3><div class="price">0</div><div class="yr">for ever</div>
+        <ul><li><svg class="i"><use href="#i-check"/></svg>Play Along with the microphone</li><li><svg class="i"><use href="#i-check"/></svg>MusicXML, MIDI, ABC and 簡譜 in</li><li><svg class="i"><use href="#i-check"/></svg>Key change, parts, mixer, note editor, export</li><li><svg class="i"><use href="#i-check"/></svg>Free library and all of Stage</li><li><svg class="i"><use href="#i-check"/></svg>Courses, classes and tools</li></ul>
+        <a class="btn line" href="app/">Start free</a></div>
+      <div class="plan reveal"><h3>Plus</h3><div class="price"><span data-myr="RM 14.90" data-usd="$3.99">RM 14.90</span><small> / month</small></div><div class="yr"><span data-myr="or RM 99.90 a year" data-usd="or $24.99 a year">or RM 99.90 a year</span></div>
+        <ul><li><svg class="i"><use href="#i-check"/></svg>Everything in Free</li><li><svg class="i"><use href="#i-check"/></svg>Search the web for sheet music (AI)</li><li><svg class="i"><use href="#i-check"/></svg>Hapi, the AI music tutor</li><li><svg class="i"><use href="#i-check"/></svg>All improviser styles</li><li><svg class="i"><use href="#i-check"/></svg>More open requests, monthly Notes</li></ul>
+        <a class="btn dark" href="app/#plans">Get Plus</a></div>
+      <div class="plan best reveal"><span class="ribbon">Most complete</span><h3>Pro</h3><div class="price"><span data-myr="RM 29.90" data-usd="$7.99">RM 29.90</span><small> / month</small></div><div class="yr"><span data-myr="or RM 229.90 a year" data-usd="or $59.99 a year">or RM 229.90 a year</span></div>
+        <ul><li><svg class="i"><use href="#i-check"/></svg>Everything in Plus</li><li><svg class="i"><use href="#i-check"/></svg><b>AI reads your PDFs and photos</b></li><li><svg class="i"><use href="#i-check"/></svg>Doubtful bars marked, ready to fix</li><li><svg class="i"><use href="#i-check"/></svg>Separate the parts of an imported score</li><li><svg class="i"><use href="#i-check"/></svg>Three times the AI allowance, spotlights</li></ul>
+        <a class="btn brand" href="app/#plans">Get Pro</a></div>
+    </div>
+    <p class="paynote center">Pay by card on this website, with Google Play in the Android app, or by DuitNow QR / bank transfer in Malaysia. One plan works on all your devices. Cancel any time.</p>
+  </div>
+</section>
+
+<section id="faq" style="padding-top:0">
+  <div class="w">
+    <div class="center reveal"><div class="eyebrow">Questions</div><h2>Good to know</h2></div>
+    <div class="faq">
+      <details><summary>Can I get the score of a current pop song?</summary><p>Pop songs are protected by copyright, so we can't put them in the free library. Ask for the song on Stage: a musician writes an arrangement for you, and it is shared only with the people who asked for it. You can also import a score you already own.</p></details>
+      <details><summary>How accurate is the AI reading of PDFs and photos?</summary><p>On clean printed pages it reads nearly every note; dense piano music and phone photos have more slips. Every bar is checked, the bars it isn't sure of are marked, and the note editor fixes them quickly. That is why it is a Pro tool for people who want to edit and arrange, not a promise of a perfect copy.</p></details>
+      <details><summary>Is MusicXML and MIDI import exact?</summary><p>Yes. Those files are read on your device with exact timing, in a fraction of a second, and it is free.</p></details>
+      <details><summary>Which devices does it work on?</summary><p>Android (Google Play), iPhone and iPad (open the app in Safari and add it to your Home Screen), and any computer in the browser, where you can install it too. Your plan follows your account.</p></details>
+      <details><summary>What are Notes?</summary><p>Notes are what you earn on Stage for helping: making a requested score, a good answer, a daily challenge. They unlock useful things, like Pro days and AI page reads. They can't be bought or cashed out.</p></details>
+      <details><summary>I teach music. Can students find me?</summary><p>Yes. Teachers set up a verified profile for a small one-time fee; students search for free, request a lesson, and you confirm the time. Lessons can be online or in person.</p></details>
+    </div>
+  </div>
+</section>
+
+<div class="final reveal">
+  <h2>What do you want to play?</h2>
+  <p>Open Haptune and have it on your stand before your coffee is ready.</p>
+  <a class="btn" href="app/">Open Haptune, free</a>
+</div>
+</main>
+
+<footer>
+  <div class="w">
+    <a class="logo" href="#top"><i><svg><use href="#i-note"/></svg></i>Haptune</a>
+    <a href="app/">Open the app</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a><a href="refunds.html">Refunds</a>
+    <span>© {{YEAR}} Haptune · v{{VERSION}}</span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var PLAY = '{{PLAY}}';
+  var ua = navigator.userAgent || '';
+  var android = /Android/i.test(ua);
+  var ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var get = document.getElementById('get'), text = document.getElementById('get-text'), note = document.getElementById('get-note');
+  var offer = null;
+  // The download button fits the device: Google Play on Android, "install" on computers, Home Screen steps on iPhone.
+  if (android && PLAY) { get.href = PLAY; text.textContent = 'Get it on Google Play'; }
+  else if (android) { text.textContent = 'Open the app'; note.textContent = 'Then choose "Add to Home screen" in your browser menu to install it.'; }
+  else if (ios) { text.textContent = 'Open the app'; note.textContent = 'To install: open it in Safari, tap Share, then "Add to Home Screen".'; }
+  else { text.textContent = 'Open in your browser'; note.textContent = 'On a computer, Chrome and Edge can also install Haptune as an app (look for the install icon in the address bar).'; }
+  addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault(); offer = e;
+    if (!(android && PLAY)) { text.textContent = android ? 'Install the app' : 'Install Haptune for PC'; }
+  });
+  get.addEventListener('click', function (e) { if (offer) { e.preventDefault(); offer.prompt(); offer.userChoice.then(function () { location.href = 'app/'; }); offer = null; } });
+
+  // the search box hands the song to the app
+  document.getElementById('try').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var q = document.getElementById('try-q').value.trim();
+    location.href = 'app/' + (q ? '#q=' + encodeURIComponent(q) : '');
+  });
+
+  // top bar turns solid after the hero starts scrolling
+  var nav = document.getElementById('nav');
+  var onScroll = function () { nav.classList.toggle('solid', scrollY > 24); };
+  addEventListener('scroll', onScroll, { passive: true }); onScroll();
+
+  // sections fade in
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (es) { es.forEach(function (x) { if (x.isIntersecting) { x.target.classList.add('in'); io.unobserve(x.target); } }); }, { threshold: 0.12 });
+    document.querySelectorAll('.reveal').forEach(function (el, i) { el.style.transitionDelay = (i % 3) * 70 + 'ms'; io.observe(el); });
+  } else document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('in'); });
+
+  // prices
+  var cur = function (c) {
+    document.getElementById('cur-myr').classList.toggle('on', c === 'myr'); document.getElementById('cur-usd').classList.toggle('on', c === 'usd');
+    document.querySelectorAll('[data-myr]').forEach(function (el) { el.textContent = el.getAttribute('data-' + c); });
+  };
+  document.getElementById('cur-myr').onclick = function () { cur('myr'); };
+  document.getElementById('cur-usd').onclick = function () { cur('usd'); };
+  try { if (!/Kuala_Lumpur|Kuching/.test(Intl.DateTimeFormat().resolvedOptions().timeZone)) cur('usd'); } catch (e) { /* keep RM */ }
+
+  // ---- the little score in the phone: Canon in D, a cursor stepping along, notes turning green ----
+  var svg = document.getElementById('demo'), NS = 'http://www.w3.org/2000/svg';
+  var mk = function (tag, attrs, parent) { var el = document.createElementNS(NS, tag); for (var k in attrs) el.setAttribute(k, attrs[k]); (parent || svg).appendChild(el); return el; };
+  // steps above the bottom line (E4 = 0): F#5 E5 D5 C#5 | B4 A4 B4 C#5, two bars a line, four lines
+  var tune = [8, 7, 6, 5, 4, 3, 4, 5, 6, 5, 4, 3, 2, 1, 2, 3, 6, 8, 9, 8, 7, 6, 7, 5, 4, 6, 5, 4, 3, 2, 3, 6];
+  var jp = ['3', '2', '1', '7', '6', '5', '6', '7', '1', '7', '6', '5', '4', '3', '4', '5', '1', '3', '4', '3', '2', '1', '2', '7', '6', '1', '7', '6', '5', '4', '5', '1'];
+  var notes = [], rows = 4, perRow = 8, x0 = 34, x1 = 290, rowH = 72, top = 14, gap = 7;
+  for (var r = 0; r < rows; r++) {
+    var y = top + r * rowH;
+    for (var l = 0; l < 5; l++) mk('line', { x1: 8, x2: x1, y1: y + l * gap, y2: y + l * gap, class: 'st' });
+    mk('line', { x1: 8, x2: 8, y1: y, y2: y + 4 * gap, class: 'bl' });
+    mk('line', { x1: (x0 + x1) / 2 - 2, x2: (x0 + x1) / 2 - 2, y1: y, y2: y + 4 * gap, class: 'bl' });
+    mk('line', { x1: x1, x2: x1, y1: y, y2: y + 4 * gap, class: 'bl' });
+    var clef = mk('text', { x: 10, y: y + 4 * gap + 1, 'font-size': 34, fill: '#14121F', 'font-family': 'serif' }); clef.textContent = '𝄞';
+  }
+  var cursor = mk('rect', { x: 0, y: 0, width: 18, height: 4 * gap + 20, rx: 6, class: 'cur' });
+  tune.forEach(function (st, i) {
+    var r = Math.floor(i / perRow), c = i % perRow;
+    var x = x0 + 12 + c * ((x1 - x0 - 10) / perRow) + (c >= 4 ? 4 : 0);
+    var y = top + r * rowH + 4 * gap - st * (gap / 2);
+    var g = mk('g', { class: 'n' });
+    mk('ellipse', { cx: x, cy: y, rx: 4.600, ry: 3.400, transform: 'rotate(-20 ' + x + ' ' + y + ')' }, g);
+    if (st >= 4) mk('line', { x1: x - 4.200, x2: x - 4.200, y1: y + 1, y2: y + 22 }, g); else mk('line', { x1: x + 4.200, x2: x + 4.200, y1: y - 1, y2: y - 22 }, g);
+    var tx = mk('text', { x: x - 3, y: top + r * rowH + 4 * gap + 24, class: 'jp' }); tx.textContent = jp[i];
+    notes.push({ g: g, x: x, row: r });
+  });
+  var k = 0, bar = document.getElementById('demo-bar');
+  var step = function () {
+    if (k === 0) notes.forEach(function (n) { n.g.setAttribute('class', 'n'); });
+    if (k > 0) notes[k - 1].g.setAttribute('class', 'n ok');
+    if (k >= notes.length) { k = 0; setTimeout(step, 1400); return; }
+    var n = notes[k];
+    n.g.setAttribute('class', 'n now');
+    cursor.setAttribute('x', n.x - 9); cursor.setAttribute('y', top + n.row * rowH - 10);
+    bar.textContent = Math.floor(k / 4) + 1;
+    k++;
+    setTimeout(step, 430);
+  };
+  if (!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) step(); else notes.forEach(function (n, i) { if (i < 9) n.g.setAttribute('class', 'n ok'); });
+})();
+</script>
+</body>
+</html>

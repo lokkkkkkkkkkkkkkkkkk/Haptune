@@ -3,6 +3,7 @@ import { parseMusicXML, describeScore } from '../core/musicxml.js';
 import { mxlToXml, decodeText } from '../core/zip.js';
 import { readMIDI } from '../core/midi.js';
 import { parseABC } from '../core/abc.js';
+import { parseJianpu, isJianpu } from '../core/jianpu.js';
 import { parseChordSheet, sheetChords, linesFromTextItems } from '../core/chordsheet.js';
 import { addScore, addSheet, addPdf } from './state.js';
 import { t } from '../core/i18n.js';
@@ -107,6 +108,10 @@ export async function importText(text, { title = '', t0 = performance.now(), rep
     const score = parseABC(trimmed);
     Object.assign(report, describeScore(score), { exact: true, format: 'ABC' });
     piece = await addScore(score, { fmt: 'abc', title: score.title || title });
+  } else if (isJianpu(trimmed)) {
+    const score = parseJianpu(trimmed);
+    Object.assign(report, describeScore(score), { exact: true, format: '簡譜' });
+    piece = await addScore(score, { fmt: 'jianpu', title: score.title || title || '簡譜' });
   } else if (/^<\?xml|<score-partwise|<score-timewise/.test(trimmed)) {
     const score = parseMusicXML(trimmed);
     Object.assign(report, describeScore(score), { exact: true, format: 'MusicXML' });

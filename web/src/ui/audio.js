@@ -12,66 +12,185 @@
 //  * the cursor uses the audible time (the audio clock minus the speaker/Bluetooth delay), so the score
 //    shows the note you hear, not the one being prepared.
 
-let ctx = null, out = null, verb = null, mainBus = null, vib = null;
+let ctx = null, out = null, verb = null, mainBus = null, vib = null, noiseBuf = null, micOpen = false;
 const waves = {};
 const MASTER = 0.8;
 const LOOKAHEAD = 1.0;          // seconds scheduled ahead of the audio clock (a jump or stop fades the bus, so this costs nothing)
 const TICK_MS = 40;
 const MAX_VOICES = 64;
-const stats = { scheduled: 0, dropped: 0, stolen: 0, transports: 0 };
+const STALL_MS = 1500;          // the audio clock standing still this long while playing = the sound system is stuck
+const stats = { scheduled: 0, dropped: 0, stolen: 0, transports: 0, rebuilds: 0, stalls: 0 };
 let userOffset = 0;              // seconds, from Settings > Sound > Sync (calibration)
 
 const CFG = () => globalThis.HAPTUNE_CONFIG || {};
+const isIOS = () => {
+  const n = globalThis.navigator;
+  return !!n && (/iPad|iPhone|iPod/.test(n.userAgent || '') || (n.platform === 'MacIntel' && n.maxTouchPoints > 1));
+};
+
+// ---------- staying alive on phones ----------
+// iPhone and iPad can leave the sound system "running" but silent and frozen (after a call, the lock screen,
+// switching to another app, plugging in headphones, or closing the microphone). Three things keep playback
+// from getting stuck:
+//  * a watchdog: when the audio clock stops moving while something plays, the sound system is rebuilt and
+//    playback carries on from the same place;
+//  * starting never waits for ever: when the browser doesn't answer, a fresh sound system is made;
+//  * when the browser insists on a tap first, the app says so ("Tap to turn the sound back on") instead of
+//    sitting silent.
+const transports = new Set();    // every Transport that is playing
+const waiting = new Set();       // things to start as soon as the sound system runs
+const stateListeners = new Set();
+let problem = null;              // null | 'tap' (sound needs a tap to carry on)
+
+/** fn(problem) is called when sound stops needing / starts needing a tap. Returns a function to stop listening. */
+export function onAudioProblem(fn) { stateListeners.add(fn); fn(problem); return () => stateListeners.delete(fn); }
+function setProblem(p) {
+  if (p === problem) return;
+  problem = p;
+  stateListeners.forEach((fn) => { try { fn(p); } catch { /* a listener's own problem */ } });
+}
+function flushWaiting() {
+  if (!ctx || ctx.state !== 'running') return;
+  setProblem(null);
+  const list = [...waiting];
+  waiting.clear();
+  list.forEach((fn) => { try { fn(); } catch { /* keep the others going */ } });
+}
+const anythingPlaying = () => [...transports].some((t) => t.playing) || waiting.size > 0;
+
+function build() {
+  const AC = globalThis.AudioContext || globalThis.webkitAudioContext;
+  if (!AC) return false;
+  try { if (navigator.audioSession) navigator.audioSession.type = micOpen ? 'play-and-record' : 'playback'; } catch { /* plays through the silent switch on iOS 17+ */ }
+  ctx = new AC({ latencyHint: 'interactive' });
+  const mine = ctx;
+  const comp = ctx.createDynamicsCompressor();
+  comp.threshold.value = -12; comp.knee.value = 10; comp.ratio.value = 3; comp.attack.value = 0.004; comp.release.value = 0.2;
+  out = ctx.createGain(); out.gain.value = MASTER;
+  out.connect(comp); comp.connect(ctx.destination);
+  // iOS pauses audio after a call, Siri or another app ("interrupted"): try to carry on, and ask for a tap if it won't
+  ctx.onstatechange = () => {
+    if (mine !== ctx) return;
+    if (ctx.state === 'running') { flushWaiting(); return; }
+    if (ctx.state === 'closed') return;
+    ctx.resume().catch(() => {});
+    setTimeout(() => { if (mine === ctx && ctx.state !== 'running' && anythingPlaying()) setProblem('tap'); }, 900);
+  };
+  // one shared room reverb, fed by each bus (not by each note)
+  verb = ctx.createConvolver();
+  const len = Math.floor(ctx.sampleRate * 1.3);
+  const ir = ctx.createBuffer(2, len, ctx.sampleRate);
+  for (let c = 0; c < 2; c++) {
+    const d = ir.getChannelData(c);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.4) * 0.5;
+  }
+  verb.buffer = ir;
+  const wet = ctx.createGain(); wet.gain.value = 0.5;
+  verb.connect(wet); wet.connect(comp);
+  // one shared vibrato for all sustained voices (in cents, so it suits every pitch)
+  vib = ctx.createOscillator(); vib.frequency.value = 5.3;
+  const vibDepth = ctx.createGain(); vibDepth.gain.value = 9;
+  vib.connect(vibDepth); vib.start();
+  vib.depth = vibDepth;
+  const pw = (h) => { const real = new Float32Array(h.length + 1), imag = new Float32Array(h.length + 1); h.forEach((a, i) => { imag[i + 1] = a; }); return ctx.createPeriodicWave(real, imag); };
+  waves.piano = pw([1, 0.55, 0.32, 0.22, 0.12, 0.09, 0.06, 0.04, 0.03, 0.02]);
+  waves.epiano = pw([1, 0.18, 0.08, 0.03, 0.02]);
+  waves.organ = pw([1, 0.7, 0.4, 0.5, 0.1, 0.3, 0, 0.2]);
+  waves.flute = pw([1, 0.22, 0.06, 0.02]);
+  waves.clar = pw([1, 0, 0.5, 0, 0.3, 0, 0.18, 0, 0.1]);
+  waves.brass = pw([1, 0.8, 0.6, 0.45, 0.32, 0.22, 0.15, 0.1]);
+  mainBus = makeBus(0.22);
+  noiseBuf = null;
+  return true;
+}
 
 export function audioContext() {
   if (!ctx) {
-    const AC = globalThis.AudioContext || globalThis.webkitAudioContext;
-    if (!AC) return null;
-    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* plays through the silent switch on iOS 17+ */ }
-    ctx = new AC({ latencyHint: 'interactive' });
-    const comp = ctx.createDynamicsCompressor();
-    comp.threshold.value = -12; comp.knee.value = 10; comp.ratio.value = 3; comp.attack.value = 0.004; comp.release.value = 0.2;
-    out = ctx.createGain(); out.gain.value = MASTER;
-    out.connect(comp); comp.connect(ctx.destination);
-    // iOS pauses audio after a call, Siri or another app ("interrupted"); wake it on the next tap
-    ctx.onstatechange = () => { if (ctx.state === 'interrupted') ctx.resume().catch(() => {}); };
-    // one shared room reverb, fed by each bus (not by each note)
-    verb = ctx.createConvolver();
-    const len = Math.floor(ctx.sampleRate * 1.3);
-    const ir = ctx.createBuffer(2, len, ctx.sampleRate);
-    for (let c = 0; c < 2; c++) {
-      const d = ir.getChannelData(c);
-      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.4) * 0.5;
-    }
-    verb.buffer = ir;
-    const wet = ctx.createGain(); wet.gain.value = 0.5;
-    verb.connect(wet); wet.connect(comp);
-    // one shared vibrato for all sustained voices (in cents, so it suits every pitch)
-    vib = ctx.createOscillator(); vib.frequency.value = 5.3;
-    const vibDepth = ctx.createGain(); vibDepth.gain.value = 9;
-    vib.connect(vibDepth); vib.start();
-    vib.depth = vibDepth;
-    const pw = (h) => { const real = new Float32Array(h.length + 1), imag = new Float32Array(h.length + 1); h.forEach((a, i) => { imag[i + 1] = a; }); return ctx.createPeriodicWave(real, imag); };
-    waves.piano = pw([1, 0.55, 0.32, 0.22, 0.12, 0.09, 0.06, 0.04, 0.03, 0.02]);
-    waves.epiano = pw([1, 0.18, 0.08, 0.03, 0.02]);
-    waves.organ = pw([1, 0.7, 0.4, 0.5, 0.1, 0.3, 0, 0.2]);
-    waves.flute = pw([1, 0.22, 0.06, 0.02]);
-    waves.clar = pw([1, 0, 0.5, 0, 0.3, 0, 0.18, 0, 0.1]);
-    waves.brass = pw([1, 0.8, 0.6, 0.45, 0.32, 0.22, 0.15, 0.1]);
-    mainBus = makeBus(0.22);
+    if (!build()) return null;
     installUnlock();
     loadPiano();
   }
-  if (ctx.state !== 'running') ctx.resume().catch(() => {});
+  if (ctx.state !== 'running') ctx.resume().then(flushWaiting, () => {});
   return ctx;
+}
+
+/** Throws the sound system away and makes a new one; whatever was playing carries on from the same place. */
+export function rebuildAudio() {
+  if (!ctx) return audioContext();
+  const old = ctx;
+  // a transport that was still waiting to start begins as asked; one that was sounding carries on from its place
+  const resume = [...transports].filter((t) => t.playing).map((t) => ({ t, from: t.begun ? t.position() : t.want.from, preroll: t.begun ? [] : t.want.preroll }));
+  resume.forEach(({ t }) => t.halt());
+  live.length = 0;
+  droneNodes = null;
+  try { old.onstatechange = null; old.close().catch(() => {}); } catch { /* already closed */ }
+  ctx = null;
+  stats.rebuilds++;
+  if (!build()) return null;
+  if (!piano) { pianoLoading = null; loadPiano(); }
+  resume.forEach(({ t, from, preroll }) => t.play(from, { preroll }));
+  if (ctx.state !== 'running') ctx.resume().then(flushWaiting, () => {});
+  return ctx;
+}
+
+/** Runs fn once the sound system is running. Never waits for ever: a frozen one is replaced, and when the
+ *  browser wants a tap first the app is told (onAudioProblem). `wanted()` false = no longer needed. */
+function whenRunning(fn, wanted = () => true) {
+  if (ctx.state === 'running') { fn(); return; }
+  const go = () => { if (wanted()) fn(); };
+  waiting.add(go);
+  const mine = ctx;
+  ctx.resume().then(flushWaiting, () => {});
+  setTimeout(() => {
+    if (!waiting.has(go)) return;                      // it started
+    if (!wanted()) { waiting.delete(go); return; }
+    if (mine === ctx && ctx.state !== 'running') {     // resume() never answered: start afresh
+      const again = [...waiting];
+      rebuildAudio();
+      again.forEach((g) => waiting.add(g));
+    }
+    setTimeout(() => { if (waiting.has(go) && ctx.state !== 'running') setProblem('tap'); else flushWaiting(); }, 500);
+  }, 700);
+}
+
+// On iPhones before iOS 17 the ring/silent switch mutes Web Audio. A silent <audio> element that is playing
+// moves the page to the "media" channel, which the switch does not mute.
+let silentEl = null;
+function unmuteIOS() {
+  if (!isIOS() || globalThis.navigator?.audioSession || !globalThis.document) return;
+  try {
+    if (!silentEl) {
+      const n = 2000, b = new Uint8Array(44 + n), dv = new DataView(b.buffer);
+      const str = (o, t) => { for (let i = 0; i < t.length; i++) b[o + i] = t.charCodeAt(i); };
+      str(0, 'RIFF'); dv.setUint32(4, 36 + n, true); str(8, 'WAVEfmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true);
+      dv.setUint16(22, 1, true); dv.setUint32(24, 8000, true); dv.setUint32(28, 8000, true); dv.setUint16(32, 1, true);
+      dv.setUint16(34, 8, true); str(36, 'data'); dv.setUint32(40, n, true); b.fill(128, 44);
+      silentEl = document.createElement('audio');
+      silentEl.src = URL.createObjectURL(new Blob([b], { type: 'audio/wav' }));
+      silentEl.loop = true; silentEl.preload = 'auto'; silentEl.title = 'Haptune';
+      silentEl.setAttribute('playsinline', ''); silentEl.setAttribute('x-webkit-airplay', 'deny');
+    }
+    if (silentEl.paused) silentEl.play().catch(() => {});
+  } catch { /* sound still works with the switch on "ring" */ }
 }
 
 /** Browsers only let sound start inside a tap. Resume on every tap, so playback started a moment later
  *  (after a bar jump, a count-in or a timer) is never stuck silent. */
 function installUnlock() {
-  const wake = () => { if (ctx && ctx.state !== 'running') ctx.resume().catch(() => {}); };
-  for (const ev of ['pointerdown', 'touchend', 'keydown']) globalThis.addEventListener?.(ev, wake, { capture: true, passive: true });
-  globalThis.document?.addEventListener?.('visibilitychange', () => { if (!document.hidden) wake(); });
+  const wake = () => {
+    if (!ctx) return;
+    unmuteIOS();
+    if (ctx.state !== 'running') ctx.resume().then(flushWaiting, () => {});
+    else if (waiting.size || problem) flushWaiting();
+  };
+  for (const ev of ['pointerdown', 'touchend', 'keydown', 'click']) globalThis.addEventListener?.(ev, wake, { capture: true, passive: true });
+  globalThis.addEventListener?.('pageshow', wake);
+  globalThis.addEventListener?.('focus', wake);
+  globalThis.document?.addEventListener?.('visibilitychange', () => {
+    if (document.hidden) { try { if (!anythingPlaying()) silentEl?.pause(); } catch { /* fine */ } return; }
+    wake();
+    setTimeout(() => { if (ctx && ctx.state !== 'running' && anythingPlaying()) setProblem('tap'); }, 800);
+  });
 }
 
 export const now = () => (ctx ? ctx.currentTime : 0);
@@ -269,7 +388,6 @@ export function note(t, midi, dur, vel = 80, inst = 'piano', pan = 0, dest = nul
   return voice;
 }
 
-let noiseBuf = null;
 function noise() {
   if (!noiseBuf) {
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
@@ -365,9 +483,13 @@ export class Transport {
     if (!audioContext()) return;
     this.stop(false);
     this.playing = true;
+    transports.add(this);
+    unmuteIOS();
+    this.want = { from, preroll }; this.begun = false;
     const gen = ++this.gen;
     const begin = () => {
       if (gen !== this.gen || !this.playing) return;
+      this.begun = true;
       this.bus = makeBus(0.22);
       const start = preroll.length ? Math.min(from, ...preroll.map((e) => e.time)) : from;   // count-in starts earlier
       const t0 = ctx.currentTime + 0.05;
@@ -376,6 +498,7 @@ export class Transport {
       this.pre = preroll.filter((e) => e.time < from).sort((a, b) => a.time - b.time);
       this.idx = lowerBound(this.times, from - 1e-6);
       this.ended = false;
+      this.clockT = ctx.currentTime; this.clockWall = performance.now();
       this.timer = setInterval(() => this.tick(), TICK_MS);
       this.tick();
       const frame = () => {
@@ -385,12 +508,22 @@ export class Transport {
       };
       this.raf = requestAnimationFrame(frame);
     };
-    if (ctx.state === 'running') begin();
-    else ctx.resume().then(begin, begin);
+    whenRunning(begin, () => gen === this.gen && this.playing);
   }
   tick() {
     if (!this.playing || !ctx) return;
     const nowT = ctx.currentTime;
+    // watchdog: the audio clock must keep moving while we play
+    const wall = performance.now();
+    if (nowT !== this.clockT) { this.clockT = nowT; this.clockWall = wall; }
+    else if (wall - this.clockWall > STALL_MS && !globalThis.document?.hidden) {
+      this.clockWall = wall;
+      stats.stalls++;
+      if (ctx.state === 'running') { rebuildAudio(); return; }       // frozen while "running": only a new one helps
+      ctx.resume().then(flushWaiting, () => {});
+      setProblem('tap');
+      return;
+    }
     const horizon = nowT + LOOKAHEAD;
     const fireAt = (e) => {
       const at = this.schedAt + (e.time - this.schedOff);
@@ -436,9 +569,12 @@ export class Transport {
     else if (e.midi !== undefined) note(at, e.midi, e.dur, e.vel, e.inst, e.pan || 0, this.bus);
     e.onFire?.(at);
   }
+  /** Stops the sound but remembers the place (used when the sound system is rebuilt). */
+  halt() { this.stop(false); }
   stop(resetPos = true) {
     if (this.playing) this.pos = this.position();
     this.playing = false;
+    transports.delete(this);
     this.gen++;
     clearInterval(this.timer); this.timer = null;
     if (this.raf) cancelAnimationFrame(this.raf);
@@ -466,9 +602,11 @@ export function startDrone(midi) {
 export function stopDrone() {
   if (!droneNodes) return;
   const { g, oscs } = droneNodes;
-  g.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.1);
-  oscs.forEach((o) => o.stop(ctx.currentTime + 0.5));
   droneNodes = null;
+  try {
+    g.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.1);
+    oscs.forEach((o) => o.stop(ctx.currentTime + 0.5));
+  } catch { /* the sound system was rebuilt meanwhile */ }
 }
 
 // ---------- pitch tracking ----------
@@ -512,12 +650,20 @@ export function yin(buf, sr, { fmin = 60, fmax = 1600, threshold = 0.15 } = {}) 
 export async function listen(onPitch) {
   audioContext();
   if (!navigator.mediaDevices?.getUserMedia) throw Object.assign(new Error('nomic'), { code: 'unavailable' });
+  // iOS: a page that only "plays" is not given the microphone, so say we play and record while it is open
+  const session = (type) => { try { if (navigator.audioSession) navigator.audioSession.type = type; } catch { /* older iOS */ } };
+  micOpen = true;
+  session('play-and-record');
   let stream;
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
   } catch (e) {
-    throw Object.assign(new Error('denied'), { code: e?.name === 'NotAllowedError' ? 'denied' : 'unavailable' });
+    micOpen = false; session('playback');
+    throw Object.assign(new Error('denied'), { code: e?.name === 'NotAllowedError' || e?.name === 'SecurityError' ? 'denied' : 'unavailable' });
   }
+  if (!ctx || ctx.state === 'closed') audioContext();
+  if (ctx.state !== 'running') await ctx.resume().catch(() => {});
+  const mine = ctx;
   const src = ctx.createMediaStreamSource(stream);
   const an = ctx.createAnalyser(); an.fftSize = 2048;
   src.connect(an);
@@ -526,19 +672,29 @@ export async function listen(onPitch) {
   const loop = () => {
     if (!running) return;
     an.getFloatTimeDomainData(buf);
-    const r = yin(buf, ctx.sampleRate);
+    const r = yin(buf, mine.sampleRate);
     if (r && r.clarity > 0.8) {
       const midi = 69 + 12 * Math.log2(r.freq / 440);
-      onPitch({ midi, freq: r.freq, cents: Math.round((midi - Math.round(midi)) * 100), clarity: r.clarity, rms: r.rms, time: ctx.currentTime });
+      onPitch({ midi, freq: r.freq, cents: Math.round((midi - Math.round(midi)) * 100), clarity: r.clarity, rms: r.rms, time: mine.currentTime });
     } else onPitch(null);
     setTimeout(loop, 22);
   };
   loop();
-  return () => { running = false; stream.getTracks().forEach((t) => t.stop()); src.disconnect(); };
+  return () => {
+    if (!running) return;
+    running = false;
+    stream.getTracks().forEach((t) => t.stop());
+    try { src.disconnect(); } catch { /* the sound system was rebuilt meanwhile */ }
+    micOpen = false; session('playback');
+    // closing the microphone changes the phone's sound route; make sure playback is awake afterwards
+    setTimeout(() => { if (ctx && ctx.state !== 'running') ctx.resume().then(flushWaiting, () => {}); }, 250);
+    void mine;
+  };
 }
 
+globalThis.__haptuneRebuild = () => rebuildAudio();     // for automated checks
 // read-only state for automated checks (smoke tests) and the in-app problem report
 globalThis.__haptuneAudio = () => ({
-  state: ctx?.state || 'none', gain: out ? out.gain.value : null, piano: !!piano, voices: live.length,
+  state: ctx?.state || 'none', gain: out ? out.gain.value : null, piano: !!piano, voices: live.length, problem,
   latencyMs: Math.round(outputDelay() * 1000), ...stats,
 });

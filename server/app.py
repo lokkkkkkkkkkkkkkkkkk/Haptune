@@ -61,9 +61,11 @@ app = FastAPI(title="Haptune engine", version=__version__)
 # The web app (GitHub Pages, the Claude preview, local dev) calls the server from the browser. No cookies
 # are used, so allowing these origins only lets those pages call the rate-limited endpoints.
 DEFAULT_ORIGINS = (r"https?://(localhost|127\.0\.0\.1)(:\d+)?|https://[\w-]+\.github\.io|capacitor://localhost"
+                   r"|https://(www\.)?haptune\.name\.my"
                    r"|https://([\w-]+\.)*claude\.ai|https://([\w-]+\.)*claudeusercontent\.com|null")
 app.add_middleware(CORSMiddleware, allow_origin_regex=os.environ.get("HAPTUNE_CORS_ORIGINS", DEFAULT_ORIGINS),
-                   allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"], allow_headers=["*"], max_age=86400)
+                   allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], allow_headers=["*"],
+                   expose_headers=["Content-Disposition"], max_age=86400)
 from academy import router as academy_router  # noqa: E402  (classes for teachers and students)
 import accounts  # noqa: E402  (accounts, plans, credits, notifications, feedback)
 from community import router as community_router  # noqa: E402  (requests, questions, library, challenges)
@@ -71,6 +73,12 @@ from community import router as community_router  # noqa: E402  (requests, quest
 app.include_router(academy_router)
 app.include_router(accounts.router)
 app.include_router(community_router)
+from stage import router as stage_router  # noqa: E402  (who is online, trending, search, daily challenge, Notes)
+app.include_router(stage_router)
+from billing import router as billing_router  # noqa: E402  (card payments with Stripe, DuitNow QR / bank transfer)
+app.include_router(billing_router)
+from tutors import router as tutors_router  # noqa: E402  (find a tutor: profiles, lesson requests, ratings)
+app.include_router(tutors_router)
 _jobs: dict[str, dict] = {}
 _lock = threading.Lock()
 _pool = ThreadPoolExecutor(max_workers=int(os.environ.get("HAPTUNE_WORKERS", "1")))
@@ -93,6 +101,25 @@ def _payload(sc: Score, musicxml_path: str | None = None) -> dict:
         with open(musicxml_path, encoding="utf-8", errors="replace") as f:
             out["musicxml"] = f.read()
     return out
+
+
+WEB_APP_URL = os.environ.get("HAPTUNE_WEB_URL", "https://haptune.name.my/")
+
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+def home():
+    """This address is the engine behind the apps. Someone opening it in a browser is sent on to the website."""
+    return (
+        "<!doctype html><html lang='en'><head><meta charset='utf-8'>"
+        "<meta name='viewport' content='width=device-width,initial-scale=1'><title>Haptune server</title>"
+        "<style>body{font-family:system-ui,sans-serif;max-width:32rem;margin:15vh auto;padding:0 16px;"
+        "line-height:1.5;color:#222;background:#fff}a{color:#6d4aff}"
+        "@media(prefers-color-scheme:dark){body{color:#eee;background:#111}a{color:#a996ff}}</style></head>"
+        f"<body><h1>Haptune server is running</h1><p>This address is the engine the Haptune apps talk to "
+        f"(version {__version__}). There is nothing to see here in a browser.</p>"
+        f"<p><a href='{WEB_APP_URL}'>Open Haptune &rarr;</a></p>"
+        "<p><small><a href='/health'>health</a></small></p></body></html>"
+    )
 
 
 @app.get("/health")
@@ -337,7 +364,7 @@ def exercise(tonic: str = "C", kind: str = Query("major", description="one of: "
 # ---------------------------------------------------------------------------
 READS_PER_DAY = int(os.environ.get("HAPTUNE_READS_PER_DAY", "20"))
 FINDS_PER_DAY = int(os.environ.get("HAPTUNE_FINDS_PER_DAY", "40"))
-MAX_READ_PAGES = int(os.environ.get("HAPTUNE_MAX_READ_PAGES", "12"))
+MAX_READ_PAGES = int(os.environ.get("HAPTUNE_MAX_READ_PAGES", "20"))
 
 
 @app.get("/ai/status")

@@ -470,7 +470,7 @@ export function JoinClassSheet() {
       toast(t('joinedClass', { name: r.class.name }));
       addXP(10);
       goLearn();
-      push('classView', { id: r.class.id }, 'community');
+      push('classView', { id: r.class.id }, 'academy');
     } catch (e) { setErr(e.message); setBusy(false); }
   };
   return (
@@ -518,7 +518,7 @@ export function NewClassSheet() {
   };
   if (made) {
     return (
-      <SheetFrame title={t('teachClass')} right={t('done')} onRight={() => { closeSheet(); goLearn(); push('classView', { id: made.id }, 'community'); }} left={false}>
+      <SheetFrame title={t('teachClass')} right={t('done')} onRight={() => { closeSheet(); goLearn(); push('classView', { id: made.id }, 'academy'); }} left={false}>
         <Confetti />
         <div class="sheet-mascot"><Mascot mood="cheer" size={100} /></div>
         <h2 style={{ textAlign: 'center', font: '800 24px/1.2 var(--round)' }}>{made.name}</h2>

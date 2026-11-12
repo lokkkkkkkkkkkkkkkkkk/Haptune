@@ -1,11 +1,18 @@
-# Haptune (触乐): get any song's score from the community, then practise it with feedback
+# Haptune (触乐): the sheet music for any song, and practice that listens
 
-**What makes Haptune different:** when a score doesn't exist, you ask the community. Paste a YouTube link or a photo of
-the page; musicians make the score, and the faster and better their help, the more credits they earn. Then you practise
-it with an app that listens, marks your notes and plays the other parts. Free for practising and the whole community;
-Plus and Pro add AI help (reading photos and PDFs, finding songs, the Hapi tutor). Android app: see
-[web/ANDROID.md](web/ANDROID.md); the same app runs on any PC in the browser.
+**Two things, done well.** (1) Get the score: search a song name, drop a PDF, photo, MusicXML or MIDI, or type 簡譜;
+4,900 free pieces are built in. (2) **Stage**, the community: request any song, musicians write it, play the daily
+challenge with friends, earn Notes that unlock Pro days. Then practise with an app that hears every note.
 
+* Website: `https://haptune.name.my/` (landing page) and `/app/` (the app, installable on PC, iPad, iPhone).
+  Android: Google Play (`web/ANDROID.md`).
+* **What only the owner can do to go live (domain, Stripe, DuitNow QR, Fly secrets): see [SETUP.md](SETUP.md).**
+* Plans: Free (practice, exact imports, 簡譜, key change, mixer, editor, export, free library, Stage), Plus (AI song
+  finder, tutor), Pro (AI reads PDFs and photos). Pay by card (Stripe), Google Play, or DuitNow / bank transfer.
+* Tests: `cd web && npm test && npm run build && npm run e2e` (browser walk-through at phone, tablet and PC sizes);
+  `cd server && python -m pytest -q`.
+
+The sections below describe the earlier parts of the project in detail.
 
 Play from your sheet music. Your iPhone, iPad or Mac listens, follows the score, and your Apple Watch
 taps you **the moment** a note is wrong, out of tune or out of time. After each take you get a marked-up
