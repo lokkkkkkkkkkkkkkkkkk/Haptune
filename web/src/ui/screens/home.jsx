@@ -139,7 +139,7 @@ export function HomeView({ active }) {
         <header class="hm-top">
           <span class="logo"><span class="logo-mark"><Icon name="library" size={18} stroke={2.4} /></span>Haptune</span>
           {streak > 0 && <span class="hm-pill flame" title={t('streak')}><Icon name="flame" size={15} fill stroke={1.6} />{streak}</span>}
-          {online && s.me && <button type="button" class="hm-pill notes" onClick={() => push('wallet', {}, 'me')} aria-label={t('rewards')}><Icon name="gift" size={15} stroke={2.2} />{s.me.credits ?? 0}</button>}
+          {online && s.me && <button type="button" class="hm-pill nts" onClick={() => push('wallet', {}, 'me')} aria-label={t('rewards')}><Icon name="gift" size={15} stroke={2.2} />{s.me.credits ?? 0}</button>}
           {online && <button type="button" class="hm-pill" onClick={() => push('notifications', {}, 'me')} aria-label={t('notifications')} style={{ position: 'relative', padding: '0 9px' }}>
             <Icon name="bell" size={17} />{s.me?.unread > 0 && <span class="tab-dot" />}</button>}
         </header>

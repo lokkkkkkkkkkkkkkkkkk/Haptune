@@ -159,9 +159,9 @@ export function Chip({ children, on, onClick, color }) {
   return <button type="button" class={`chip${on ? ' on' : ''}${color ? ' c-' + color : ''}`} onClick={onClick}>{children}</button>;
 }
 
-export function Button({ children, kind = 'primary', onClick, disabled, icon, color, full, small, type = 'button' }) {
+export function Button({ children, kind = 'primary', onClick, disabled, icon, color, full, small, type = 'button', id }) {
   return (
-    <button type={type} class={`btn ${kind}${full ? ' full' : ''}${small ? ' small' : ''}${color ? ' c-' + color : ''}`} onClick={onClick} disabled={disabled}>
+    <button type={type} id={id} class={`btn ${kind}${full ? ' full' : ''}${small ? ' small' : ''}${color ? ' c-' + color : ''}`} onClick={onClick} disabled={disabled}>
       {icon && <Icon name={icon} size={small ? 16 : 19} stroke={2.2} />}{children}
     </button>
   );

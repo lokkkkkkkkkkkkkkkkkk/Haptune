@@ -124,7 +124,34 @@ def engine():
         args = {"connect_args": {"check_same_thread": False}} if url.startswith("sqlite") else {"pool_pre_ping": True}
         _engine = create_engine(url, future=True, **args)
         meta.create_all(_engine)
+        _add_missing_columns(_engine)
     return _engine
+
+
+def _add_missing_columns(eng) -> None:
+    """New versions add columns to tables that already hold people's data. create_all only makes missing
+    tables, so columns the database doesn't have yet are added here (existing rows get the column's default)."""
+    from sqlalchemy import inspect, text
+    insp = inspect(eng)
+    with eng.begin() as c:
+        for table in meta.sorted_tables:
+            have = {col["name"] for col in insp.get_columns(table.name)}
+            for col in table.columns:
+                if col.name in have:
+                    continue
+                ddl = f'ALTER TABLE "{table.name}" ADD COLUMN "{col.name}" {col.type.compile(eng.dialect)}'
+                default = getattr(col.default, "arg", None) if col.default is not None else None
+                if isinstance(default, bool):
+                    ddl += f" DEFAULT {'TRUE' if default else 'FALSE'}" if eng.dialect.name != "sqlite" else f" DEFAULT {int(default)}"
+                elif isinstance(default, (int, float)):
+                    ddl += f" DEFAULT {default}"
+                elif isinstance(default, str):
+                    ddl += " DEFAULT '" + default.replace("'", "''") + "'"
+                elif not col.nullable:
+                    ddl += " DEFAULT ''" if "CHAR" in ddl.upper() or "TEXT" in ddl.upper() else " DEFAULT 0"
+                if not col.nullable and "DEFAULT" in ddl:
+                    ddl += " NOT NULL"
+                c.execute(text(ddl))
 
 
 def reset_engine(url: str | None = None) -> None:

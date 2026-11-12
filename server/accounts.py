@@ -62,6 +62,9 @@ accounts = Table("accounts", meta,
                  Column("last_day", String(10), nullable=True),
                  Column("bonus_month", String(7), nullable=True),
                  Column("plus_redeemed", Float, nullable=True),
+                 Column("pass_days", Integer, nullable=True),                  # length of a pass bought with Notes
+                 Column("stripe_customer", String(40), nullable=True),
+                 Column("stripe_sub", String(40), nullable=True),
                  Column("created", Float, nullable=False),
                  Column("last_seen", Float, nullable=False))
 ledger = Table("ledger", meta,
@@ -117,8 +120,12 @@ PLANS = {
     "plus": {"open_requests": 10, "monthly_credits": 100, "spotlights": 1},
     "pro": {"open_requests": 30, "monthly_credits": 300, "spotlights": 4},
 }
-AI_BUDGET = {"free": 0.0, "plus": 1.20, "pro": 3.60}
-BUDGET_SPLIT = {"read_pages": 0.60, "find": 0.25, "tutor": 0.15}
+AI_BUDGET = {"free": 0.0, "plus": 1.00, "pro": 4.00}
+# Reading printed music with AI is a Pro tool: it is the costly feature, and it is for people who will check and
+# edit the result. Plus has the song finder and the tutor.
+BUDGET_SPLIT = {"plus": {"read_pages": 0.0, "find": 0.65, "tutor": 0.35},
+                "pro": {"read_pages": 0.65, "find": 0.20, "tutor": 0.15}}
+NEEDS = {"read_pages": "pro", "find": "plus", "tutor": "plus"}      # the lowest plan that includes each AI feature
 # What one use typically costs on each model family (US$; measured on the Claude API, see the README and
 # engine/tools/model_bench.py). The song finder needs web search, which runs on Sonnet or Opus.
 UNIT_COST = {
@@ -159,7 +166,7 @@ def ai_allowance(tier: str, kind: str) -> int | None:
     over = OVERRIDES.get(tier, {})
     if kind in over:
         return over[kind]
-    budget = AI_BUDGET.get(tier, 0.0) * BUDGET_SPLIT[kind]
+    budget = AI_BUDGET.get(tier, 0.0) * BUDGET_SPLIT.get(tier, {}).get(kind, 0.0)
     return max(1, int(budget / unit_cost(kind))) if budget > 0 else 0
 
 
@@ -281,11 +288,44 @@ def effective_tier(acc: dict | None) -> str:
     return t if t in PLANS else "free"
 
 
-def plan_limits(tier: str) -> dict:
+def plan_limits(tier: str, acc: dict | None = None) -> dict:
     table = plan_table()
     if tier == "dev":
         return {k: None for k in table["pro"]}                   # no limits for the developer
-    return dict(table.get(tier, table["free"]))
+    lim = dict(table.get(tier, table["free"]))
+    # A pass earned with Notes lasts days, not a month: its AI allowance is the matching share of the month's.
+    if acc and acc.get("tier_source") == "notes" and acc.get("pass_days"):
+        share = min(1.0, acc["pass_days"] / 30.0)
+        for k in AI_KINDS:
+            if lim.get(k):
+                lim[k] = max(1, int(lim[k] * share + 0.5))
+    return lim
+
+
+# ----------------------------------------------------------------------------------------------- who is here now
+PRESENCE: dict[str, float] = {}           # user id -> when last heard from (this server is one machine)
+PRACTISING: dict[str, float] = {}
+
+
+def touch(uid: str, practising: bool = False) -> None:
+    now = time.time()
+    PRESENCE[uid] = now
+    if practising:
+        PRACTISING[uid] = now
+    if len(PRESENCE) > 20000:                                    # forget people not seen for an hour
+        for k in [k for k, v in PRESENCE.items() if now - v > 3600]:
+            PRESENCE.pop(k, None)
+            PRACTISING.pop(k, None)
+
+
+def online_now(window: float = 300.0) -> int:
+    now = time.time()
+    return sum(1 for v in PRESENCE.values() if now - v <= window)
+
+
+def practising_now(window: float = 150.0) -> int:
+    now = time.time()
+    return sum(1 for v in PRACTISING.values() if now - v <= window)
 
 
 def user_from_token(token: str) -> dict | None:
@@ -330,6 +370,7 @@ def current(authorization: str = Header("")) -> Me:
             raise HTTPException(403, "This account can no longer use the community.")
         c.execute(update(accounts).where(accounts.c.user_id == user["id"]).values(last_seen=_now()))
         _monthly_bonus(c, acc)
+    touch(user["id"])
     return Me(user, acc)
 
 
@@ -371,16 +412,18 @@ def notify(c, uid: str, kind: str, *, actor: str | None = None, post: str | None
 def _monthly_bonus(c, acc: dict) -> None:
     tier = effective_tier(acc)
     n = plan_table().get(tier, {}).get("monthly_credits", 0) if tier != "dev" else 0
+    if acc.get("tier_source") in ("notes", "credits"):
+        n = 0                                                    # a pass earned with Notes doesn't hand Notes back
     if n and acc.get("bonus_month") != month():
         c.execute(update(accounts).where(accounts.c.user_id == acc["user_id"]).values(bonus_month=month()))
         grant(c, acc["user_id"], n, "plan_bonus", note=f"{tier} {month()}")
         notify(c, acc["user_id"], "credits", amount=n, reason="plan_bonus")
 
 
-def usage_of(c, uid: str, tier: str) -> dict:
+def usage_of(c, uid: str, tier: str, acc: dict | None = None) -> dict:
     rows = c.execute(select(usage.c.kind, usage.c.used).where(usage.c.user_id == uid, usage.c.period == month())).all()
     used = {k: u for k, u in rows}
-    lim = plan_limits(tier)
+    lim = plan_limits(tier, acc)
     return {k: {"used": used.get(k, 0), "limit": lim.get(k)} for k in AI_KINDS}
 
 
@@ -403,12 +446,12 @@ def me_json(me: Me) -> dict:
     with engine().connect() as c:
         acc = dict(c.execute(select(accounts).where(accounts.c.user_id == me.id)).mappings().first())
         unread = c.execute(select(func.count()).select_from(notifications).where(notifications.c.user_id == me.id, notifications.c.read.is_(False))).scalar()
-        u = usage_of(c, me.id, me.tier)
+        u = usage_of(c, me.id, me.tier, acc)
         n_sessions = c.execute(select(func.count()).select_from(sessions).where(sessions.c.user_id == me.id)).scalar()
     return {**public_user(me.user, acc), "bio": acc["bio"], "lang": acc["lang"], "role": acc["role"], "is_admin": me.is_admin,
             "tier": me.tier, "tier_until": _iso(acc["tier_until"]) if me.tier not in ("free", "dev") else None,
             "tier_source": acc["tier_source"], "credits": acc["credits"], "streak": acc["streak"], "usage": u,
-            "limits": plan_limits(me.tier), "unread": unread, "guidelines": acc["guidelines"], "has_password": bool(acc["pw_hash"]),
+            "limits": plan_limits(me.tier, acc), "unread": unread, "guidelines": acc["guidelines"], "has_password": bool(acc["pw_hash"]),
             "devices": n_sessions + 1, "joined": _iso(acc["created"])}
 
 
@@ -611,11 +654,12 @@ def charge_ai(request: Request, kind: str, amount: int = 1) -> Me | None:
     402 = the plan doesn't include it (the app shows the plans); 429 = this month's allowance is used up."""
     me = ai_user(request)
     tier = me.tier if me else "free"
-    limit = plan_limits(tier).get(kind)
+    limit = plan_limits(tier, me.acc if me else None).get(kind)
     names = {"read_pages": "Reading music with AI", "find": "Finding songs online", "tutor": "Hapi the tutor"}
     if limit == 0:
-        raise HTTPException(402, {"code": "plan_required", "feature": kind, "tier": tier,
-                                  "message": f"{names.get(kind, kind)} is part of Haptune Plus."})
+        need = NEEDS.get(kind, "plus")
+        raise HTTPException(402, {"code": "plan_required", "feature": kind, "tier": tier, "need": need,
+                                  "message": f"{names.get(kind, kind)} is part of Haptune {need.capitalize()}."})
     if me is None or limit is None:
         return me
     with engine().begin() as c:

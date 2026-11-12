@@ -1,5 +1,5 @@
 // Building blocks shared by the community screens: people, post cards, stars, reports, time labels.
-import { useState } from 'preact/hooks';
+import { useState, useEffect } from 'preact/hooks';
 import { push, closeSheet, openSheet, toast, getState } from '../state.js';
 import { t, getLang, instrumentName } from '../../core/i18n.js';
 import { Icon, Chip, Button, List, Row } from '../components.jsx';
@@ -59,8 +59,30 @@ export function PersonLine({ user, sub, onClick }) {
   );
 }
 
+/** An amount of Notes (the reward people earn on Stage). */
 export function Coins({ n, size = 'md' }) {
-  return <span class={`coins ${size}`}><span class="coin" aria-hidden="true" />{n}</span>;
+  return <span class={`nts ${size}`}><Icon name="gift" size={size === 'xl' ? 34 : size === 'lg' ? 20 : size === 'sm' ? 13 : 15} stroke={2.3} />{n}</span>;
+}
+
+export const EMOJI = [['like', '👏'], ['love', '❤️'], ['fire', '🔥'], ['bravo', '🎉'], ['wow', '😮']];
+
+/** Emoji reactions under a post: one each; tapping yours again takes it back. */
+export function Reactions({ target }) {
+  const [st, setSt] = useState({ counts: {}, mine: null });
+  useEffect(() => { let alive = true; C.emojiCounts([target]).then((r) => alive && r.items[target] && setSt(r.items[target])).catch(() => {}); return () => { alive = false; }; }, [target]);
+  const tap = async (kind) => {
+    const r = await attempt(() => C.emoji(target, kind));
+    if (r) setSt({ counts: r.counts, mine: r.mine });
+  };
+  return (
+    <div class="reactions" role="group" aria-label={t('react')}>
+      {EMOJI.map(([kind, face]) => (
+        <button type="button" key={kind} class={st.mine === kind ? 'on' : ''} onClick={() => tap(kind)} aria-pressed={st.mine === kind} aria-label={kind}>
+          <span aria-hidden="true">{face}</span>{st.counts[kind] ? <b class="num">{st.counts[kind]}</b> : null}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 export function StatusPill({ p }) {

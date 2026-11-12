@@ -1,6 +1,6 @@
 import { render } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
-import { useApp, loadAll, go, pop, popToRoot, closeSheet, openSheet, getState, setState, hooks, toast } from './state.js';
+import { useApp, loadAll, go, pop, popToRoot, push, closeSheet, openSheet, getState, setState, hooks, toast } from './state.js';
 import { t } from '../core/i18n.js';
 import { Icon } from './components.jsx';
 import { HistoryView } from './screens/summary.jsx';
@@ -17,7 +17,7 @@ import { AcademyView, CourseView, LessonSheet, ChallengeSheet } from './screens/
 import { ClassView, AssignmentView, JoinClassSheet, NewClassSheet, NewAssignmentSheet, ReviewSheet } from './screens/classes.jsx';
 import { ToolsView, ToolView } from './screens/tools.jsx';
 import { AccountSheet, PaywallSheet, SetPasswordSheet, SignInSheet, DeleteAccountSheet, DevCodeSheet } from './screens/account.jsx';
-import { CommunityView } from './screens/community.jsx';
+import { CommunityView, DailyView, StageGuideSheet } from './screens/community.jsx';
 import { PostView, AcceptSheet, ChangesSheet, AddCreditsSheet, SubmitScoreSheet, ImageSheet } from './screens/post.jsx';
 import { ComposeSheet } from './screens/compose.jsx';
 import { ProfileView, LeaderboardView, NotificationsView, WalletView, ChallengeView, EditProfileView } from './screens/people.jsx';
@@ -45,7 +45,7 @@ const ROOTS = { summary: HomeView, library: LibraryView, community: CommunityVie
 const VIEWS = {
   improvise: (p) => <ImproviseView {...p} pushed />, tools: (p) => <ToolsView {...p} pushed />, courses: (p) => <AcademyView {...p} pushed />,
   piece: PieceView, songbook: SongbookView, catalog: CatalogView, course: CourseView, tool: ToolView, history: HistoryView, classView: ClassView, assignment: AssignmentView,
-  post: PostView, profile: ProfileView, leaderboard: LeaderboardView, notifications: NotificationsView, wallet: WalletView, challenge: ChallengeView,
+  post: PostView, daily: DailyView, profile: ProfileView, leaderboard: LeaderboardView, notifications: NotificationsView, wallet: WalletView, challenge: ChallengeView,
   editProfile: EditProfileView, help: HelpView, admin: AdminView,
 };
 const SHEETS = {
@@ -54,7 +54,7 @@ const SHEETS = {
   importWizard: ImportWizardSheet, finder: FinderSheet, welcome: WelcomeSheet, playAlong: PlayAlongSheet, keySheet: KeySheet, details: DetailsSheet,
   joinClass: JoinClassSheet, newClass: NewClassSheet, newAssignment: NewAssignmentSheet, review: ReviewSheet,
   plans: PlansSheet, compose: ComposeSheet, accept: AcceptSheet, changes: ChangesSheet, addCredits: AddCreditsSheet, submitScore: SubmitScoreSheet,
-  image: ImageSheet, reportPost: ReportSheet, more: MoreSheet, feedback: FeedbackSheet, guidelines: GuidelinesSheet, about: AboutSheet, installHelp: InstallHelpSheet,
+  image: ImageSheet, reportPost: ReportSheet, more: MoreSheet, feedback: FeedbackSheet, guidelines: GuidelinesSheet, about: AboutSheet, installHelp: InstallHelpSheet, stageGuide: StageGuideSheet,
   setPassword: SetPasswordSheet, signIn: SignInSheet, deleteAccount: DeleteAccountSheet, devCode: DevCodeSheet,
 };
 
@@ -86,6 +86,7 @@ function openHash() {
   if (u) { go('community'); push('profile', { handle: u[1] }, 'community'); return; }
   const sq = /^q=(.+)$/.exec(h);
   if (sq) { go('summary'); setState({ homeQuery: decodeURIComponent(sq[1]).slice(0, 120) }); history.replaceState(null, '', location.pathname); return; }
+  if (h === 'daily') { go('community'); push('daily', {}, 'community'); return; }
   if (h === 'stage') go('community');
   else if (h === 'learn') go('academy');
   else if (h === 'plans') openSheet('plans');

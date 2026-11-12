@@ -79,7 +79,7 @@ const idle = (fn) => (globalThis.requestIdleCallback ? requestIdleCallback(fn, {
 
 // ---------- the piece screen ----------
 
-export function PieceView({ id, active, start, assignment, challenge }) {
+export function PieceView({ id, active, start, assignment, challenge, daily }) {
   const s = useApp();
   const meta = s.pieces.find((p) => p.id === id);
   const [data, setData] = useState(null);
@@ -99,10 +99,10 @@ export function PieceView({ id, active, start, assignment, challenge }) {
   if (!meta) return <div class="scroll"><NavBar title="" backLabel={t('library')} /></div>;
   if (!data) return <div class="scroll"><NavBar title={meta.title} backLabel={t('library')} /><div class="loading"><Mascot mood="think" size={80} /></div></div>;
   return <PieceBody meta={meta} data={data} semis={semis} setSemis={(v) => { setSemis(v); updatePiece(id, { transpose: v }); if (v) awardBadge('transposer'); }}
-    view={view} setView={setView} active={active} start={start} assignment={assignment} challenge={challenge} />;
+    view={view} setView={setView} active={active} start={start} assignment={assignment} challenge={challenge} daily={daily} />;
 }
 
-function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, assignment, challenge }) {
+function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, assignment, challenge, daily }) {
   const s = useApp();
   const { score, sheet: baseSheet, rec } = data;
   const tScore = useMemo(() => (score ? transposeScore(score, semis) : null), [score, semis]);
@@ -347,6 +347,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
       return;
     }
     practice.current = { mode, sel: psel, started: performance.now(), range, speed: sp };
+    if (hasServer()) C.pulse(true).catch(() => {});             // counted in "practising now" on Stage
     if (mode === 'wait') {
       const exp = expectedNotes(perf, matchSel(psel), range);
       const singer = SINGING.has(s.settings.instrument) || tScore.parts[psel.pi ?? 0]?.instrument === 'voice';
@@ -436,6 +437,12 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
     if (r.accuracy >= 0.85) addXP(20);
     const barsList = [...r.bars.entries()].sort((x, y) => x[0] - y[0]).map(([mi, b]) => ({ bar: barNo(mi), accuracy: b.total ? b.right / b.total : 1 }));
     setResult({ ...r, seconds: secs, tricky: trickyBars(r.bars), barsList, mode: pr?.mode, speed: pr?.speed ?? speed, part: pr?.sel?.id });
+    // today's tune: the try goes on the board by itself (the best one of the day counts)
+    if (daily && hasServer() && !pr?.range) {
+      C.enterDaily({ song: daily, accuracy: Math.round(r.accuracy * 1000) / 1000, tempo_pct: Math.round((pr?.speed ?? speed) * 100), seconds: secs })
+        .then((d) => { setResult((x) => x && ({ ...x, dailyRank: d.mine?.rank, dailyOf: d.players })); toast(d.earned ? t('dailyIn', { n: d.earned, r: d.mine?.rank }) : t('dailyRank', { r: d.mine?.rank, m: d.players })); })
+        .catch(() => {});
+    }
   };
   const finishWait = () => { const f = follower.current; if (f) showResult(f.result()); follower.current = null; };
   const endWait = (silent) => {
