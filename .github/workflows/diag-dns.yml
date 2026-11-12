@@ -1,0 +1,30 @@
+name: diag-dns (temporary)
+on:
+  push:
+    branches: [diag/dns]
+jobs:
+  dns:
+    runs-on: ubuntu-latest
+    steps:
+      - run: sudo apt-get install -y -qq dnsutils whois >/dev/null 2>&1 || true
+      - name: lookups
+        run: |
+          set +e
+          D=haptune.name.my
+          for R in 8.8.8.8 1.1.1.1; do
+            echo "##### resolver $R"
+            for T in NS SOA A AAAA; do echo "== $T $D"; dig +short @$R $T $D; done
+            echo "== CNAME www"; dig +short @$R CNAME www.$D; dig +short @$R A www.$D
+            echo "== full status"; dig @$R A $D | grep -E "status|flags"
+          done
+          echo "##### DS at parent (DNSSEC)"; dig +short DS $D @8.8.8.8
+          echo "== NS of name.my"; dig +short NS name.my
+          P=$(dig +short NS name.my | head -1); echo "== delegation from parent $P"; dig @$P NS $D +norec | sed -n '/AUTHORITY/,/^$/p;/ADDITIONAL/,/^$/p'
+          echo "== DS from parent"; dig @$P DS $D +norec | grep -E "DS|status"
+          echo "== cd (checking disabled) vs normal"; dig +cd @8.8.8.8 A $D | grep -E "status|^$D"; dig @8.8.8.8 A $D | grep status
+          echo "##### trace"; dig +trace $D | tail -25
+          echo "##### whois"; whois $D 2>&1 | head -40
+          echo "##### http"; curl -sS -m 15 -I http://$D/ | head -8; curl -sS -m 15 -I https://$D/ | head -8
+          echo "##### fly"; curl -sS -m 30 https://haptune-lok.fly.dev/health; echo
+          curl -sS -m 30 -o /dev/null -D - -X OPTIONS https://haptune-lok.fly.dev/ai/status -H "Origin: http://haptune.name.my" -H "Access-Control-Request-Method: GET" | head -10
+          curl -sS -m 30 -o /dev/null -D - -X OPTIONS https://haptune-lok.fly.dev/ai/status -H "Origin: https://haptune.name.my" -H "Access-Control-Request-Method: GET" | head -10
