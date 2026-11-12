@@ -12,14 +12,14 @@ import { Coins, PostCard } from './social.jsx';
 const LEVELS = ['beginner', 'intermediate', 'advanced'];
 const LICENCES = ['pd', 'own', 'arr', 'copyrighted', 'unknown'];
 
-export function ComposeSheet({ type: initial = 'request', piece = null, show = null }) {
+export function ComposeSheet({ type: initial = 'request', piece = null, show = null, title: title0 = '', link: link0 = '' }) {
   const s = useApp();
   const [type, setType] = useState(initial);
-  const [title, setTitle] = useState(piece?.title || '');
+  const [title, setTitle] = useState(piece?.title || title0);
   const [song, setSong] = useState('');
   const [artist, setArtist] = useState(piece?.composer || '');
   const [body, setBody] = useState('');
-  const [link, setLink] = useState('');
+  const [link, setLink] = useState(link0);
   const [insts, setInsts] = useState(() => [s.me?.instruments?.[0] || s.settings.instrument].filter(Boolean));
   const [level, setLevel] = useState('');
   const [licence, setLicence] = useState(type === 'share' ? '' : 'unknown');

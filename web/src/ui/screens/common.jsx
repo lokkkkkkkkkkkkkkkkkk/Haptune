@@ -1,4 +1,4 @@
-import { useApp, openSheet, pop, closeSheet } from '../state.js';
+import { useApp, pop, closeSheet, go } from '../state.js';
 import { t } from '../../core/i18n.js';
 import { Icon } from '../components.jsx';
 
@@ -6,21 +6,24 @@ export function Avatar() {
   const s = useApp();
   const initials = (s.settings.name || '').trim().split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
   return (
-    <button type="button" class="avatar" onClick={() => openSheet('account')} aria-label={t('account')}>
+    <button type="button" class="avatar" onClick={() => go('me')} aria-label={t('me')}>
       {initials || <Icon name="person" size={18} />}
       {s.plus && <span class="crown"><Icon name="crown" size={11} stroke={2.6} /></span>}
     </button>
   );
 }
 
-export function LargeTitle({ title, eyebrow, actions, color }) {
+export function LargeTitle({ title, eyebrow, actions, color, back = false, avatar = false }) {
   return (
-    <header class={`large-title c-${color || 'blue'}`}>
+    <header class={`large-title c-${color || 'violet'}`}>
       <div>
-        {eyebrow && <div class="eyebrow">{eyebrow}</div>}
-        <h1>{title}</h1>
+        {back && <button type="button" class="back-btn" onClick={() => pop()} aria-label={t('back')}><Icon name="chevronL" size={20} stroke={2.6} /></button>}
+        <div style={{ minWidth: 0 }}>
+          {eyebrow && <div class="eyebrow">{eyebrow}</div>}
+          <h1>{title}</h1>
+        </div>
       </div>
-      <div class="title-actions">{actions}<Avatar /></div>
+      <div class="title-actions">{actions}{avatar && <Avatar />}</div>
     </header>
   );
 }

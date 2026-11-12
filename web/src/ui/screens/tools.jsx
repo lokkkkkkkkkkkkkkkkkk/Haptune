@@ -14,14 +14,14 @@ const TOOLS = [
   { id: 'scales', icon: 'stairs', color: 'blue' }, { id: 'drone', icon: 'drone', color: 'indigo' },
 ];
 
-export function ToolsView() {
+export function ToolsView({ pushed = false }) {
   return (
     <div class="scroll">
       <div class="wrap">
-        <LargeTitle title={t('tools')} color="teal" />
+        <LargeTitle title={t('tools')} back={pushed} />
         <div class="grid tiles">
           {TOOLS.map((x) => (
-            <button type="button" key={x.id} class={`tile c-${x.color}`} onClick={() => (x.id === 'scales' ? openSheet('scale') : push('tool', { tool: x.id }, 'tools'))}>
+            <button type="button" key={x.id} class={`tile c-${x.color}`} onClick={() => (x.id === 'scales' ? openSheet('scale') : push('tool', { tool: x.id }))}>
               <Badge icon={x.icon} color={x.color} size={40} />
               <h3>{t(x.id === 'scales' ? 'scaleExercise' : x.id)}</h3>
             </button>

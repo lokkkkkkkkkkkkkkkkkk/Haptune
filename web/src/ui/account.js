@@ -101,7 +101,9 @@ export const C = {
   notifications: () => call('/c/notifications'),
   readNotifications: (ids) => call('/c/notifications/read', { method: 'POST', json: { ids: ids || null } }),
   feedback: (body) => call('/c/feedback', { method: 'POST', json: body }),
-  // community
+  // Stage
+  pulse: () => call('/c/pulse', { timeout: 20000 }),
+  search: (text) => call(`/c/search${q({ q: text })}`, { timeout: 20000 }),
   home: () => call('/c/home'),
   posts: (params) => call(`/c/posts${q(params)}`),
   post: (id) => call(`/c/posts/${id}`),

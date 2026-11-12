@@ -14,11 +14,11 @@ import { Mascot } from '../mascot.jsx';
 
 const dateSeed = () => { const d = new Date(); return d.getFullYear() * 400 + d.getMonth() * 32 + d.getDate(); };
 
-export function AcademyView({ active }) {
+export function AcademyView({ active, pushed = false }) {
   return (
     <div class="scroll">
       <div class="wrap">
-        <LargeTitle title={t('academy')} color="orange" />
+        <LargeTitle title={t('academy')} back={pushed} />
         <AcademyBody active={active} />
       </div>
     </div>

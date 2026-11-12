@@ -438,6 +438,8 @@ const INSTR = {
 let lang = 'en';
 export function setLang(l) { lang = I[l] !== undefined ? l : 'en'; }
 export function getLang() { return lang; }
+/** True when the key has a translation row (used by tools/i18n-check.mjs). */
+export const hasKey = (k) => Object.prototype.hasOwnProperty.call(S, k);
 export function t(key, vars) {
   const row = S[key];
   let s = row ? (row[I[lang]] ?? row[0]) : key;

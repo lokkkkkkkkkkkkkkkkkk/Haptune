@@ -26,7 +26,7 @@ let state = {
   progress: { xp: 0, lessons: {}, badges: [], days: [], minutes: {}, quizzes: 0, challengeWins: 0 },
   examples: false,
   tab: 'summary',
-  stacks: { summary: [], library: [], community: [], academy: [], improvise: [], tools: [] },
+  stacks: { summary: [], library: [], community: [], academy: [], me: [] },
   sheet: null,
   toast: null,
 };
@@ -43,12 +43,15 @@ export function useApp() {
 }
 
 // ---------- navigation ----------
-export function go(tab) { setState({ tab }); }
-/** The Academy (courses, classes, tutor) lives in the Community tab as "Learn". */
-export function goLearn() { setState({ tab: 'community', communitySeg: 'learn' }); }
+const TAB_IDS = ['summary', 'library', 'community', 'academy', 'me'];
+/** Goes to a tab; anything else (improvise, tools...) is a screen opened on top of the current tab. */
+export function go(tab) { if (TAB_IDS.includes(tab)) setState({ tab }); else push(tab); }
+/** Learn: courses, classes, tutors. */
+export function goLearn() { setState({ tab: 'academy' }); }
 /** Hooks the app shell fills in (keeps this file free of network code). */
 export const hooks = { practice: null };
 export function push(view, props = {}, tab = state.tab) {
+  if (!state.stacks[tab]) tab = state.tab;
   setState((s) => ({ tab, stacks: { ...s.stacks, [tab]: [...s.stacks[tab], { view, props, key: Math.random().toString(36).slice(2) }] } }));
 }
 export function pop(tab = state.tab) { setState((s) => ({ stacks: { ...s.stacks, [tab]: s.stacks[tab].slice(0, -1) } })); }
