@@ -101,7 +101,7 @@ export function LeaderboardView({ active, board: b0 = 'helpers' }) {
 const NOTE_ICON = {
   submission: ['staff', 'green'], accepted: ['check', 'green'], changes: ['pencil', 'orange'], helpful: ['heart', 'pink'], comment: ['chat', 'blue'],
   answer: ['quiz', 'blue'], want: ['users', 'purple'], follow: ['plus', 'purple'], ready: ['bell', 'green'], challenge: ['trophy', 'yellow'],
-  credits: ['star', 'yellow'], mod: ['info', 'red'], claim: ['pencil', 'orange'], like: ['heart', 'pink'], new_post: ['bell', 'blue'], nudge: ['bolt', 'orange'], paid_ok: ['crown', 'purple'], paid_no: ['info', 'red'],
+  credits: ['star', 'yellow'], mod: ['info', 'red'], claim: ['pencil', 'orange'], like: ['heart', 'pink'], new_post: ['bell', 'blue'], nudge: ['bolt', 'orange'], paid_ok: ['crown', 'purple'], paid_no: ['info', 'red'], lesson: ['calendar', 'green'], tutor: ['academy', 'orange'],
   expired: ['info', 'gray'], plan: ['crown', 'purple'], published: ['books', 'green'],
 };
 
@@ -119,7 +119,7 @@ export function NotificationsView({ active }) {
           <div class="notes">
             {items.map((n) => {
               const [icon, color] = NOTE_ICON[n.kind] || ['bell', 'gray'];
-              const open = () => (n.post_id ? push('post', { id: n.post_id }) : n.actor?.handle ? push('profile', { handle: n.actor.handle }) : n.kind === 'credits' ? push('wallet') : null);
+              const open = () => (n.kind === 'lesson' ? push('lessons') : n.kind === 'tutor' ? push('tutorMe') : n.kind === 'nudge' ? push('daily') : n.kind === 'paid_ok' || n.kind === 'paid_no' ? openSheet('plans') : n.post_id ? push('post', { id: n.post_id }) : n.actor?.handle ? push('profile', { handle: n.actor.handle }) : n.kind === 'credits' ? push('wallet') : null);
               return (
                 <button type="button" key={n.id} class={`note-row${n.read ? '' : ' unread'}`} onClick={open}>
                   {n.actor ? <Person user={n.actor} size={38} /> : <span class={`note-ic c-${color}`}><Icon name={icon} size={18} stroke={2.2} /></span>}

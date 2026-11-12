@@ -10,6 +10,8 @@ const dateSeed = () => { const d = new Date(); return d.getFullYear() * 400 + d.
 
 export function LearnView({ active }) {
   const tiles = [
+    { id: 'tutors', icon: 'users', color: 'violet', title: 'findTutor', sub: 'findTutorSub', go: () => push('tutors') },
+    { id: 'lessons', icon: 'calendar', color: 'green', title: 'myLessons', sub: 'myLessonsSub', go: () => push('lessons') },
     { id: 'ear', icon: 'ear', color: 'orange', title: 'earTraining', sub: 'earTrainingSub', go: () => openSheet('lesson', { lessonId: 'ear2', seed: dateSeed(), daily: true }) },
     { id: 'solo', icon: 'sparkles', color: 'pink', title: 'newSolo', sub: 'newSoloSub', go: () => push('improvise') },
     { id: 'tools', icon: 'tuningfork', color: 'teal', title: 'tools', sub: 'toolsSub', go: () => push('tools') },

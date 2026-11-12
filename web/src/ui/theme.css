@@ -432,3 +432,24 @@ body { font: 16px/1.4 var(--font); letter-spacing: -.006em; }
 .ed-b:disabled { opacity: .35; }
 .ed-b .tx { font: 800 19px/1 var(--display); height: 20px; display: grid; place-items: center; }
 .ed-b span:last-child { font-size: 10.5px; font-weight: 650; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; padding: 0 2px; }
+
+/* ---------- tutors ---------- */
+.tu-list { display: flex; flex-direction: column; gap: 10px; }
+.tu-card { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 20px; background: var(--card); border: 1px solid var(--line); text-align: left; width: 100%; min-width: 0; }
+.tu-card .m { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.tu-card strong { font-size: 16px; font-weight: 750; letter-spacing: -.02em; display: flex; align-items: center; gap: 5px; }
+.tu-card strong svg, .tu-ver { color: var(--green); }
+.tu-card .h { font-size: 13.5px; color: var(--ink2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tu-card .tags { display: flex; gap: 5px; flex-wrap: wrap; }
+.tu-card .tags i { font-style: normal; font-size: 11.5px; font-weight: 650; padding: 2px 8px; border-radius: 99px; background: var(--fill); color: var(--ink2); }
+.tu-card .tags i.on { background: color-mix(in srgb, var(--green) 14%, transparent); color: var(--green); }
+.tu-card .r { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.tu-card .r b { font-size: 12.5px; color: var(--ink2); max-width: 110px; text-align: right; }
+.tu-stars { display: inline-flex; align-items: center; gap: 3px; font-weight: 800; font-size: 14px; color: var(--sun); }
+.tu-stars small { color: var(--ink3); font-weight: 600; } .tu-stars.new { color: var(--violet); font-size: 12px; }
+.tu-head { display: flex; align-items: center; gap: 14px; }
+.tu-head h1 { font: 800 24px/1.15 var(--display); letter-spacing: -.03em; } .tu-head p { color: var(--ink2); font-size: 15px; margin: 2px 0 6px; }
+.tu-ver { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 750; margin-right: 8px; }
+.lesson-when { display: flex; align-items: center; gap: 7px; font-weight: 750; font-size: 15px; }
+.textarea { width: 100%; border: 1px solid var(--line); border-radius: 14px; background: var(--card); padding: 12px 14px; font: inherit; font-size: 16px; color: var(--ink); resize: vertical; }
+.textarea:focus { outline: 2px solid var(--violet); outline-offset: 0; }

@@ -13,6 +13,7 @@ import { WelcomeSheet } from './screens/welcome.jsx';
 import { local } from './storage.js';
 import { PieceView, ChordSheet, FindKeySheet, ExportSheet, PlayAlongSheet, KeySheet, DetailsSheet, MixerSheet, InstrumentPickSheet } from './screens/piece.jsx';
 import { EditorView } from './screens/editor.jsx';
+import { TutorsView, TutorView, TutorMeView, LessonsView, LessonAskSheet, LessonRateSheet } from './screens/tutors.jsx';
 import { ImproviseView } from './screens/improvise.jsx';
 import { AcademyView, CourseView, LessonSheet, ChallengeSheet } from './screens/academy.jsx';
 import { ClassView, AssignmentView, JoinClassSheet, NewClassSheet, NewAssignmentSheet, ReviewSheet } from './screens/classes.jsx';
@@ -45,7 +46,7 @@ export const TABS = [
 const ROOTS = { summary: HomeView, library: LibraryView, community: CommunityView, academy: LearnView, me: MeView };
 const VIEWS = {
   improvise: (p) => <ImproviseView {...p} pushed />, tools: (p) => <ToolsView {...p} pushed />, courses: (p) => <AcademyView {...p} pushed />,
-  piece: PieceView, editor: EditorView, songbook: SongbookView, catalog: CatalogView, course: CourseView, tool: ToolView, history: HistoryView, classView: ClassView, assignment: AssignmentView,
+  piece: PieceView, editor: EditorView, tutors: TutorsView, tutor: TutorView, tutorMe: TutorMeView, lessons: LessonsView, songbook: SongbookView, catalog: CatalogView, course: CourseView, tool: ToolView, history: HistoryView, classView: ClassView, assignment: AssignmentView,
   post: PostView, daily: DailyView, profile: ProfileView, leaderboard: LeaderboardView, notifications: NotificationsView, wallet: WalletView, challenge: ChallengeView,
   editProfile: EditProfileView, help: HelpView, admin: AdminView,
 };
@@ -55,7 +56,7 @@ const SHEETS = {
   importWizard: ImportWizardSheet, finder: FinderSheet, welcome: WelcomeSheet, playAlong: PlayAlongSheet, keySheet: KeySheet, details: DetailsSheet,
   joinClass: JoinClassSheet, newClass: NewClassSheet, newAssignment: NewAssignmentSheet, review: ReviewSheet,
   plans: PlansSheet, manualPay: ManualPaySheet, compose: ComposeSheet, accept: AcceptSheet, changes: ChangesSheet, addCredits: AddCreditsSheet, submitScore: SubmitScoreSheet,
-  image: ImageSheet, reportPost: ReportSheet, more: MoreSheet, feedback: FeedbackSheet, guidelines: GuidelinesSheet, about: AboutSheet, installHelp: InstallHelpSheet, stageGuide: StageGuideSheet, mixer: MixerSheet, instrumentPick: InstrumentPickSheet,
+  image: ImageSheet, reportPost: ReportSheet, more: MoreSheet, feedback: FeedbackSheet, guidelines: GuidelinesSheet, about: AboutSheet, installHelp: InstallHelpSheet, stageGuide: StageGuideSheet, mixer: MixerSheet, instrumentPick: InstrumentPickSheet, lessonAsk: LessonAskSheet, lessonRate: LessonRateSheet,
   setPassword: SetPasswordSheet, signIn: SignInSheet, deleteAccount: DeleteAccountSheet, devCode: DevCodeSheet,
 };
 
@@ -100,6 +101,7 @@ function openHash() {
   if (u) { go('community'); push('profile', { handle: u[1] }, 'community'); return; }
   const sq = /^q=(.+)$/.exec(h);
   if (sq) { go('summary'); setState({ homeQuery: decodeURIComponent(sq[1]).slice(0, 120) }); history.replaceState(null, '', location.pathname); return; }
+  if (h === 'tutors') { go('academy'); push('tutors', {}, 'academy'); return; }
   if (h === 'daily') { go('community'); push('daily', {}, 'community'); return; }
   if (h === 'stage') go('community');
   else if (h === 'learn') go('academy');

@@ -55,6 +55,8 @@ export function MeView({ active }) {
             <List>
               <Row icon="gift" color="violet" title={t('rewards')} subtitle={t('rewardsRowSub')} detail={me?.credits ?? ''} onClick={() => push('wallet')} id="me-rewards" />
               <Row icon="bell" color="pink" title={t('notifications')} detail={me?.unread || ''} onClick={() => push('notifications')} />
+              <Row icon="academy" color="orange" title={t('teachOnHaptune')} subtitle={t('teachOnHaptuneSub')} onClick={() => push('tutorMe')} id="me-teach" />
+              <Row icon="calendar" color="green" title={t('myLessons')} subtitle={t('myLessonsSub')} onClick={() => push('lessons')} />
               {me?.handle && <Row icon="person" color="blue" title={t('myStagePage')} subtitle={t('myStagePageSub')} onClick={() => push('profile', { handle: me.handle })} />}
             </List>
           </Section>

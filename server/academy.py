@@ -19,6 +19,7 @@ import hashlib
 import os
 import secrets
 import tempfile
+import threading
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -114,7 +115,19 @@ DAY = 86400.0
 _engine = None
 
 
+_engine_lock = threading.Lock()
+
+
 def engine():
+    """The database. Made once: the lock stops two first requests from both creating the tables."""
+    global _engine
+    if _engine is not None:
+        return _engine
+    with _engine_lock:
+        return _make_engine()
+
+
+def _make_engine():
     global _engine
     if _engine is None:
         url = os.environ.get("DATABASE_URL") or "sqlite:///" + os.path.join(
@@ -122,9 +135,10 @@ def engine():
         if url.startswith("postgres://"):
             url = "postgresql+psycopg://" + url[len("postgres://"):]
         args = {"connect_args": {"check_same_thread": False}} if url.startswith("sqlite") else {"pool_pre_ping": True}
-        _engine = create_engine(url, future=True, **args)
-        meta.create_all(_engine)
-        _add_missing_columns(_engine)
+        eng = create_engine(url, future=True, **args)
+        meta.create_all(eng)
+        _add_missing_columns(eng)
+        _engine = eng                                  # only visible to others once it is ready
     return _engine
 
 

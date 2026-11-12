@@ -77,6 +77,8 @@ from stage import router as stage_router  # noqa: E402  (who is online, trending
 app.include_router(stage_router)
 from billing import router as billing_router  # noqa: E402  (card payments with Stripe, DuitNow QR / bank transfer)
 app.include_router(billing_router)
+from tutors import router as tutors_router  # noqa: E402  (find a tutor: profiles, lesson requests, ratings)
+app.include_router(tutors_router)
 _jobs: dict[str, dict] = {}
 _lock = threading.Lock()
 _pool = ThreadPoolExecutor(max_workers=int(os.environ.get("HAPTUNE_WORKERS", "1")))
