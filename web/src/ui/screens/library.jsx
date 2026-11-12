@@ -8,6 +8,7 @@ import { Mascot } from '../mascot.jsx';
 import { importFile, importText, ACCEPT } from '../importer.js';
 import { SONGS, songTitle } from '../../data/songs.js';
 import { loadCatalog, searchCatalog, addCatalogPiece, GENRES } from '../catalog.js';
+import { parseJianpu, isJianpu } from '../../core/jianpu.js';
 import { parseChordSheet, sheetChords } from '../../core/chordsheet.js';
 import { keyName, parseName, nameOf } from '../../core/pitch.js';
 import { scaleScore } from '../../core/exercises.js';
@@ -142,11 +143,14 @@ export function ImportReportSheet({ pieceId, report, error, name }) {
   );
 }
 
+const JIANPU_EXAMPLE = 'title: 茉莉花\nkey: 1=F\ntime: 2/4\ntempo: 72\n---\n3 3_ 5_ | 6_ 1\'_ 1\'_ 6_ | 5 5_ 6_ | 5 - |\nw: 好 一 朵 美 丽 的 茉 莉 花\n5 5_ 6_ | 1\' 1\'_ 6_ | 5 5_ 6_ | 5 - ||\nw: 好 一 朵 美 丽 的 茉 莉 花';
+
 export function PasteSheet({ initial = '' }) {
   const [text, setText] = useState(initial);
   const preview = useMemo(() => {
     if (!text.trim()) return null;
     if (/^X:\s*\d/m.test(text) && /^K:/m.test(text)) return 'ABC';
+    if (isJianpu(text)) { try { const sc = parseJianpu(text); return `簡譜 · ${sc.measures.length} ${t('bars').toLowerCase()}`; } catch (e) { return null; } }
     try { const s = parseChordSheet(text); const n = sheetChords(s).length; return n ? t('detected', { n, key: keyName(s.key) }) : null; } catch { return null; }
   }, [text]);
   const add = async () => {
@@ -157,8 +161,13 @@ export function PasteSheet({ initial = '' }) {
     } catch (e) { toast(e.message, 'err'); }
   };
   return (
-    <SheetFrame title={t('pasteChords')} right={t('add')} onRight={add} rightDisabled={!preview} full>
-      <p class="note-text">{t('pasteChordsSub')}. ChordPro, ABC.</p>
+    <SheetFrame title={t('wayType')} right={t('add')} onRight={add} rightDisabled={!preview} full>
+      <p class="note-text">{t('typeItSub')}</p>
+      <div class="chips">
+        <Chip onClick={() => setText(JIANPU_EXAMPLE)} >簡譜 {t('example')}</Chip>
+        <Chip onClick={() => setText('{title: Amazing Grace}\n{key: G}\nA[G]mazing [G7]grace, how [C]sweet the [G]sound\nThat saved a wretch like [D]me')}>{t('viewChords')} {t('example')}</Chip>
+        <Chip onClick={() => setText('X:1\nT:Ode to Joy\nM:4/4\nL:1/4\nK:D\nF F G A|A G F E|D D E F|F3/2 E/2 E2|]')}>ABC {t('example')}</Chip>
+      </div>
       <textarea class="field" id="paste-text" placeholder={`${t('pasteHere')}\n\nG            G7         C         G\nAmazing grace, how sweet the sound`} value={text} onInput={(e) => setText(e.currentTarget.value)} onPaste={(e) => { const v = e.clipboardData?.getData('text'); if (v) { e.preventDefault(); setText((x) => x + v); } }} />
       {preview && <div class="report-line"><span class="t-green"><Icon name="check" size={20} stroke={2.4} /></span><strong>{preview}</strong></div>}
       <Button onClick={add} disabled={!preview} full>{t('addToLibrary')}</Button>

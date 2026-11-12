@@ -387,3 +387,48 @@ body { font: 16px/1.4 var(--font); letter-spacing: -.006em; }
 .pro-gate > * { position: relative; }
 .pro-gate h2 { font: 800 23px/1.15 var(--display); letter-spacing: -.03em; }
 .pro-gate p { font-size: 14.5px; opacity: .8; line-height: 1.45; }
+
+/* ---------- the song screen: parts, 簡譜, mixer, editor ---------- */
+.app.immersive .tabbar { display: none; }
+.app.immersive .scroll { padding-bottom: calc(var(--sa-bottom) + 28px); }
+.app.immersive .scroll.has-player { padding-bottom: calc(var(--sa-bottom) + 190px); }
+.app.immersive .scroll.has-editor { padding-bottom: calc(var(--sa-bottom) + 210px); }
+.app.immersive .player { bottom: calc(var(--sa-bottom) + 10px); }
+.part-box { display: flex; flex-direction: column; gap: 8px; }
+.part-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.part-row .k { font: 750 11.5px var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--ink3); flex-shrink: 0; min-width: 62px; }
+.part-row .chips { flex: 1; min-width: 0; }
+.jp-box { background: #fff; color: #14121F; border-radius: var(--r); border: 1px solid var(--line); box-shadow: var(--shadow); padding: 12px 8px; min-height: 120px; }
+:root[data-theme="dark"] .jp-box { background: #F4F1EA; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .jp-box { background: #F4F1EA; } }
+.jp-svg { width: 100%; height: auto; display: block; fill: currentColor; }
+.jp-svg .jp-head { fill: #6A4DFF; }
+.jp-svg .jp-chord { fill: #6D3FD0; }
+.jp-svg .jp-lyric { fill: #5F5B76; }
+.jp-svg .jp-dash { fill: #8A879C; }
+.jp-svg .jn.on { fill: #6A4DFF; color: #6A4DFF; }
+.jp-svg .jn.on text:first-of-type, .jp-svg .jn.on text { font-weight: 800; }
+.jp-svg .jbar { cursor: pointer; }
+.jp-svg .jbar:active .jbar-bg { fill: rgba(106,77,255,.08); }
+.tap-part { display: flex; align-items: center; gap: 8px; padding: 4px 2px 10px; border-bottom: 1px solid var(--line); margin-bottom: 8px; flex-wrap: wrap; animation: fade .2s; }
+.tap-part strong { font-size: 14.5px; margin-right: auto; }
+.mixer { display: flex; flex-direction: column; gap: 10px; }
+.mix-row { display: grid; grid-template-columns: minmax(84px, 1.1fr) 40px 40px 2fr; align-items: center; gap: 8px; padding: 12px 14px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); }
+.mix-row strong { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mix-b { height: 36px; border-radius: 10px; background: var(--fill); font: 800 13px var(--display); color: var(--ink2); text-align: center; }
+.mix-b.on.m { background: var(--red); color: #fff; } .mix-b.on.s { background: var(--sun); color: #3A2500; }
+.mix-row input[type="range"] { accent-color: var(--violet); }
+.ed-nav { display: flex; align-items: center; gap: 10px; }
+.ed-nav strong { flex: 1; text-align: center; font-size: 15px; }
+.ed-nav .tbtn:disabled { opacity: .35; }
+.ed-score { padding: 14px 4px; min-height: 180px; }
+.ed-score g.note, .ed-score g.rest, .ed-score g.mRest { cursor: pointer; }
+.vrv g.sel, .vrv g.sel * { fill: #E0352B !important; color: #E0352B !important; stroke: #E0352B !important; }
+.ed-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 25; padding: 10px max(12px, var(--sa-right)) calc(10px + var(--sa-bottom)) max(12px, var(--sa-left)); background: var(--bar); border-top: 1px solid var(--line); }
+.ed-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; max-width: 720px; margin: 0 auto; }
+@media (min-width: 700px) { .ed-grid { grid-template-columns: repeat(10, minmax(0, 1fr)); } }
+.ed-b { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; height: 58px; border-radius: 14px; background: var(--fill); color: var(--ink); min-width: 0; transition: transform .1s, background .15s; }
+.ed-b:active { transform: scale(.94); background: var(--violet-soft); }
+.ed-b:disabled { opacity: .35; }
+.ed-b .tx { font: 800 19px/1 var(--display); height: 20px; display: grid; place-items: center; }
+.ed-b span:last-child { font-size: 10.5px; font-weight: 650; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; padding: 0 2px; }

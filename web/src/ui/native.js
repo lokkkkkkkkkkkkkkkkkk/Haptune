@@ -3,6 +3,7 @@
 //   * in-app purchases go through RevenueCat, which tells the Haptune server what was bought
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { App } from '@capacitor/app';
+import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 
 export const isNative = () => Capacitor.isNativePlatform();
 export const platform = () => Capacitor.getPlatform();          // 'android' | 'ios' | 'web'
@@ -58,3 +59,18 @@ export async function storeRestore(userId) {
 export function openExternal(url) {
   try { window.open(url, '_blank', 'noopener'); } catch { location.href = url; }
 }
+
+/** A short buzz you can feel while playing: 'wrong' (a wrong note), 'bar' (first beat), 'beat'.
+ *  The installed app uses the phone's haptics; Android browsers vibrate; iPhone browsers have no vibration
+ *  (the Haptune app for iPhone taps the Apple Watch instead). */
+export function buzz(kind = 'wrong') {
+  try {
+    if (isNative()) {
+      if (kind === 'wrong') Haptics.notification({ type: NotificationType.Error }).catch(() => {});
+      else Haptics.impact({ style: kind === 'bar' ? ImpactStyle.Heavy : ImpactStyle.Light }).catch(() => {});
+      return;
+    }
+    navigator.vibrate?.(kind === 'wrong' ? [70, 50, 70] : kind === 'bar' ? 45 : 18);
+  } catch { /* no vibration on this device */ }
+}
+export const canBuzz = () => isNative() || typeof navigator.vibrate === 'function';

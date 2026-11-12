@@ -11,7 +11,8 @@ import { LibraryView, SongbookView, PasteSheet, FindSongSheet, ScaleSheet, Impor
 import { AddSheet, ImportWizardSheet, FinderSheet } from './screens/addmusic.jsx';
 import { WelcomeSheet } from './screens/welcome.jsx';
 import { local } from './storage.js';
-import { PieceView, ChordSheet, FindKeySheet, ExportSheet, PlayAlongSheet, KeySheet, DetailsSheet } from './screens/piece.jsx';
+import { PieceView, ChordSheet, FindKeySheet, ExportSheet, PlayAlongSheet, KeySheet, DetailsSheet, MixerSheet, InstrumentPickSheet } from './screens/piece.jsx';
+import { EditorView } from './screens/editor.jsx';
 import { ImproviseView } from './screens/improvise.jsx';
 import { AcademyView, CourseView, LessonSheet, ChallengeSheet } from './screens/academy.jsx';
 import { ClassView, AssignmentView, JoinClassSheet, NewClassSheet, NewAssignmentSheet, ReviewSheet } from './screens/classes.jsx';
@@ -44,7 +45,7 @@ export const TABS = [
 const ROOTS = { summary: HomeView, library: LibraryView, community: CommunityView, academy: LearnView, me: MeView };
 const VIEWS = {
   improvise: (p) => <ImproviseView {...p} pushed />, tools: (p) => <ToolsView {...p} pushed />, courses: (p) => <AcademyView {...p} pushed />,
-  piece: PieceView, songbook: SongbookView, catalog: CatalogView, course: CourseView, tool: ToolView, history: HistoryView, classView: ClassView, assignment: AssignmentView,
+  piece: PieceView, editor: EditorView, songbook: SongbookView, catalog: CatalogView, course: CourseView, tool: ToolView, history: HistoryView, classView: ClassView, assignment: AssignmentView,
   post: PostView, daily: DailyView, profile: ProfileView, leaderboard: LeaderboardView, notifications: NotificationsView, wallet: WalletView, challenge: ChallengeView,
   editProfile: EditProfileView, help: HelpView, admin: AdminView,
 };
@@ -54,7 +55,7 @@ const SHEETS = {
   importWizard: ImportWizardSheet, finder: FinderSheet, welcome: WelcomeSheet, playAlong: PlayAlongSheet, keySheet: KeySheet, details: DetailsSheet,
   joinClass: JoinClassSheet, newClass: NewClassSheet, newAssignment: NewAssignmentSheet, review: ReviewSheet,
   plans: PlansSheet, manualPay: ManualPaySheet, compose: ComposeSheet, accept: AcceptSheet, changes: ChangesSheet, addCredits: AddCreditsSheet, submitScore: SubmitScoreSheet,
-  image: ImageSheet, reportPost: ReportSheet, more: MoreSheet, feedback: FeedbackSheet, guidelines: GuidelinesSheet, about: AboutSheet, installHelp: InstallHelpSheet, stageGuide: StageGuideSheet,
+  image: ImageSheet, reportPost: ReportSheet, more: MoreSheet, feedback: FeedbackSheet, guidelines: GuidelinesSheet, about: AboutSheet, installHelp: InstallHelpSheet, stageGuide: StageGuideSheet, mixer: MixerSheet, instrumentPick: InstrumentPickSheet,
   setPassword: SetPasswordSheet, signIn: SignInSheet, deleteAccount: DeleteAccountSheet, devCode: DevCodeSheet,
 };
 
@@ -166,8 +167,10 @@ function App() {
     </button>
   );
   const tier = s.me?.tier || 'free';
+  const top = s.stacks[s.tab]?.[s.stacks[s.tab].length - 1]?.view;
+  const immersive = top === 'piece' || top === 'editor';
   return (
-    <div class="app">
+    <div class={`app${immersive ? ' immersive' : ''}`}>
       <header class="topnav">
         <button type="button" class="logo" onClick={() => { popToRoot('summary'); go('summary'); }}><span class="logo-mark"><Icon name="library" size={18} stroke={2.4} /></span>Haptune</button>
         <nav aria-label="Sections">{TABS.filter((x) => x.id !== 'me').map((tab) => tabBtn(tab, 'top'))}</nav>
