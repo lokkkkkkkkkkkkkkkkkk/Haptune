@@ -34,7 +34,7 @@ def test_home_page_points_to_the_website():
 
 def test_the_website_may_call_the_server_and_change_things():
     """The web app runs on haptune.name.my and edits profiles and posts with PATCH; browsers ask first."""
-    for origin in ("https://haptune.name.my", "https://www.haptune.name.my", "https://localhost"):
+    for origin in ("https://haptune.name.my", "http://haptune.name.my", "https://www.haptune.name.my", "https://localhost"):
         r = client.options("/c/me", headers={"Origin": origin, "Access-Control-Request-Method": "PATCH",
                                              "Access-Control-Request-Headers": "authorization,content-type"})
         assert r.status_code == 200 and r.headers["access-control-allow-origin"] == origin, origin

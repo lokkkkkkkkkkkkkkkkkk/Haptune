@@ -61,7 +61,7 @@ app = FastAPI(title="Haptune engine", version=__version__)
 # The web app (GitHub Pages, the Claude preview, local dev) calls the server from the browser. No cookies
 # are used, so allowing these origins only lets those pages call the rate-limited endpoints.
 DEFAULT_ORIGINS = (r"https?://(localhost|127\.0\.0\.1)(:\d+)?|https://[\w-]+\.github\.io|capacitor://localhost"
-                   r"|https://(www\.)?haptune\.name\.my"
+                   r"|https?://(www\.)?haptune\.name\.my"
                    r"|https://([\w-]+\.)*claude\.ai|https://([\w-]+\.)*claudeusercontent\.com|null")
 app.add_middleware(CORSMiddleware, allow_origin_regex=os.environ.get("HAPTUNE_CORS_ORIGINS", DEFAULT_ORIGINS),
                    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], allow_headers=["*"],
