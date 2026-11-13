@@ -149,6 +149,7 @@ def my_tutor(me: A.Me = Depends(A.current)):
 @router.put("/tutor/me")
 def save_tutor(body: TutorIn, me: A.Me = Depends(A.current)):
     """Saves the teaching profile. Once the fee is paid it goes to the developer to be checked, then it is listed."""
+    A.require_registered(me)
     if not (body.online or body.in_person):
         raise HTTPException(400, "Choose online, in person, or both.")
     vals = dict(headline=CM.clean_text(body.headline, 120), bio=CM.clean_text(body.bio, 2000), instruments=[i[:24] for i in body.instruments],

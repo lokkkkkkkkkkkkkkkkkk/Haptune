@@ -167,7 +167,7 @@ function unmuteIOS() {
       dv.setUint16(34, 8, true); str(36, 'data'); dv.setUint32(40, n, true); b.fill(128, 44);
       silentEl = document.createElement('audio');
       silentEl.src = URL.createObjectURL(new Blob([b], { type: 'audio/wav' }));
-      silentEl.loop = true; silentEl.preload = 'auto'; silentEl.title = 'Haptune';
+      silentEl.loop = true; silentEl.preload = 'auto'; silentEl.title = 'ETASheet';
       silentEl.setAttribute('playsinline', ''); silentEl.setAttribute('x-webkit-airplay', 'deny');
     }
     if (silentEl.paused) silentEl.play().catch(() => {});
@@ -646,50 +646,104 @@ export function yin(buf, sr, { fmin = 60, fmax = 1600, threshold = 0.15 } = {}) 
   return { freq: sr / (tau + shift), clarity: 1 - b, rms };
 }
 
-/** Opens the microphone and calls onPitch({midi, freq, cents, clarity, rms, time}) about 40 times a second. */
-export async function listen(onPitch) {
+/** The best recording format this browser makes (Chrome/Android: WebM Opus; Safari/iPhone: MP4 AAC). */
+function recordingType() {
+  if (typeof MediaRecorder === 'undefined') return null;
+  for (const t of ['audio/webm;codecs=opus', 'audio/mp4;codecs=mp4a.40.2', 'audio/mp4', 'audio/webm', 'audio/ogg;codecs=opus']) {
+    try { if (MediaRecorder.isTypeSupported(t)) return t; } catch { /* old browser */ }
+  }
+  return '';
+}
+
+/**
+ * Opens the microphone and calls onPitch({midi, freq, cents, clarity, rms, time}) about 40 times a second.
+ * Returns stop(); with {record: true} the take is also recorded, and stop.recording() resolves to
+ * {blob, type, seconds} (or null) once stopped.
+ *
+ * The microphone is analysed in a sound system of its own, made at the microphone's own sample rate. On iPhone
+ * (above all as an app on the Home Screen) feeding the microphone into the playback sound system, whose rate can
+ * differ, gave silence: Play Along then heard nothing.
+ */
+export async function listen(onPitch, { record = false } = {}) {
   audioContext();
   if (!navigator.mediaDevices?.getUserMedia) throw Object.assign(new Error('nomic'), { code: 'unavailable' });
   // iOS: a page that only "plays" is not given the microphone, so say we play and record while it is open
   const session = (type) => { try { if (navigator.audioSession) navigator.audioSession.type = type; } catch { /* older iOS */ } };
   micOpen = true;
   session('play-and-record');
+  // made now, while the tap that started Play Along still counts, so the phone lets it run
+  const AC = globalThis.AudioContext || globalThis.webkitAudioContext;
+  let mctx = null;
+  try { mctx = new AC({ latencyHint: 'interactive' }); mctx.resume?.().catch(() => {}); } catch { mctx = null; }
   let stream;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } });
   } catch (e) {
     micOpen = false; session('playback');
+    try { mctx?.close(); } catch { /* already closed */ }
     throw Object.assign(new Error('denied'), { code: e?.name === 'NotAllowedError' || e?.name === 'SecurityError' ? 'denied' : 'unavailable' });
   }
   if (!ctx || ctx.state === 'closed') audioContext();
   if (ctx.state !== 'running') await ctx.resume().catch(() => {});
-  const mine = ctx;
-  const src = ctx.createMediaStreamSource(stream);
-  const an = ctx.createAnalyser(); an.fftSize = 2048;
+  // the microphone's rate: if the new sound system doesn't match it, make one that does
+  const micRate = stream.getAudioTracks()[0]?.getSettings?.().sampleRate;
+  if (mctx && micRate && Math.abs(mctx.sampleRate - micRate) > 1) {
+    try { mctx.close(); } catch { /* fine */ }
+    try { mctx = new AC({ sampleRate: micRate, latencyHint: 'interactive' }); } catch { mctx = null; }
+  }
+  if (mctx && mctx.state !== 'running') await Promise.race([mctx.resume().catch(() => {}), new Promise((r) => setTimeout(r, 400))]);
+  const actx = mctx && mctx.state === 'running' ? mctx : ctx;          // fall back to the playback sound system
+  const src = actx.createMediaStreamSource(stream);
+  const an = actx.createAnalyser(); an.fftSize = 2048;
   src.connect(an);
+  // Safari only runs an analyser that leads somewhere: a silent path to the speakers keeps it awake
+  let sink = null;
+  if (actx === mctx) { try { sink = actx.createGain(); sink.gain.value = 0; an.connect(sink); sink.connect(actx.destination); } catch { sink = null; } }
   const buf = new Float32Array(an.fftSize);
   let running = true;
+  // the recording (Play Along takes a teacher can listen to)
+  let rec = null, chunks = [], recStart = 0, recDone = null;
+  const type = record ? recordingType() : null;
+  if (record && type !== null) {
+    try {
+      rec = new MediaRecorder(stream, type ? { mimeType: type, audioBitsPerSecond: 48000 } : undefined);
+      rec.ondataavailable = (e) => { if (e.data?.size) chunks.push(e.data); };
+      recDone = new Promise((resolve) => { rec.onstop = () => resolve(chunks.length ? { blob: new Blob(chunks, { type: rec.mimeType || type || 'audio/webm' }), type: (rec.mimeType || type || 'audio/webm').split(';')[0], seconds: Math.round((performance.now() - recStart) / 1000) } : null); });
+      rec.start(1000);
+      recStart = performance.now();
+    } catch { rec = null; recDone = null; }
+  }
+  let silentFrames = 0;
   const loop = () => {
     if (!running) return;
     an.getFloatTimeDomainData(buf);
-    const r = yin(buf, mine.sampleRate);
-    if (r && r.clarity > 0.8) {
+    const r = yin(buf, actx.sampleRate);
+    if (r && r.clarity > 0.78) {
+      silentFrames = 0;
       const midi = 69 + 12 * Math.log2(r.freq / 440);
-      onPitch({ midi, freq: r.freq, cents: Math.round((midi - Math.round(midi)) * 100), clarity: r.clarity, rms: r.rms, time: mine.currentTime });
-    } else onPitch(null);
-    setTimeout(loop, 22);
+      onPitch({ midi, freq: r.freq, cents: Math.round((midi - Math.round(midi)) * 100), clarity: r.clarity, rms: r.rms, time: actx.currentTime });
+    } else {
+      onPitch(null, r ? r.rms : 0);                      // no clear pitch (silence, or a noisy moment)
+      // a sound system the phone paused (a call, another app) gives only zeros: wake it
+      if (!r && ++silentFrames % 90 === 0 && actx.state !== 'running') actx.resume().catch(() => {});
+    }
+    setTimeout(loop, 20);
   };
   loop();
-  return () => {
+  const stop = () => {
     if (!running) return;
     running = false;
+    try { if (rec && rec.state !== 'inactive') rec.stop(); } catch { /* already stopped */ }
     stream.getTracks().forEach((t) => t.stop());
-    try { src.disconnect(); } catch { /* the sound system was rebuilt meanwhile */ }
+    try { src.disconnect(); an.disconnect(); sink?.disconnect(); } catch { /* the sound system was rebuilt meanwhile */ }
+    if (actx === mctx) setTimeout(() => { try { mctx.close(); } catch { /* closed */ } }, 300);
     micOpen = false; session('playback');
     // closing the microphone changes the phone's sound route; make sure playback is awake afterwards
     setTimeout(() => { if (ctx && ctx.state !== 'running') ctx.resume().then(flushWaiting, () => {}); }, 250);
-    void mine;
   };
+  stop.recording = () => recDone || Promise.resolve(null);
+  stop.analyser = actx === mctx ? 'own' : 'shared';
+  return stop;
 }
 
 globalThis.__haptuneRebuild = () => rebuildAudio();     // for automated checks

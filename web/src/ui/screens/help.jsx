@@ -136,7 +136,7 @@ export function AboutSheet() {
   const cfg = globalThis.HAPTUNE_CONFIG || {};
   return (
     <SheetFrame title={t('about')} right={t('done')} onRight={closeSheet}>
-      <div class="empty"><Mascot mood="wave" size={90} /><h3>Haptune</h3><p>{t('version')} {cfg.version} ({cfg.build}) · {t('madeBy')} sloky</p></div>
+      <div class="empty"><Mascot mood="wave" size={90} /><h3>ETASheet</h3><p>{t('version')} {cfg.version} ({cfg.build}) · {t('madeBy')} sloky</p></div>
       <Section title={t('creditsThanks')}>
         <List>
           <Row title="Salamander Grand Piano V3" subtitle="Alexander Holm · CC BY 3.0" />

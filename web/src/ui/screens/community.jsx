@@ -8,7 +8,8 @@ import { useState, useEffect, useRef } from 'preact/hooks';
 import { useApp, push, openSheet, closeSheet, setState, addSongbookSong, toast } from '../state.js';
 import { t, instrumentName } from '../../core/i18n.js';
 import { Icon, Chip, Button, Section, Card, Segmented, Empty, List, Row } from '../components.jsx';
-import { LargeTitle, NavBar, SheetFrame } from './common.jsx';
+import { LargeTitle, NavBar, SheetFrame, Avatar } from './common.jsx';
+import { Composer, Feed } from './stagefeed.jsx';
 import { Mascot } from '../mascot.jsx';
 import { hasServer } from '../api.js';
 import { C, ensureAccount, attempt } from '../account.js';
@@ -17,8 +18,8 @@ import { ScoreCard } from './home.jsx';
 import { local } from '../storage.js';
 
 const SEGMENTS = [
-  { value: 'home', label: 'segForYou' }, { value: 'library', label: 'segScores' }, { value: 'requests', label: 'segRequests' },
-  { value: 'play', label: 'segPlay' }, { value: 'questions', label: 'segQuestions' },
+  { value: 'home', label: 'segForYou' }, { value: 'following', label: 'segFollowing' }, { value: 'requests', label: 'segRequests' },
+  { value: 'library', label: 'segScores' }, { value: 'play', label: 'segPlay' }, { value: 'questions', label: 'segQuestions' },
 ];
 
 /** Notes: what people earn on Stage. A small pill with the balance. */
@@ -44,25 +45,19 @@ export function CommunityView({ active }) {
   return (
     <div class="scroll" id="stage">
       <div class="wrap">
-        <LargeTitle title="Stage" eyebrow={t('stageEyebrow')} actions={actions} />
+        <LargeTitle title="Stage" eyebrow={t('stageEyebrow3')} actions={<>{actions}<span class="ph-only"><Avatar /></span></>} />
         {!online ? <Empty icon="globe" title={t('communityOffline')} sub={t('communityOfflineSub')} /> : <>
-          <div class="st-actions">
-            <button type="button" class="st-act main" id="st-request" onClick={() => openSheet('compose', { type: 'request' })}>
-              <span class="ic"><Icon name="flag" size={22} stroke={2.2} /></span><strong>{t('requestSong')}</strong><span>{t('requestSongSub')}</span>
-            </button>
-            <button type="button" class="st-act" id="st-share" onClick={() => (local.get('guide.upload', false) ? openSheet('compose', { type: 'share' }) : openSheet('stageGuide', { topic: 'upload' }))}>
-              <span class="ic"><Icon name="upload" size={22} stroke={2.2} /></span><strong>{t('shareScore')}</strong><span>{t('shareScoreSub')}</span>
-            </button>
-            <button type="button" class="st-act" id="st-help" onClick={helpWrite}>
-              <span class="ic"><Icon name="pencil" size={22} stroke={2.2} /></span><strong>{t('helpWrite')}</strong><span>{t('helpWriteSub')}</span>
-            </button>
+          <Composer />
+          <div class="ptabs" id="community-seg">
+            {SEGMENTS.map((o) => <button type="button" key={o.value} class={seg === o.value ? 'on' : ''} onClick={() => setState({ communitySeg: o.value, stageMine: false })}>{t(o.label)}</button>)}
           </div>
-          <div class="seg-scroll"><Segmented id="community-seg" value={seg} onChange={(v) => setState({ communitySeg: v, stageMine: false })} options={SEGMENTS.map((o) => ({ value: o.value, label: t(o.label) }))} /></div>
           {seg === 'home' ? <ForYou active={active} />
-            : seg === 'requests' ? <PostList key="r" type="request" active={active} mine={!!s.stageMine} />
-              : seg === 'library' ? <PostList key="l" type="share" active={active} />
-                : seg === 'play' ? <Play active={active} />
-                  : <PostList key="q" type="question" active={active} />}
+            : seg === 'following' ? <Feed active={active} following />
+              : seg === 'requests' ? <><button type="button" class="sr-cta" onClick={helpWrite} id="st-help"><span class="hm-art sm"><Icon name="pencil" size={20} stroke={2.2} /></span><div><strong>{t('helpWrite')}</strong><span>{t('helpWriteSub')}</span></div><Icon name="chevronR" size={16} stroke={2.4} /></button>
+                <PostList key="r" type="request" active={active} mine={!!s.stageMine} /></>
+                : seg === 'library' ? <PostList key="l" type="share" active={active} />
+                  : seg === 'play' ? <Play active={active} />
+                    : <PostList key="q" type="question" active={active} />}
         </>}
       </div>
     </div>
@@ -104,34 +99,14 @@ function ForYou({ active }) {
           </div>
         </Section>
       )}
-      {data.new_scores.length > 0 && (
-        <Section title={t('newScores')} action={all('library')}>
-          <div class="shelf">
-            {data.new_scores.map((p) => <ScoreCard key={p.id} title={p.title} by={p.artist || p.author?.name} genre="classical"
-              tag={p.instruments?.[0] ? instrumentName(p.instruments[0]) : t('score')} heat={p.saves || null} onClick={() => push('post', { id: p.id })} />)}
-          </div>
-        </Section>
-      )}
       {mine.length > 0 && data.help_wanted.length > 0 && (
         <Section title={t('helpWantedFor', { inst: mine.map(instrumentName).join(', ') })} action={all('requests', { stageMine: true })}>
-          <div class="post-list">{data.help_wanted.map((p) => <PostCard key={p.id} p={p} compact />)}</div>
+          <div class="post-list">{data.help_wanted.slice(0, 3).map((p) => <PostCard key={p.id} p={p} compact />)}</div>
         </Section>
       )}
-      {!mine.length && (
-        <button type="button" class="sr-cta" onClick={() => push('editProfile')}>
-          <span class="hm-art sm"><Icon name="violin" size={21} stroke={2.1} /></span>
-          <div><strong>{t('setInstruments')}</strong><span>{t('setInstrumentsTip')}</span></div><Icon name="chevronR" size={16} stroke={2.4} />
-        </button>
-      )}
-      <Section title={t('mostWanted')} action={all('requests')}>
-        {data.wanted.length ? <div class="post-list">{data.wanted.map((p) => <PostCard key={p.id} p={p} compact />)}</div>
-          : <Empty icon="flag" title={t('noRequestsYet')} sub={t('noRequestsYetSub')} />}
+      <Section title={t('latestOnStage')}>
+        <Feed active={active} />
       </Section>
-      {data.delivered.length > 0 && (
-        <Section title={t('recentlyDelivered')}>
-          <div class="post-list">{data.delivered.map((p) => <PostCard key={p.id} p={p} compact />)}</div>
-        </Section>
-      )}
       {data.helpers.length > 0 && (
         <Section title={t('topHelpersWeek')} action={<button type="button" onClick={() => push('leaderboard')}>{t('leaderboard')}</button>}>
           <div class="helpers-strip">
@@ -144,11 +119,6 @@ function ForYou({ active }) {
               </button>
             ))}
           </div>
-        </Section>
-      )}
-      {data.questions.length > 0 && (
-        <Section title={t('questionsWaiting')} action={all('questions')}>
-          <div class="post-list">{data.questions.map((p) => <PostCard key={p.id} p={p} compact />)}</div>
         </Section>
       )}
       <HowStageWorks />

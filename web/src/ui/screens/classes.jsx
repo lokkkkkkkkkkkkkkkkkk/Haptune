@@ -3,7 +3,7 @@
 // and the bars to work on. Each class has an activity feed and a weekly leaderboard.
 import { useState, useEffect } from 'preact/hooks';
 import { useApp, push, pop, go, openSheet, closeSheet, toast, getPiece, addScore, addXP, setState, updateSettings, goLearn } from '../state.js';
-import { t, getLang } from '../../core/i18n.js';
+import { t, getLang, instrumentName } from '../../core/i18n.js';
 import { Icon, Card, Section, List, Row, Button, Badge, Segmented, Chip, Stepper, Rings } from '../components.jsx';
 import { NavBar, SheetFrame } from './common.jsx';
 import { Mascot, Confetti } from '../mascot.jsx';
@@ -163,14 +163,18 @@ export function MissionCard({ a, color, onClick }) {
 }
 
 // ---------------------------------------------------------------- one class
-export function ClassView({ id }) {
+export function ClassView({ id, tab: tab0 }) {
   const s = useApp();
-  const [tab, setTab] = useState('missions');
+  const [tab, setTab] = useState(tab0 || 'missions');
   const cls = useLoad(() => academy.classDetail(id), [id, s.academyRev]);
   const feed = useLoad(() => (tab === 'feed' ? academy.feed(id) : Promise.resolve(null)), [id, tab, s.academyRev]);
   const board = useLoad(() => (tab === 'board' ? academy.leaderboard(id) : Promise.resolve(null)), [id, tab, s.academyRev]);
+  const prog = useLoad(() => (tab === 'students' ? academy.progress(id) : Promise.resolve(null)), [id, tab, s.academyRev]);
   const c = cls.data;
   const teacher = c?.role === 'teacher';
+  useEffect(() => { if (c && !teacher && tab === 'students') setTab('missions'); }, [c?.role]);
+  const setVisibility = async (v) => { try { await academy.editClass(id, { visibility: v }); refreshClasses(); toast(v === 'public' ? t('classNowOpen') : t('classNowPrivate')); } catch (e) { toast(e.message, 'err'); } };
+  const newCode = async () => { if (!confirm(t('newCodeConfirm'))) return; try { await academy.editClass(id, { new_code: true }); refreshClasses(); } catch (e) { toast(e.message, 'err'); } };
 
   const share = async () => {
     const text = t('shareCodeText', { name: c.name, code: c.join_code });
@@ -188,7 +192,7 @@ export function ClassView({ id }) {
 
   return (
     <div class="scroll">
-      <NavBar title={c?.name || t('myClasses')} color={c?.color || 'orange'} backLabel={t('academy')} />
+      <NavBar title={c?.name || t('myClasses')} color={c?.color || 'orange'} backLabel={t('hub')} />
       <div class="wrap" style={{ paddingTop: 14 }}>
         {!c ? <Loading error={cls.error} /> : (
           <>
@@ -201,20 +205,41 @@ export function ClassView({ id }) {
                 </div>
               </div>
               {c.description && <p class="ch-about">{c.description}</p>}
-              {teacher && (
+              {c.join_code && (
                 <div class="code-box">
                   <span class="lbl">{t('classCode')}</span>
                   <span class="code-val" id="class-code">{fmtCode(c.join_code)}</span>
-                  <button type="button" class="btn small white" onClick={share}><Icon name="share" size={16} stroke={2.2} />{t('shareCodeBtn')}</button>
+                  <button type="button" class="btn small white" onClick={() => openSheet('classQR', { classId: id })} id="class-invite"><Icon name="link" size={16} stroke={2.2} />{t('hubInvite')}</button>
                 </div>
               )}
+              <div class="row-gap"><span class="pill3 on-dark"><Icon name={c.visibility === 'public' ? 'globe' : 'lock'} size={13} />{c.visibility === 'public' ? t('classOpen') : t('classPrivate')}</span>
+                {c.instrument && <span class="pill3 on-dark">{instrumentName(c.instrument)}</span>}</div>
               <span class="mascot-peek"><Mascot mood={teacher ? 'cheer' : 'wave'} size={78} /></span>
             </div>
 
-            <Segmented value={tab} onChange={setTab} small options={[
-              { value: 'missions', label: t('assignmentsT') }, { value: 'feed', label: t('classFeed') },
-              { value: 'board', label: t('leaderboardT') }, { value: 'people', label: t('peopleT') },
-            ]} />
+            <div class="ptabs" id="class-tabs">
+              {(teacher ? [['students', t('studentsT')], ['missions', t('assignmentsT')], ['feed', t('classFeed')], ['board', t('leaderboardT')], ['people', t('settingsT')]]
+                : [['missions', t('assignmentsT')], ['mine', t('myProgress')], ['feed', t('classFeed')], ['board', t('leaderboardT')], ['people', t('peopleT')]])
+                .map(([v, l]) => <button type="button" key={v} class={tab === v ? 'on' : ''} onClick={() => (v === 'mine' ? push('student', { classId: id, uid: myId(), name: t('myProgress') }) : setTab(v))}>{l}</button>)}
+            </div>
+
+            {tab === 'students' && teacher && (prog.data ? (
+              prog.data.students.length ? (
+                <div class="prog-table" id="progress-table">
+                  <div class="pt-head"><span>{t('studentT')}</span><span>{t('avgScore')}</span><span class="pc-only">{t('thisWeek')}</span><span>{t('doneT')}</span><span /></div>
+                  {prog.data.students.map((st) => (
+                    <button type="button" class="pt-row" key={st.id} onClick={() => push('student', { classId: id, uid: st.id, name: st.name })}>
+                      <span class="pt-who"><Person name={st.name} color={st.color} size={34} /><span><strong>{st.name}</strong><span class="tiny">{st.last ? relTime(st.last) : t('notYet')}</span></span></span>
+                      <span class={`pt-acc ${st.accuracy == null ? '' : st.accuracy >= 85 ? 'good' : st.accuracy >= 60 ? 'mid' : 'low'}`}>{st.accuracy == null ? '–' : `${st.accuracy}%`}
+                        {st.trend ? <small class={st.trend > 0 ? 'up' : 'down'}>{st.trend > 0 ? '▲' : '▼'}{Math.abs(st.trend)}</small> : null}</span>
+                      <span class="pc-only">{t('minN', { n: st.minutes_week })} · {t('takesN', { n: st.week_takes })}</span>
+                      <span>{st.done}/{st.assigned}{st.recordings ? <Icon name="mic" size={13} /> : null}</span>
+                      <Icon name="chevronR" size={16} stroke={2.4} />
+                    </button>
+                  ))}
+                </div>
+              ) : <Card class="classes-hello"><Mascot mood="wave" size={70} /><p>{t('noStudentsYet')}</p><Button small icon="link" onClick={() => openSheet('classQR', { classId: id })}>{t('hubInvite')}</Button></Card>
+            ) : <Loading error={prog.error} />)}
 
             {tab === 'missions' && (
               <div class="mission-list">
@@ -267,6 +292,16 @@ export function ClassView({ id }) {
               </div>
             ) : <Loading error={board.error} />)}
 
+            {tab === 'people' && teacher && (
+              <div class="card class-settings">
+                <strong>{t('whoCanJoin')}</strong>
+                <div class="seg2">
+                  <button type="button" class={c.visibility !== 'public' ? 'on' : ''} onClick={() => setVisibility('private')}><Icon name="lock" size={16} />{t('classPrivate')}<span>{t('classPrivateSub')}</span></button>
+                  <button type="button" class={c.visibility === 'public' ? 'on' : ''} onClick={() => setVisibility('public')} id="make-open"><Icon name="globe" size={16} />{t('classOpen')}<span>{t('classOpenSub')}</span></button>
+                </div>
+                <Button small kind="secondary" icon="loop" onClick={newCode}>{t('newCode')}</Button>
+              </div>
+            )}
             {tab === 'people' && (
               <List>
                 {c.members.map((m) => (
@@ -454,7 +489,7 @@ function TryCard({ sub, a, onPractise }) {
 export function JoinClassSheet() {
   const s = useApp();
   const [code, setCode] = useState('');
-  const [name, setName] = useState(realName(s.settings.name));
+  const [name, setName] = useState(realName(s.settings.name) || (s.me?.name && s.me.name !== 'Musician' ? s.me.name : ''));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const clean = code.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -494,7 +529,9 @@ export function NewClassSheet() {
   const [name, setName] = useState('');
   const [about, setAbout] = useState('');
   const [color, setColor] = useState('orange');
-  const [teacherName, setTeacherName] = useState(realName(s.settings.name));
+  const [visibility, setVis] = useState('private');
+  const [instrument, setInstrument] = useState(s.settings.instrument || '');
+  const [teacherName, setTeacherName] = useState(realName(s.settings.name) || (s.me?.name && s.me.name !== 'Musician' ? s.me.name : ''));
   const [busy, setBusy] = useState(false);
   const [made, setMade] = useState(null);
   const [err, setErr] = useState('');
@@ -504,7 +541,7 @@ export function NewClassSheet() {
     setBusy(true); setErr('');
     try {
       await ensureProfile(teacherName.trim());
-      const r = await academy.createClass(name.trim(), about.trim(), color);
+      const r = await academy.createClass(name.trim(), about.trim(), color, { visibility, instrument });
       setMade(r.class);
       refreshClasses();
       addXP(10);
@@ -524,7 +561,8 @@ export function NewClassSheet() {
         <h2 style={{ textAlign: 'center', font: '800 24px/1.2 var(--round)' }}>{made.name}</h2>
         <p class="note-text" style={{ textAlign: 'center' }}>{t('classReady')}</p>
         <div class={`code-big c-${color}`}>{fmtCode(made.join_code)}</div>
-        <Button kind="brand" full icon="share" onClick={share}>{t('shareCodeBtn')}</Button>
+        <Button kind="brand" full icon="link" onClick={() => openSheet('classQR', { classId: made.id })}>{t('hubInvite')}</Button>
+        <Button kind="secondary" full icon="share" onClick={share}>{t('shareCodeBtn')}</Button>
       </SheetFrame>
     );
   }
@@ -538,6 +576,15 @@ export function NewClassSheet() {
       <div class="color-pick" role="radiogroup" aria-label="Colour">
         {CLASS_COLORS.map((c) => <button type="button" key={c} role="radio" aria-checked={color === c} aria-label={c} class={`swatch c-${c}${color === c ? ' on' : ''}`} onClick={() => setColor(c)} />)}
       </div>
+      <div class="seg2">
+        <button type="button" class={visibility === 'private' ? 'on' : ''} onClick={() => setVis('private')} id="new-class-private"><Icon name="lock" size={16} />{t('classPrivate')}<span>{t('classPrivateSub')}</span></button>
+        <button type="button" class={visibility === 'public' ? 'on' : ''} onClick={() => setVis('public')} id="new-class-public"><Icon name="globe" size={16} />{t('classOpen')}<span>{t('classOpenSub')}</span></button>
+      </div>
+      <label class="field-label" for="new-class-inst">{t('instrument')}</label>
+      <select class="field" id="new-class-inst" value={instrument} onChange={(e) => setInstrument(e.currentTarget.value)}>
+        <option value="">{t('anyInstrument')}</option>
+        {['piano', 'violin', 'guitar', 'voice', 'cello', 'flute', 'ukulele', 'sax', 'clarinet', 'trumpet', 'erhu', 'guzheng'].map((k) => <option key={k} value={k}>{instrumentName(k)}</option>)}
+      </select>
       <label class="field-label" for="new-class-teacher">{t('yourName')}</label>
       <input class="field" id="new-class-teacher" placeholder="Ms Tan" value={teacherName} onInput={(e) => setTeacherName(e.currentTarget.value)} maxLength={60} />
       <p class="note-text">{t('nameSeen')}</p>

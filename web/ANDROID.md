@@ -1,16 +1,16 @@
-# Haptune for Android: test it, then launch it on Google Play
+# ETASheet for Android: test it, then launch it on Google Play
 
 The Android app is the web app (`web/`) packaged with [Capacitor](https://capacitorjs.com). App ID:
-`com.sloky.haptune` (it can never change once the app is on Google Play). Nothing here needs a Mac or Android Studio:
+`com.sloky.etasheet` (it can never change once the app is on Google Play). Nothing here needs a Mac or Android Studio:
 GitHub Actions builds everything (`.github/workflows/android.yml`).
 
 ## 1. Install the test app on your phone (free, today)
 
 Every push that changes `web/` builds a new test APK and publishes it as the release **android-test**:
 
-**https://github.com/lokkkkkkkkkkkkkkkkkk/Haptune/releases/download/android-test/Haptune.apk**
+**https://github.com/lokkkkkkkkkkkkkkkkkk/Haptune/releases/download/android-test/ETASheet.apk**
 
-1. Open that link on your Android phone and download `Haptune.apk`.
+1. Open that link on your Android phone and download `ETASheet.apk`.
 2. Open the file. Android asks to allow installing apps from your browser (or Files): allow it once.
 3. Install. Later builds install over it and keep your library (they are all signed with the same test key).
 
@@ -41,18 +41,18 @@ Actions → Variables). Purchases stay switched off until step 4.
    ```
 4. In GitHub → Settings → Secrets and variables → Actions → **Secrets**, add:
    `HAPTUNE_KEYSTORE_BASE64` (the contents of haptune-upload.txt), `HAPTUNE_KEYSTORE_PASSWORD`, `HAPTUNE_KEY_ALIAS`
-   (`upload`), `HAPTUNE_KEY_PASSWORD`. The next build also makes **Haptune.aab** (Actions → the run → Artifacts →
-   Haptune-android).
-5. In the Play Console: **Create app** → name Haptune, app, free (with in-app purchases). Turn on **Play App Signing**
+   (`upload`), `HAPTUNE_KEY_PASSWORD`. The next build also makes **ETASheet.aab** (Actions → the run → Artifacts →
+   ETASheet-android).
+5. In the Play Console: **Create app** → name ETASheet, app, free (with in-app purchases). Turn on **Play App Signing**
    (Google keeps the real signing key; your upload key can be reset if lost).
-6. **Testing → Closed testing → Create track**, upload `Haptune.aab`, add your 12+ testers' Gmail addresses (friends,
+6. **Testing → Closed testing → Create track**, upload `ETASheet.aab`, add your 12+ testers' Gmail addresses (friends,
    family, students), and send them the opt-in link. They install from Google Play and keep it for 14 days.
 7. Fill in the **App content** pages (answers below), the store listing (section 6), then **Production → Create
    release** when Google allows it.
 
 App content answers:
-* **Privacy policy URL:** https://lokkkkkkkkkkkkkkkkkk.github.io/Haptune/privacy.html
-* **Account deletion URL** (required because accounts exist): https://lokkkkkkkkkkkkkkkkkk.github.io/Haptune/
+* **Privacy policy URL:** https://haptune.name.my/privacy.html
+* **Account deletion URL** (required because accounts exist): https://haptune.name.my/app/ (Me → Settings → Delete account)
   (sign in → Account → Delete account), and it is also in the app.
 * **Data safety:** collects name/username (account), user-generated content (posts, scores, photos you attach),
   app activity (practice minutes), purchase history (via Google Play), crash/diagnostic info (only when the user sends
@@ -66,7 +66,7 @@ App content answers:
 
 ## 4. Subscriptions (Plus and Pro) with RevenueCat
 
-RevenueCat (free until US$2,500 a month in revenue) handles Google Play billing and tells the Haptune server which plan
+RevenueCat (free until US$2,500 a month in revenue) handles Google Play billing and tells the ETASheet server which plan
 each account has. Only one plan check exists, on the server, so a plan bought on the phone also works when the same
 account signs in on a PC.
 
@@ -111,32 +111,30 @@ answers a month). The app reads the plans from the server.
 
 ## 6. Store listing (copy, then adjust)
 
-**Title:** Haptune: Practise & Get Any Score
+**Title:** ETASheet: Practise, Learn & Write Music
 
-**Short description (80 characters):** Ask for any song's score, practise with feedback, and learn with friends.
+**Short description (80 characters):** Play along with feedback, learn with your teacher, write and share sheet music.
 
 **Full description:**
 
-> Can't find the sheet music for the song you love? Ask the Haptune community. Paste a YouTube link or a photo of the
-> page, and musicians make the score for you. Then practise it with feedback.
+> ETASheet listens while you play and shows exactly which notes and bars to fix.
 >
-> • Ask for any song: violin, piano, guitar, voice, erhu, flute and more. Others who want it too add credits, and a
->   helper makes the score, often within a day.
-> • Help others and earn credits: the faster and better your score, the bigger the reward.
-> • Play Along: Haptune listens through the microphone and marks right and wrong notes, waiting for you or keeping the
->   beat.
-> • Real piano sound and a cursor that follows the music, MuseScore style. Practise one part while the app plays the
->   rest.
-> • Import MusicXML, MIDI, ABC, chord sheets and PDFs. Change the key in one tap.
-> • Weekly challenges, leaderboards, classes with your teacher, and courses.
+> • Play Along: the app hears your instrument through the microphone, waits for each note or keeps the beat, buzzes on
+>   a wrong note, and gives you a report: your score, the notes to fix, and the bars to loop. Every take is recorded.
+> • Learn with your teacher: join a class with a link, a QR code or a code. Your teacher sets songs, sees your progress
+>   and listens to your takes, and replies with comments and the bars to practise. Teachers and music schools run
+>   their classes here, private or open to everyone.
+> • Write: tap notes on the piano keys, scan a PDF or a photo, add chords, change the key, and share it.
+> • Stage: post what you are playing, a recording, photos or a score; request any song and help others.
+> • 4,900 free pieces, staff notation and 簡譜, piano, violin, guitar, voice, erhu, guzheng and 20+ instruments.
 > • In English, Bahasa Melayu, 简体中文 and 繁體中文.
 >
-> Free: practice, the whole community, classes and tools, with no ads. Haptune Plus adds AI help: reading music from
-> photos and PDFs, finding songs online and Hapi the tutor.
+> Free: practice, classes, writing and the whole community, with no ads. ETASheet Plus and Pro add AI help: reading
+> music from photos and PDFs, finding songs online and the AI tutor.
 
-**Bahasa Melayu (short):** Minta skor apa-apa lagu, berlatih dengan maklum balas, dan belajar bersama rakan.
+**Bahasa Melayu (short):** Main bersama dengan maklum balas, belajar bersama guru, tulis dan kongsi skor muzik.
 
-**简体中文（简短）：** 求任何歌曲的乐谱，边练边得到反馈，和朋友一起学习。
+**简体中文（简短）：** 跟奏有反馈，跟老师学习，写谱、分享乐谱。
 
 **繁體中文（簡短）：** 求任何歌曲的樂譜，邊練邊得到回饋，和朋友一起學習。
 
@@ -146,7 +144,7 @@ phone: Community home, a request with a score, Play Along, the score cursor, Pla
 ## 7. Updating the app later
 
 Change `version` in `web/package.json` (e.g. 0.4.0 → 0.5.0) when you release. Each build's version code is the GitHub
-run number, so it always goes up. Upload the new `Haptune.aab` to the same track.
+run number, so it always goes up. Upload the new `ETASheet.aab` to the same track.
 
 ## Building on your own computer (optional)
 

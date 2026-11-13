@@ -155,8 +155,8 @@ export function Segmented({ value, options, onChange, small, id }) {
   );
 }
 
-export function Chip({ children, on, onClick, color }) {
-  return <button type="button" class={`chip${on ? ' on' : ''}${color ? ' c-' + color : ''}`} onClick={onClick}>{children}</button>;
+export function Chip({ children, on, onClick, color, id }) {
+  return <button type="button" id={id} class={`chip${on ? ' on' : ''}${color ? ' c-' + color : ''}`} onClick={onClick}>{children}</button>;
 }
 
 export function Button({ children, kind = 'primary', onClick, disabled, icon, color, full, small, type = 'button', id }) {

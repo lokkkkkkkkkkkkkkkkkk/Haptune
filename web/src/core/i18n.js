@@ -1,6 +1,7 @@
 // Interface text: [English, Bahasa Melayu, 简体中文, 繁體中文]. {name} placeholders are filled by t().
 import { MORE } from './i18n-community.js';
 import { V2 } from './i18n-v2.js';
+import { V3 } from './i18n-v3.js';
 export const LANGS = [
   { id: 'en', name: 'English' }, { id: 'ms', name: 'Bahasa Melayu' }, { id: 'zh-Hans', name: '简体中文' }, { id: 'zh-Hant', name: '繁體中文' },
 ];
@@ -28,10 +29,10 @@ const S = {
   ringPractise: ['Practise', 'Berlatih', '练习', '練習'], ringLearn: ['Learn', 'Belajar', '学习', '學習'], ringStreak: ['Streak', 'Rentetan', '连续', '連續'],
   activity: ['Activity', 'Aktiviti', '活动', '活動'], improviseIdea: ['Improvise Idea', 'Idea Improvisasi', '即兴灵感', '即興靈感'],
   improviseIdeaText: ['A {style} solo over the chords of {song}.', 'Solo {style} atas kord {song}.', '用《{song}》的和弦来一段{style}独奏。', '用《{song}》的和弦來一段{style}獨奏。'],
-  plusTitle: ['Haptune Plus', 'Haptune Plus', 'Haptune Plus', 'Haptune Plus'],
+  plusTitle: ['ETASheet Plus', 'ETASheet Plus', 'ETASheet Plus', 'ETASheet Plus'],
   plusBlurb: ['Every Academy course, all improviser styles, exports, photo scanning and unlimited history.', 'Semua kursus Akademi, semua gaya improvisasi, eksport, imbasan foto dan sejarah tanpa had.', '全部学院课程、所有即兴风格、导出、拍照识谱和无限记录。', '全部學院課程、所有即興風格、匯出、拍照識譜和無限記錄。'],
   tryFreeWeek: ['Try it free for a week', 'Cuba percuma selama seminggu', '免费试用一周', '免費試用一週'],
-  welcomeTitle: ['Welcome to Haptune', 'Selamat datang ke Haptune', '欢迎使用 Haptune', '歡迎使用 Haptune'],
+  welcomeTitle: ['Welcome to ETASheet', 'Selamat datang ke ETASheet', '欢迎使用 ETASheet', '歡迎使用 ETASheet'],
   welcome1: ['Add a song', 'Tambah lagu', '添加歌曲', '新增歌曲'], welcome1b: ['From the songbook, MusicXML, MIDI, a chord sheet or a PDF. Conversion is exact.', 'Daripada buku lagu, MusicXML, MIDI, helaian kord atau PDF. Penukaran adalah tepat.', '来自曲库、MusicXML、MIDI、和弦谱或 PDF，转换精确无误。', '來自曲庫、MusicXML、MIDI、和弦譜或 PDF，轉換精確無誤。'],
   welcome2: ['Change the key', 'Tukar kunci', '升降调', '升降調'], welcome2b: ['Move any song up or down; notes and chords are re-spelled correctly.', 'Naikkan atau turunkan mana-mana lagu; not dan kord dieja semula dengan betul.', '任何歌曲都能升降调，音符与和弦会正确改写。', '任何歌曲都能升降調，音符與和弦會正確改寫。'],
   welcome3: ['Learn and improvise', 'Belajar dan berimprovisasi', '学习与即兴', '學習與即興'], welcome3b: ['Short Academy lessons, and an AI band that plays along while you solo.', 'Pelajaran Akademi yang ringkas, dan band AI yang mengiringi solo anda.', '简短的学院课程，以及陪你独奏的 AI 乐队。', '簡短的學院課程，以及陪你獨奏的 AI 樂隊。'],
@@ -52,7 +53,7 @@ const S = {
   importDone: ['Imported in {ms} ms', 'Diimport dalam {ms} ms', '导入用时 {ms} 毫秒', '匯入用時 {ms} 毫秒'],
   importExact: ['Exact: nothing was changed or lost.', 'Tepat: tiada apa diubah atau hilang.', '精确：没有任何改动或丢失。', '精確：沒有任何改動或遺失。'],
   importAligned: ['{n} notes were moved onto the beat (at most {ms} ms).', '{n} not dialihkan ke atas rentak (paling banyak {ms} ms).', '{n} 个音符被对齐到拍点（最多 {ms} 毫秒）。', '{n} 個音符被對齊到拍點（最多 {ms} 毫秒）。'],
-  importKeyEstimated: ['The file had no key signature; Haptune worked it out.', 'Fail tiada tanda kunci; Haptune mengiranya.', '文件没有调号，Haptune 已自动判断。', '檔案沒有調號，Haptune 已自動判斷。'],
+  importKeyEstimated: ['The file had no key signature; ETASheet worked it out.', 'Fail tiada tanda kunci; ETASheet mengiranya.', '文件没有调号，ETASheet 已自动判断。', '檔案沒有調號，ETASheet 已自動判斷。'],
   importPdfChords: ['Found {n} chords and {l} lyric lines in the PDF text.', 'Menemui {n} kord dan {l} baris lirik dalam teks PDF.', '在 PDF 文字中找到 {n} 个和弦和 {l} 行歌词。', '在 PDF 文字中找到 {n} 個和弦和 {l} 行歌詞。'],
   importPdfNoText: ['This PDF has no readable text (it is a scanned picture). Its pages are kept so you can practise from them; for notes and chords, import a MusicXML or MIDI version, or use photo scanning in the iPhone app.', 'PDF ini tiada teks yang boleh dibaca (ia gambar imbasan). Halamannya disimpan supaya anda boleh berlatih; untuk not dan kord, import versi MusicXML atau MIDI, atau guna imbasan foto dalam aplikasi iPhone.', '此 PDF 没有可读文字（是扫描图片）。页面已保留供练习；如需音符和和弦，请导入 MusicXML 或 MIDI 版本，或在 iPhone 应用中拍照识谱。', '此 PDF 沒有可讀文字（是掃描圖片）。頁面已保留供練習；如需音符和和弦，請匯入 MusicXML 或 MIDI 版本，或在 iPhone 應用中拍照識譜。'],
   importDrums: ['{n} drum notes were left out.', '{n} not dram ditinggalkan.', '已略过 {n} 个鼓的音符。', '已略過 {n} 個鼓的音符。'],
@@ -87,7 +88,7 @@ const S = {
   exportInKey: ['Exported in the key you are viewing ({key}).', 'Dieksport dalam kunci yang anda lihat ({key}).', '按当前所看的调导出（{key}）。', '按目前所看的調匯出（{key}）。'],
   favourite: ['Favourite', 'Kegemaran', '收藏', '收藏'], unfavourite: ['Remove Favourite', 'Buang Kegemaran', '取消收藏', '取消收藏'],
   practiseMic: ['Practise with Mic', 'Berlatih dengan Mikrofon', '用麦克风练习', '用麥克風練習'], listening: ['Listening…', 'Mendengar…', '正在聆听…', '正在聆聽…'],
-  micUnavailable: ['Live listening needs the microphone, which this preview cannot use. Install Haptune from your GitHub Pages link (Add to Home Screen) to practise with the mic.', 'Pendengaran langsung memerlukan mikrofon, yang tidak boleh digunakan dalam pratonton ini. Pasang Haptune dari pautan GitHub Pages anda (Tambah ke Skrin Utama) untuk berlatih dengan mikrofon.', '实时聆听需要麦克风，此预览无法使用。请从你的 GitHub Pages 链接安装 Haptune（添加到主屏幕）后再用麦克风练习。', '即時聆聽需要麥克風，此預覽無法使用。請從你的 GitHub Pages 連結安裝 Haptune（加入主畫面）後再用麥克風練習。'],
+  micUnavailable: ['Live listening needs the microphone, which this preview cannot use. Install ETASheet from your GitHub Pages link (Add to Home Screen) to practise with the mic.', 'Pendengaran langsung memerlukan mikrofon, yang tidak boleh digunakan dalam pratonton ini. Pasang ETASheet dari pautan GitHub Pages anda (Tambah ke Skrin Utama) untuk berlatih dengan mikrofon.', '实时聆听需要麦克风，此预览无法使用。请从你的 GitHub Pages 链接安装 ETASheet（添加到主屏幕）后再用麦克风练习。', '即時聆聽需要麥克風，此預覽無法使用。請從你的 GitHub Pages 連結安裝 ETASheet（加入主畫面）後再用麥克風練習。'],
   micDenied: ['Microphone access was refused. Allow it in Settings > Safari > Microphone, then try again.', 'Akses mikrofon ditolak. Benarkan dalam Tetapan > Safari > Mikrofon, kemudian cuba lagi.', '麦克风访问被拒绝。请在“设置 > Safari > 麦克风”中允许后再试。', '麥克風存取被拒絕。請在「設定 > Safari > 麥克風」中允許後再試。'],
   takeResult: ['{acc}% of notes right · {tune}% in tune', '{acc}% not betul · {tune}% tepat nada', '{acc}% 音符正确 · {tune}% 音准', '{acc}% 音符正確 · {tune}% 音準'],
   partToPractise: ['Part', 'Bahagian', '声部', '聲部'],
@@ -116,7 +117,7 @@ const S = {
   youWon: ['You beat the challenge!', 'Anda menang cabaran!', '你赢得了挑战！', '你贏得了挑戰！'], youLost: ['Close! Try again to win.', 'Hampir! Cuba lagi untuk menang.', '差一点！再试一次。', '差一點！再試一次。'],
   aiTutor: ['AI Tutor', 'Tutor AI', 'AI 导师', 'AI 導師'], aiTutorHelp: ['Ask anything about music theory, practice or your instrument.', 'Tanya apa sahaja tentang teori muzik, latihan atau alat muzik anda.', '问任何关于乐理、练习或乐器的问题。', '問任何關於樂理、練習或樂器的問題。'],
   ask: ['Ask', 'Tanya', '提问', '提問'], thinking: ['Thinking…', 'Berfikir…', '思考中…', '思考中…'],
-  aiUnavailable: ['The AI tutor works when Haptune is opened inside Claude.', 'Tutor AI berfungsi apabila Haptune dibuka dalam Claude.', '在 Claude 中打开 Haptune 时可使用 AI 导师。', '在 Claude 中打開 Haptune 時可使用 AI 導師。'],
+  aiUnavailable: ['The AI tutor works when ETASheet is opened inside Claude.', 'Tutor AI berfungsi apabila ETASheet dibuka dalam Claude.', '在 Claude 中打开 ETASheet 时可使用 AI 导师。', '在 Claude 中打開 ETASheet 時可使用 AI 導師。'],
   badges: ['Badges', 'Lencana', '徽章', '徽章'], dailyChallenge: ['Daily Challenge', 'Cabaran Harian', '每日挑战', '每日挑戰'],
   dailyChallengeSub: ['8 quick ear-training questions. Same questions for everyone today.', '8 soalan latihan telinga. Soalan sama untuk semua hari ini.', '8 道练耳快问，今天所有人题目相同。', '8 道練耳快問，今天所有人題目相同。'],
   q_noteName: ['Name this note', 'Namakan not ini', '这是什么音？', '這是什麼音？'], q_beats: ['How many beats?', 'Berapa detik?', '几拍？', '幾拍？'],
@@ -153,14 +154,14 @@ const S = {
   wifiOnlyHelp: ['Imports are read on this device and never use data. With this on, online extras such as the AI tutor wait for Wi-Fi whenever the browser can tell which network you are on.', 'Import dibaca pada peranti ini dan tidak pernah menggunakan data. Jika dihidupkan, ciri dalam talian seperti tutor AI menunggu Wi-Fi apabila pelayar dapat mengesan rangkaian anda.', '导入在本机完成，从不耗流量。开启后，只要浏览器能识别当前网络，AI 导师等联网功能就会等待 Wi-Fi。', '匯入在本機完成，從不耗流量。開啟後，只要瀏覽器能識別目前網路，AI 導師等連網功能就會等待 Wi-Fi。'],
   waitingWifi: ['Waiting for Wi-Fi (Wi-Fi only is on)', 'Menunggu Wi-Fi (Wi-Fi sahaja dihidupkan)', '等待 Wi-Fi（已开启仅 Wi-Fi）', '等待 Wi-Fi（已開啟僅 Wi-Fi）'],
   cellularNotice: ['You seem to be on mobile data. Continue anyway?', 'Anda nampaknya menggunakan data mudah alih. Teruskan?', '你似乎在使用移动数据。仍要继续吗？', '你似乎在使用行動數據。仍要繼續嗎？'],
-  subscription: ['Subscription', 'Langganan', '订阅', '訂閱'], plusActive: ['Haptune Plus is on (demo)', 'Haptune Plus aktif (demo)', 'Haptune Plus 已开启（演示）', 'Haptune Plus 已開啟（示範）'],
+  subscription: ['Subscription', 'Langganan', '订阅', '訂閱'], plusActive: ['ETASheet Plus is on (demo)', 'ETASheet Plus aktif (demo)', 'ETASheet Plus 已开启（演示）', 'ETASheet Plus 已開啟（示範）'],
   backup: ['Back Up Library', 'Sandarkan Pustaka', '备份曲库', '備份曲庫'], restore: ['Restore From Backup', 'Pulihkan Dari Sandaran', '从备份恢复', '從備份還原'],
   backupHelp: ['Your library and progress live on this device. A backup is one file you can keep in iCloud Drive, Google Drive or anywhere.', 'Pustaka dan kemajuan anda disimpan pada peranti ini. Sandaran ialah satu fail yang boleh disimpan di iCloud Drive, Google Drive atau di mana-mana.', '曲库与进度保存在本机。备份是一个文件，可放在 iCloud 云盘、Google 云端硬盘或任何地方。', '曲庫與進度儲存在本機。備份是一個檔案，可放在 iCloud 雲碟、Google 雲端硬碟或任何地方。'],
   restored: ['Restored {n} pieces', 'Memulihkan {n} lagu', '已恢复 {n} 首', '已還原 {n} 首'], resetAll: ['Erase All Data', 'Padam Semua Data', '清除全部数据', '清除全部資料'],
   confirmErase: ['Erase everything on this device?', 'Padam semua pada peranti ini?', '清除本机所有内容？', '清除本機所有內容？'], erase: ['Erase', 'Padam', '清除', '清除'],
   about: ['About', 'Perihal', '关于', '關於'], licences: ['Notation by Verovio (LGPL). PDF reading by PDF.js (Apache 2.0). Songbook melodies are in the public domain.', 'Notasi oleh Verovio (LGPL). Bacaan PDF oleh PDF.js (Apache 2.0). Melodi buku lagu adalah domain awam.', '记谱由 Verovio（LGPL）提供，PDF 读取由 PDF.js（Apache 2.0）提供。曲库旋律均属公有领域。', '記譜由 Verovio（LGPL）提供，PDF 讀取由 PDF.js（Apache 2.0）提供。曲庫旋律均屬公有領域。'],
   installTitle: ['Install on iPhone', 'Pasang di iPhone', '安装到 iPhone', '安裝到 iPhone'],
-  installHelp: ['In Safari, tap Share, then Add to Home Screen. Haptune opens full screen and works offline.', 'Dalam Safari, ketik Kongsi, kemudian Tambah ke Skrin Utama. Haptune dibuka skrin penuh dan berfungsi luar talian.', '在 Safari 中点“分享”，再点“添加到主屏幕”。Haptune 将全屏打开并可离线使用。', '在 Safari 中點「分享」，再點「加入主畫面」。Haptune 將全螢幕開啟並可離線使用。'],
+  installHelp: ['In Safari, tap Share, then Add to Home Screen. ETASheet opens full screen and works offline.', 'Dalam Safari, ketik Kongsi, kemudian Tambah ke Skrin Utama. ETASheet dibuka skrin penuh dan berfungsi luar talian.', '在 Safari 中点“分享”，再点“添加到主屏幕”。ETASheet 将全屏打开并可离线使用。', '在 Safari 中點「分享」，再點「加入主畫面」。ETASheet 將全螢幕開啟並可離線使用。'],
   // paywall
   plusFeatures1: ['All six Academy courses', 'Semua enam kursus Akademi', '全部六门学院课程', '全部六門學院課程'], plusFeatures2: ['Every improviser style and the jam band', 'Semua gaya improvisasi dan band jam', '所有即兴风格与合奏乐队', '所有即興風格與合奏樂隊'],
   plusFeatures3: ['Export MusicXML, MIDI and ChordPro', 'Eksport MusicXML, MIDI dan ChordPro', '导出 MusicXML、MIDI 与 ChordPro', '匯出 MusicXML、MIDI 與 ChordPro'], plusFeatures4: ['Unlimited practice history and reports', 'Sejarah latihan dan laporan tanpa had', '无限练习记录与报告', '無限練習記錄與報告'],
@@ -168,7 +169,7 @@ const S = {
   freeWeek: ['7 days free', '7 hari percuma', '免费 7 天', '免費 7 天'], bestValue: ['Best value', 'Nilai terbaik', '最划算', '最划算'],
   startTrial: ['Start Free Trial', 'Mula Percubaan Percuma', '开始免费试用', '開始免費試用'], notNow: ['Not Now', 'Bukan Sekarang', '以后再说', '以後再說'],
   demoPayment: ['Demo: the web version takes no payment. In the iPhone app, Apple handles the purchase and you can cancel any time.', 'Demo: versi web tidak mengambil bayaran. Dalam aplikasi iPhone, Apple mengendalikan pembelian dan anda boleh batal bila-bila masa.', '演示：网页版不会收费。在 iPhone 应用中由 Apple 处理购买，可随时取消。', '示範：網頁版不會收費。在 iPhone 應用中由 Apple 處理購買，可隨時取消。'],
-  plusOnly: ['Included with Haptune Plus', 'Termasuk dalam Haptune Plus', 'Haptune Plus 专享', 'Haptune Plus 專享'],
+  plusOnly: ['Included with ETASheet Plus', 'Termasuk dalam ETASheet Plus', 'ETASheet Plus 专享', 'ETASheet Plus 專享'],
   nQuestions: ['{n} questions', '{n} soalan', '{n} 道题', '{n} 道題'], handsOn: ['Hands-on activity', 'Aktiviti amali', '动手练习', '動手練習'],
   saveFailed: ['Could not save the file here. Try again, or use the installed app.', 'Fail tidak dapat disimpan di sini. Cuba lagi, atau guna aplikasi yang dipasang.', '无法在此保存文件。请重试，或使用已安装的应用。', '無法在此儲存檔案。請重試，或使用已安裝的應用。'],
   engineFailed: ['Sheet music could not be drawn here. Piano Roll, Chords and Lyrics still work, and playback is unaffected.', 'Notasi muzik tidak dapat dilukis di sini. Gulungan Piano, Kord dan Lirik masih berfungsi, dan main balik tidak terjejas.', '这里无法绘制五线谱。钢琴卷帘、和弦与歌词仍可使用，播放不受影响。', '這裡無法繪製五線譜。鋼琴捲簾、和弦與歌詞仍可使用，播放不受影響。'],
@@ -189,7 +190,7 @@ const S = {
   findSongTileSub: ['Type a name or paste a YouTube link', 'Taip nama atau tampal pautan YouTube', '输入歌名或粘贴 YouTube 链接', '輸入歌名或貼上 YouTube 連結'],
   keepGoing: ['Keep going', 'Teruskan', '继续练习', '繼續練習'],
   playAlong: ['Play Along', 'Main Bersama', '跟奏', '跟奏'],
-  playAlongSub: ['You play, Haptune listens', 'Anda main, Haptune mendengar', '你来弹，Haptune 来听', '你來彈，Haptune 來聽'],
+  playAlongSub: ['You play, ETASheet listens', 'Anda main, ETASheet mendengar', '你来弹，ETASheet 来听', '你來彈，ETASheet 來聽'],
   listenSub: ['Hear it played', 'Dengar ia dimainkan', '先听一遍', '先聽一遍'],
   todayGoal: ['Today: {n} of {g} min', 'Hari ini: {n} daripada {g} min', '今天：{n}/{g} 分钟', '今天：{n}/{g} 分鐘'],
   goalDone: ['Goal reached. Great work!', 'Sasaran tercapai. Syabas!', '达成今天的目标，真棒！', '達成今天的目標，真棒！'],
@@ -205,7 +206,7 @@ const S = {
   fileTileSub: ['MusicXML, MIDI, ABC, ChordPro', 'MusicXML, MIDI, ABC, ChordPro', 'MusicXML、MIDI、ABC、ChordPro', 'MusicXML、MIDI、ABC、ChordPro'],
   moreWays: ['More ways', 'Cara lain', '更多方式', '更多方式'],
   sampleSongs: ['Sample songs', 'Lagu contoh', '示例歌曲', '範例歌曲'],
-  sampleSongsSub: ['Try Haptune with public-domain songs', 'Cuba Haptune dengan lagu domain awam', '用公版歌曲试试 Haptune', '用公版歌曲試試 Haptune'],
+  sampleSongsSub: ['Try ETASheet with public-domain songs', 'Cuba ETASheet dengan lagu domain awam', '用公版歌曲试试 ETASheet', '用公版歌曲試試 ETASheet'],
   readMusic: ['Read sheet music', 'Baca skor muzik', '识读乐谱', '識讀樂譜'],
   stepPages: ['Your pages', 'Halaman anda', '你的页面', '你的頁面'],
   addPage: ['Add a page', 'Tambah halaman', '添加一页', '新增一頁'],
@@ -231,7 +232,7 @@ const S = {
   showOnPage: ['See on the page', 'Lihat pada halaman', '在原页上看', '在原頁上看'],
   hearBar: ['Hear it', 'Dengar', '听一听', '聽一聽'],
   saveToLibrary: ['Save to Library', 'Simpan ke Pustaka', '保存到曲库', '儲存到曲庫'],
-  aiUnreachable: ["Couldn't reach Haptune online. It may be waking up: try again in a moment. The PDF is kept so you can view it.", 'Tidak dapat menghubungi Haptune dalam talian. Ia mungkin sedang bangun: cuba lagi sebentar lagi. PDF disimpan supaya anda boleh melihatnya.', '暂时连不上 Haptune 在线服务，可能正在启动，请稍后再试。PDF 已保存，可以查看。', '暫時連不上 Haptune 線上服務，可能正在啟動，請稍後再試。PDF 已儲存，可以查看。'],
+  aiUnreachable: ["Couldn't reach ETASheet online. It may be waking up: try again in a moment. The PDF is kept so you can view it.", 'Tidak dapat menghubungi ETASheet dalam talian. Ia mungkin sedang bangun: cuba lagi sebentar lagi. PDF disimpan supaya anda boleh melihatnya.', '暂时连不上 ETASheet 在线服务，可能正在启动，请稍后再试。PDF 已保存，可以查看。', '暫時連不上 ETASheet 線上服務，可能正在啟動，請稍後再試。PDF 已儲存，可以查看。'],
   aiOff: ["AI reading isn't available in this version yet. The PDF is kept so you can view it.", 'Bacaan AI belum tersedia dalam versi ini. PDF disimpan supaya anda boleh melihatnya.', '此版本暂不支持 AI 识谱。PDF 已保存，可以查看。', '此版本暫不支援 AI 識譜。PDF 已儲存，可以查看。'],
   readFailed: ["Couldn't read this one", 'Tidak dapat membaca ini', '这份没能读出来', '這份沒能讀出來'],
   tryClearer: ['Try a clearer photo: straight on, flat, in good light.', 'Cuba foto yang lebih jelas: lurus, rata, dalam cahaya yang baik.', '请把乐谱放平，在光线充足处正对拍清楚。', '請把樂譜放平，在光線充足處正對拍清楚。'],
@@ -277,7 +278,7 @@ const S = {
   missedNotes: ['{n} notes missed', '{n} not tersilap', '错了 {n} 个音', '錯了 {n} 個音'],
   submitToTeacher: ['Send to my teacher', 'Hantar kepada guru', '交给老师', '交給老師'],
   sentToTeacher: ['Sent to your teacher!', 'Dihantar kepada guru anda!', '已交给老师！', '已交給老師！'],
-  buzzHint: ['On Android the phone buzzes on a wrong note. On iPhone, the Haptune app taps your Apple Watch.', 'Pada Android, telefon bergetar apabila not salah. Pada iPhone, aplikasi Haptune mengetuk Apple Watch anda.', '安卓手机弹错时会振动；在 iPhone 上，Haptune App 会轻敲你的 Apple Watch。', 'Android 手機彈錯時會震動；在 iPhone 上，Haptune App 會輕敲你的 Apple Watch。'],
+  buzzHint: ['On Android the phone buzzes on a wrong note. On iPhone, the ETASheet app taps your Apple Watch.', 'Pada Android, telefon bergetar apabila not salah. Pada iPhone, aplikasi ETASheet mengetuk Apple Watch anda.', '安卓手机弹错时会振动；在 iPhone 上，ETASheet App 会轻敲你的 Apple Watch。', 'Android 手機彈錯時會震動；在 iPhone 上，ETASheet App 會輕敲你的 Apple Watch。'],
   originalSong: ['Original', 'Asal', '原曲', '原曲'],
   // ---- export ----
   exportAs: ['Export as', 'Eksport sebagai', '导出为', '匯出為'],
@@ -346,7 +347,7 @@ const S = {
   noClassesYet: ['Learn with a teacher, any time', 'Belajar dengan guru, bila-bila masa', '随时跟老师学习', '隨時跟老師學習'],
   noClassesSub: ['Join with a class code, or start a class to teach. Practise whenever you like before the due date.', 'Sertai dengan kod kelas, atau mulakan kelas untuk mengajar. Berlatih bila-bila masa sebelum tarikh akhir.', '输入班级代码加入，或自己开班教学。截止前随时都能练。', '輸入班級代碼加入，或自己開班教學。截止前隨時都能練。'],
   leaveClass: ['Leave class', 'Tinggalkan kelas', '退出班级', '退出班級'],
-  classesOffline: ['Classes need Haptune online, which isn’t available in this version yet.', 'Kelas memerlukan Haptune dalam talian, yang belum tersedia dalam versi ini.', '班级需要 Haptune 在线服务，此版本暂不可用。', '班級需要 Haptune 線上服務，此版本暫不可用。'],
+  classesOffline: ['Classes need ETASheet online, which isn’t available in this version yet.', 'Kelas memerlukan ETASheet dalam talian, yang belum tersedia dalam versi ini.', '班级需要 ETASheet 在线服务，此版本暂不可用。', '班級需要 ETASheet 線上服務，此版本暫不可用。'],
   fromYourLibrary: ['From your library', 'Daripada pustaka anda', '从你的曲库选择', '從你的曲庫選擇'],
   listenRecording: ['Play recording', 'Main rakaman', '播放录音', '播放錄音'],
   focusBars: ['Bars to work on', 'Bar untuk diperbaiki', '需要加强的小节', '需要加強的小節'],
@@ -356,7 +357,7 @@ const S = {
   joinedClass: ['You joined {name}!', 'Anda menyertai {name}!', '你加入了 {name}！', '你加入了 {name}！'],
   classReady: ['Your class is ready. Share the code with your students.', 'Kelas anda sedia. Kongsi kod dengan pelajar anda.', '班级建好了，把代码分享给学生吧。', '班級建好了，把代碼分享給學生吧。'],
   shareCodeBtn: ['Share code', 'Kongsi kod', '分享代码', '分享代碼'],
-  shareCodeText: ['Join my Haptune class "{name}" with the code {code}', 'Sertai kelas Haptune saya "{name}" dengan kod {code}', '用代码 {code} 加入我的 Haptune 班级「{name}」', '用代碼 {code} 加入我的 Haptune 班級「{name}」'],
+  shareCodeText: ['Join my ETASheet class "{name}" with the code {code}', 'Sertai kelas ETASheet saya "{name}" dengan kod {code}', '用代码 {code} 加入我的 ETASheet 班级「{name}」', '用代碼 {code} 加入我的 ETASheet 班級「{name}」'],
   teacherT: ['Teacher', 'Guru', '老师', '老師'],
   studentT: ['Student', 'Pelajar', '学生', '學生'],
   toDoT: ['To do', 'Perlu dibuat', '待完成', '待完成'],
@@ -426,7 +427,7 @@ const S = {
 };
 
 
-Object.assign(S, MORE, V2);                // community, accounts, plans and help (i18n-community.js)
+Object.assign(S, MORE, V2, V3);                // community, accounts, plans and help (i18n-community.js)
 
 const INSTR = {
   piano: ['Piano', 'Piano', '钢琴', '鋼琴'], keyboard: ['Keyboard', 'Papan kekunci', '电子琴', '電子琴'], violin: ['Violin', 'Biola', '小提琴', '小提琴'], viola: ['Viola', 'Viola', '中提琴', '中提琴'],

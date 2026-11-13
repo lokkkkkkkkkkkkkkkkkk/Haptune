@@ -1,5 +1,7 @@
 """Stage: presence, trending, search, the daily challenge with friends, emoji reactions, Notes and passes."""
 import os
+os.environ.setdefault("HAPTUNE_SIGNIN_REQUIRED", "0")   # these tests use guest accounts; test_hub.py checks the sign-in rule
+import os
 import sys
 import time
 

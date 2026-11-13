@@ -3,7 +3,7 @@ import { useApp, getPiece, updatePiece, deletePiece, markOpened, pop, push, open
 import { t, getLang, instrumentName, INSTRUMENTS } from '../../core/i18n.js';
 import { Icon, Card, Section, List, Row, Segmented, Stepper, Button, Chip, Stars, FretDiagram, PianoChord, Keyboard, Badge, Toggle } from '../components.jsx';
 import { NavBar, SheetFrame } from './common.jsx';
-import { renderMusicXML, isVerovioReady, pageSize } from '../verovio.js';
+import { renderMusicXML, isVerovioReady, pageSize, warmEditor } from '../verovio.js';
 import { saveFile, scorePdf, SaveError } from '../files.js';
 import { openPdf } from '../importer.js';
 import { Transport, audioContext, note, listen } from '../audio.js';
@@ -159,6 +159,8 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
   const builtRef = useRef(null);
   const tlRef = useRef(null);
   const micStop = useRef(null);
+  const takeRec = useRef(null);                 // resolves to this take's recording once the microphone closes
+  const appNotes = useRef([]);                  // what the app itself is playing (so the microphone doesn't take it for the player)
   const frames = useRef([]);
   const follower = useRef(null);
   const practice = useRef(null);
@@ -182,6 +184,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
     cursorRef.current = cur;
     if (transport.current?.playing || lastQ.current > 0) cur.update(lastQ.current, { scroll: false, notes: !!transport.current?.playing });
     else idle(() => { if (cursorRef.current === cur && !cur.geo) cur.measure(); });     // ready before the first Play
+    idle(() => warmEditor());                                 // the note editor opens at once
   };
   // prepare the notes for playing while the player reads the page, so the first Play starts at once
   useEffect(() => { if (perf) idle(() => { try { timeline(); } catch { /* built again on Play */ } }); }, [perf]);
@@ -369,7 +372,10 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
     const range = rng !== undefined ? rng : loop;
     try {
       micStop.current?.();
-      micStop.current = await listen((p) => onFrame(p));
+      takeRec.current = null;
+      const stopMic = await listen((p, rms) => onFrame(p, rms), { record: true });
+      micStop.current = stopMic;
+      takeRec.current = stopMic.recording;
     } catch (e) {
       toast(t(e.code === 'denied' ? 'micDenied' : 'micUnavailable'), 'err');
       return;
@@ -380,6 +386,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
       const exp = expectedNotes(perf, matchSel(psel), range);
       const singer = SINGING.has(s.settings.instrument) || tScore.parts[psel.pi ?? 0]?.instrument === 'voice';
       follower.current = new Follower(exp, { octaveOk: singer || !!arranged?.octaves });
+      follower.current.ignore = (m) => { const now = performance.now(); appNotes.current = appNotes.current.filter((x) => x.until > now); return appNotes.current.some((x) => x.midi === m && !exp[follower.current.k]?.midis.includes(m)); };
       setPa({ mode, sel: psel, msg: null, k: 0, n: exp.length });
       markNow();
     } else {
@@ -406,7 +413,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
     }
   };
 
-  const onFrame = (p) => {
+  const onFrame = (p, rms = 0) => {
     const pr = practice.current;
     if (!pr) return;
     if (pr.mode === 'beat') {
@@ -419,7 +426,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
     }
     const f = follower.current;
     if (!f) return;
-    const r = f.push(p ? { midi: p.midi, rms: p.rms } : null);
+    const r = f.push(p ? { midi: p.midi, rms: p.rms } : null, rms);
     if (!r) return;
     const box = scoreBox.current;
     const exp = f.exp[r.index];
@@ -431,6 +438,8 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
       else markNow();
     } else {
       if (pr.buzzWrong) buzz('wrong');
+      flashWrong();
+      elsFor(exp.ids).forEach((el) => { el.classList.remove('shake'); void el.getBBox?.(); el.classList.add('shake'); });
       setPa((x) => x && ({ ...x, msg: { played: r.played, want: exp.top } }));
     }
   };
@@ -450,7 +459,9 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
       if (matchSel(pr.sel)(e)) continue;
       const st = (secondsAt(perf.tempos, e.t, speed) - secondsAt(perf.tempos, a, speed));
       if (st > 0.05) continue;
-      note(now, e.midi, Math.min(1.6, secondsAt(perf.tempos, e.t.add(e.dur), speed) - secondsAt(perf.tempos, e.t, speed)), Math.round((e.vel || 80) * 0.8), instFor(e), -0.2);
+      const len = Math.min(1.6, secondsAt(perf.tempos, e.t.add(e.dur), speed) - secondsAt(perf.tempos, e.t, speed));
+      note(now, e.midi, len, Math.round((e.vel || 80) * 0.8), instFor(e), -0.2);
+      appNotes.current.push({ midi: e.midi, until: performance.now() + len * 1000 + 250 });
     }
   };
 
@@ -464,7 +475,13 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
     recordTake({ pieceId: meta.id, title: meta.title, seconds: secs, accuracy: r.accuracy, inTune: r.inTune ?? r.accuracy });
     if (r.accuracy >= 0.85) addXP(20);
     const barsList = [...r.bars.entries()].sort((x, y) => x[0] - y[0]).map(([mi, b]) => ({ bar: barNo(mi), accuracy: b.total ? b.right / b.total : 1 }));
-    setResult({ ...r, seconds: secs, tricky: trickyBars(r.bars), barsList, mode: pr?.mode, speed: pr?.speed ?? speed, part: pr?.sel?.id });
+    const keyF = sheetKey?.fifths || 0;
+    const nm = (m) => pitchName(spellMidi(m, keyF));
+    const wrong = (r.wrong || []).slice(0, 40).map((w) => ({ bar: barNo(w.mi), mi: w.mi, want: nm(w.want), played: w.played == null ? '' : nm(w.played) }));
+    setResult({ ...r, wrong, seconds: secs, tricky: trickyBars(r.bars), barsList, mode: pr?.mode, speed: pr?.speed ?? speed, part: pr?.sel?.id, title: meta.title });
+    const recP = takeRec.current;
+    takeRec.current = null;
+    if (recP) recP().then((rec) => { if (rec?.blob?.size > 2000) setResult((x) => x && ({ ...x, recording: rec, recordingURL: URL.createObjectURL(rec.blob) })); }).catch(() => {});
     // today's tune: the try goes on the board by itself (the best one of the day counts)
     if (daily && hasServer() && !pr?.range) {
       C.enterDaily({ song: daily, accuracy: Math.round(r.accuracy * 1000) / 1000, tempo_pct: Math.round((pr?.speed ?? speed) * 100), seconds: secs })
@@ -480,8 +497,8 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
     const pr = practice.current;
     if (!pr || !perf) return;
     const bars = new Map();
+    const wrong = [];
     let right = 0, tuned = 0, total = 0;
-    const box = scoreBox.current;
     for (const e of perf.events) {
       if (!matchSel(pr.sel)(e) || e.unpitched) continue;
       if (pr.range && (e.mi < pr.range.from || e.mi > pr.range.to)) continue;
@@ -500,9 +517,10 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
       const bs = bars.get(e.mi) || { right: 0, total: 0 };
       bs.total++; if (ok) bs.right++;
       bars.set(e.mi, bs);
+      if (!ok && wrong.length < 200) wrong.push({ mi: e.mi, want: e.midi, played: fr.length ? Math.round(fr[Math.floor(fr.length / 2)]) : null });
       elsFor(e.ids).forEach((el) => el.classList.add(ok ? 'ok' : 'bad'));
     }
-    showResult({ accuracy: total ? right / total : 0, right, total, inTune: right ? tuned / right : 0, bars });
+    showResult({ accuracy: total ? right / total : 0, right, total, inTune: right ? tuned / right : 0, bars, wrong });
   }
 
   const practiseBars = (mi, pct) => {
@@ -527,10 +545,13 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
   const sendToTeacher = async () => {
     if (!assignment || !result) return;
     try {
+      const rec = result.recording?.blob ? await blobToB64(result.recording.blob) : null;
       const r = await academy.submit(assignment.id, {
         accuracy: Math.round(result.accuracy * 1000) / 1000, timing: result.inTune ?? null, tempo_pct: Math.round(result.speed * 100),
         seconds: result.seconds || 0, bars: result.barsList.map((b) => Math.round(b.accuracy * 100) / 100),
         bar_numbers: result.barsList.map((b) => Number(b.bar) || 0),
+        note: result.wrong?.length ? result.wrong.slice(0, 12).map((w) => `${t('bar', { n: w.bar })}: ${w.played || '?'} → ${w.want}`).join(' · ') : '',
+        recording_b64: rec, recording_type: rec ? result.recording.type : null,
       });
       toast(t('sentToTeacher'));
       if (r.submission?.reached_goal) addXP(30);
@@ -617,6 +638,23 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
         )}
 
         {tScore && (
+          <div class="tools-strip" id="song-tools">
+            <button type="button" class="tool-btn c-violet" id="tool-key" onClick={() => openSheet('keySheet', { pieceId: meta.id, semis, onPick: setSemis, keyText: curKeyText, originalKey: originalKey ? keyName(originalKey) : '' })}>
+              <span class="ic"><Icon name="key" size={19} stroke={2.2} /></span><b>{curKeyText || '–'}</b>{t('changeKey')}</button>
+            <button type="button" class="tool-btn c-blue" id="tool-speed" onClick={() => setSpeed((x) => (x >= 1 ? 0.75 : x >= 0.75 ? 0.5 : 1))}>
+              <span class="ic"><Icon name="clock" size={19} stroke={2.2} /></span><b>{Math.round(speed * 100)}%</b>{t('speed')}</button>
+            {choices.length > 0 && <button type="button" class={`tool-btn c-pink${Object.values(mix).some((m) => m.mute || m.solo || (m.vol ?? 1) < 1) ? ' on' : ''}`} id="tool-mixer" onClick={() => openSheet('mixer', { choices, mix, onChange: setMix, label: handLabel })}>
+              <span class="ic"><Icon name="mixer" size={19} stroke={2.2} /></span><b>{t('partsN', { n: choices.length })}</b>{t('mixer')}</button>}
+            <button type="button" class={`tool-btn c-orange${loop ? ' on' : ''}`} id="tool-loop" onClick={toggleLoop}>
+              <span class="ic"><Icon name="loop" size={19} stroke={2.2} /></span><b>{loop ? `${barNo(loop.from)}–${barNo(loop.to)}` : t('off')}</b>{t('loop')}</button>
+            <button type="button" class={`tool-btn c-teal${metro ? ' on' : ''}`} onClick={() => setMetro(!metro)}>
+              <span class="ic"><Icon name="metronome" size={19} stroke={2.2} /></span><b>{metro ? t('on') : t('off')}</b>{t('metronome')}</button>
+            <button type="button" class={`tool-btn c-blue${forInst ? ' on' : ''}`} id="tool-inst" onClick={() => openSheet('instrumentPick', { value: forInst, onPick: setForInst })}>
+              <span class="ic"><Icon name="violin" size={19} stroke={2.2} /></span><b>{forInst ? instrumentName(forInst) : t('asWritten')}</b>{t('writtenFor')}</button>
+          </div>
+        )}
+
+        {tScore && (
           <div class="part-box">
             {choices.length > 0 && (
               <div class="part-row">
@@ -628,14 +666,6 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
                 </div>
               </div>
             )}
-            <div class="part-row">
-              <span class="k">{t('writtenFor')}</span>
-              <div class="chips">
-                <Chip on={!forInst} onClick={() => setForInst(null)}>{t('asWritten')}</Chip>
-                {[...new Set([s.settings.instrument, forInst].filter((x) => x && INSTRUMENT_DEFS[x]))].map((k) => <Chip key={k} on={forInst === k} onClick={() => setForInst(k)} >{instrumentName(k)}{INSTRUMENT_DEFS[k].pitch ? ` (${INSTRUMENT_DEFS[k].pitch})` : ''}</Chip>)}
-                <Chip onClick={() => openSheet('instrumentPick', { value: forInst, onPick: setForInst })}><Icon name="chevronD" size={14} /> {t('otherInstrument')}</Chip>
-              </div>
-            </div>
             {arranged && (
               <div class="banner" id="arr-note"><Icon name="info" size={18} stroke={2.2} /><div class="sub" style={{ flex: 1 }}>
                 {t('arrNote', { inst: instrumentName(forInst) })}{arranged.octaves ? ` ${t('arrOctave', { n: Math.abs(arranged.octaves), dir: t(arranged.octaves > 0 ? 'higher' : 'lower') })}` : ''}
@@ -647,6 +677,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
         )}
 
         {result && <ResultCard result={result} barNo={barNo} onPractise={practiseBars} onAgain={openPlayAlong} assignment={assignment} onSend={sendToTeacher}
+          onClass={() => openSheet('take', { result })} onShowBar={(mi) => { setView('sheet'); goToBar(mi); }}
           challenge={challenge || (rec.songId && challengeSong.current === rec.songId ? rec.songId : null)} onChallenge={enterChallenge}
           onShare={() => openSheet('compose', { type: 'show', show: { piece: meta.title, accuracy: Math.round(result.accuracy * 1000) / 1000, minutes: Math.round((result.seconds || 0) / 6) / 10, mode: result.mode, tempo_pct: Math.round((result.speed || 1) * 100) } })} />}
 
@@ -668,7 +699,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
         {views.length > 1 && <Segmented id="piece-views" value={view} onChange={setView} options={views} />}
 
         {view === 'sheet' && xml && <SheetMusic xml={xml} boxRef={scoreBox} layerRef={layerRef} onDrawn={onSheetDrawn} flagged={flags.map((f) => f.bar - 1)} changed={rec.changedIds}
-          onFallback={() => setView('roll')} onTapId={(nid) => { const e = perf?.events.find((x) => x.ids.includes(nid)); if (!e) return; goToBar(e.mi); if (sel.pi === null && choices.length) { const c = choices.find((x) => x.pi === e.pi && (!x.staff || x.staff === (e.staff || 1))); if (c) { setTap(c); clearTimeout(tapTimer.current); tapTimer.current = setTimeout(() => setTap(null), 8000); } } }} />}
+          active={active} onTapBar={(mi) => goToBar(mi)} onFallback={() => setView('roll')} onTapId={(nid) => { const e = perf?.events.find((x) => x.ids.includes(nid)); if (!e) return; goToBar(e.mi); if (sel.pi === null && choices.length) { const c = choices.find((x) => x.pi === e.pi && (!x.staff || x.staff === (e.staff || 1))); if (c) { setTap(c); clearTimeout(tapTimer.current); tapTimer.current = setTimeout(() => setTap(null), 8000); } } }} />}
         {view === 'sheet' && tScore && <p class="note-text" style={{ textAlign: 'center' }}>{t('tapBarHint')}</p>}
         {view === 'jianpu' && shown && <JianpuSheet score={shown} title={meta.title} apiRef={jpRef} perf={perf} sel={arranged ? { pi: sel.pi ?? 0, staff: sel.pi !== null ? sel.staff : null } : sel} onBar={goToBar} />}
         {view === 'roll' && perf && <PianoRoll score={tScore} perf={perf} q={player.q} harmonies={harmonies} />}
@@ -765,37 +796,63 @@ function MiniKeys({ want, played }) {
   return <div class="kbd-wrap"><Keyboard lo={start} hi={start + 24} marks={marks} height={58} /></div>;
 }
 
-function ResultCard({ result, barNo, onPractise, onAgain, assignment, onSend, challenge, onChallenge, onShare }) {
+function ResultCard({ result, barNo, onPractise, onAgain, assignment, onSend, challenge, onChallenge, onShare, onClass, onShowBar }) {
   const acc = Math.round(result.accuracy * 100);
   const good = acc >= 85;
   const next = Math.min(150, Math.round(result.speed * 100) + 10);
+  const stars = acc >= 95 ? 3 : acc >= 80 ? 2 : acc >= 55 ? 1 : 0;
+  const [all, setAll] = useState(false);
+  const wrong = result.wrong || [];
   return (
-    <Card class="result fade-up">
+    <Card class="result result3 fade-up" id="take-report">
       {good && <Confetti />}
-      <div class="report-line" style={{ alignItems: 'center' }}>
-        <Mascot mood={good ? 'cheer' : acc >= 60 ? 'happy' : 'sad'} size={64} />
-        <div style={{ flex: 1 }}>
-          <strong style={{ fontSize: 20 }}>{good ? t('wellPlayed') : t('keepAtIt')}</strong>
-          <div class="sub">{t('rightNotes')}: <b class="num">{acc}%</b> · {result.right}/{result.total}{result.inTune !== undefined && result.mode === 'beat' ? ` · ${t('inTune')} ${Math.round(result.inTune * 100)}%` : ''}</div>
+      <div class="r3-top">
+        <div class={`r3-ring ${good ? 'good' : acc >= 60 ? 'mid' : 'low'}`} style={{ '--p': acc }}><span class="num">{acc}<small>%</small></span></div>
+        <div class="r3-text">
+          <div class="r3-stars" aria-label={`${stars}/3`}>{[0, 1, 2].map((i) => <Icon key={i} name="star" size={22} fill={i < stars} stroke={2} />)}</div>
+          <strong>{good ? t('wellPlayed') : t('keepAtIt')}</strong>
+          <span class="muted">{t('rightNotes')}: {result.right}/{result.total}{result.inTune !== undefined && result.mode === 'beat' ? ` · ${t('inTune')} ${Math.round(result.inTune * 100)}%` : ''} · {Math.round((result.speed || 1) * 100)}% · {fmtSecs(result.seconds || 0)}</span>
         </div>
-        <span class="big-score num">{acc}%</span>
+        <span class="pc-only"><Mascot mood={good ? 'cheer' : acc >= 60 ? 'happy' : 'sad'} size={72} /></span>
       </div>
       {result.barsList?.length > 1 && (
-        <div class="bar-strip" aria-hidden="true">{result.barsList.map((b) => <i key={b.bar} title={`${b.bar}`} style={{ '--a': b.accuracy }} class={b.accuracy >= 0.85 ? 'ok' : b.accuracy >= 0.6 ? 'mid' : 'low'} />)}</div>
+        <div class="r3-bars">
+          <span class="k">{t('reportBars')}</span>
+          <div class="bar-strip">{result.barsList.map((b, i) => <i key={b.bar + ':' + i} title={`${t('bar', { n: b.bar })}: ${Math.round(b.accuracy * 100)}%`} style={{ '--a': b.accuracy }} class={b.accuracy >= 0.85 ? 'ok' : b.accuracy >= 0.6 ? 'mid' : 'low'} />)}</div>
+        </div>
       )}
-      {result.tricky?.length > 0 && <>
-        <div class="sub" style={{ fontWeight: 700 }}>{t('trickySpots')}</div>
-        {result.tricky.map((x) => (
-          <div class="tricky-row" key={x.mi}>
-            <span class="n">{t('bar', { n: barNo(x.mi) })}</span>
-            <span class="sub" style={{ flex: 1 }}>{t('missedNotes', { n: x.missed })}</span>
-            <Button small kind="secondary" color="orange" icon="loop" onClick={() => onPractise(x.mi, Math.max(40, Math.round(result.speed * 100) - 20))}>{t('loopAt', { p: Math.max(40, Math.round(result.speed * 100) - 20) })}</Button>
-          </div>
-        ))}
-      </>}
+      {wrong.length > 0 && (
+        <div class="r3-wrong" id="wrong-notes">
+          <span class="k">{t('reportWrong', { n: wrong.length })}</span>
+          {(all ? wrong : wrong.slice(0, 5)).map((w, i) => (
+            <button type="button" class="wn" key={i} onClick={() => onShowBar?.(w.mi)}>
+              <span class="b">{t('bar', { n: w.bar })}</span>
+              <span class="p">{w.played ? <><s>{w.played}</s> → <b>{w.want}</b></> : <>{t('reportMissed')} <b>{w.want}</b></>}</span>
+              <Icon name="chevronR" size={14} stroke={2.4} />
+            </button>
+          ))}
+          {wrong.length > 5 && <button type="button" class="hw-skip" onClick={() => setAll(!all)}>{all ? t('showLess') : t('showAllN', { n: wrong.length })}</button>}
+        </div>
+      )}
+      {result.tricky?.length > 0 && (
+        <div class="r3-tricky">
+          <span class="k">{t('trickySpots')}</span>
+          {result.tricky.map((x) => (
+            <div class="tricky-row" key={x.mi}>
+              <span class="n">{t('bar', { n: barNo(x.mi) })}</span>
+              <span class="sub" style={{ flex: 1 }}>{t('missedNotes', { n: x.missed })}</span>
+              <Button small kind="secondary" color="orange" icon="loop" onClick={() => onPractise(x.mi, Math.max(40, Math.round(result.speed * 100) - 20))}>{t('loopAt', { p: Math.max(40, Math.round(result.speed * 100) - 20) })}</Button>
+            </div>
+          ))}
+        </div>
+      )}
+      {result.recordingURL && (
+        <div class="r3-rec"><span class="k"><Icon name="mic" size={14} />{t('yourTake')}</span><audio controls preload="metadata" src={result.recordingURL} /></div>
+      )}
       <div class="btn-row">
-        <Button small icon="mic" color="pink" onClick={onAgain}>{good && next > Math.round(result.speed * 100) ? t('tryAt', { p: next }) : t('tryAgain')}</Button>
+        <Button small icon="mic" onClick={onAgain}>{good && next > Math.round(result.speed * 100) ? t('tryAt', { p: next }) : t('tryAgain')}</Button>
         {assignment && <Button small icon="send" kind="brand" onClick={onSend} disabled={result.sent}>{result.sent ? t('sentToTeacher') : t('submitToTeacher')}</Button>}
+        {!assignment && hasServer() && <Button small icon="academy" kind="secondary" onClick={onClass} id="share-class">{result.shared ? t('sharedWithClass') : t('shareWithClass')}</Button>}
         {challenge && <Button small icon="trophy" color="orange" onClick={onChallenge} disabled={result.entered}>{result.entered ? t('challengeEntered') : t('enterChallenge')}</Button>}
         {hasServer() && <Button small icon="share" kind="secondary" onClick={onShare}>{t('shareWin')}</Button>}
       </div>
@@ -803,38 +860,90 @@ function ResultCard({ result, barNo, onPractise, onAgain, assignment, onSend, ch
   );
 }
 
-function SheetMusic({ xml, boxRef, layerRef, onDrawn, onTapId, onFallback, flagged = [], changed = null }) {
-  const [state, setState2] = useState({ loading: true, pages: [], error: null, first: !isVerovioReady() });
+const fmtSecs = (n) => `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`;
+/** A Blob as base64 (for sending a recording). */
+export async function blobToB64(blob) {
+  const buf = new Uint8Array(await blob.arrayBuffer());
+  let bin = '';
+  for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+/** A short red glow around the screen for a wrong note (iPhone browsers can't vibrate). */
+function flashWrong() {
+  const el = document.querySelector('.app');
+  if (!el) return;
+  el.classList.remove('flash-wrong');
+  void el.offsetWidth;
+  el.classList.add('flash-wrong');
+  clearTimeout(flashWrong.timer);
+  flashWrong.timer = setTimeout(() => el.classList.remove('flash-wrong'), 420);
+}
+
+let sheetSeq = 0;
+function SheetMusic({ xml, boxRef, layerRef, onDrawn, onTapId, onTapBar, onFallback, flagged = [], changed = null, active = true }) {
+  const [state, setState2] = useState({ loading: true, pages: [], error: null, first: !isVerovioReady(), all: false });
   const wrapRef = useRef(null);
+  const keyRef = useRef(`sheet${++sheetSeq}`);
+  const drawnFor = useRef(null);
   // joined once, not on every playing frame; each page keeps its exact shape, so pages off the screen
   // can be left unpainted (content-visibility) without anything moving when they come into view
   const html = useMemo(() => state.pages.map((svg) => { const z = pageSize(svg); return `<div class="vrv-page"${z ? ` style="aspect-ratio:${z.w}/${z.h}"` : ''}>${svg}</div>`; }).join(''), [state.pages]);
   const drawn = useRef(onDrawn);
   drawn.current = onDrawn;
   useEffect(() => {
+    // a piece hidden under the editor is drawn again only when it is on screen (it used to redraw the whole
+    // score after every saved edit, which kept the engraver busy and made the editor feel stuck)
+    if (!active || drawnFor.current === xml) return undefined;
     let alive = true;
     const width = Math.min(980, (wrapRef.current?.clientWidth || 360));
+    const pages = [];
+    let shown = 0, raf = 0;
+    const flush = () => { raf = 0; if (alive && pages.length > shown) { shown = pages.length; setState2((x) => ({ ...x, loading: false, pages: pages.slice(), error: null, all: false })); } };
     setState2((x) => ({ ...x, loading: true }));
-    renderMusicXML(xml, { width, scale: width < 500 ? 34 : 40 })
-      .then((r) => { if (alive) setState2({ loading: false, pages: r.pages, error: null }); })
-      .catch((e) => { if (alive) setState2({ loading: false, pages: [], error: e.message }); });
-    return () => { alive = false; };
-  }, [xml]);
+    renderMusicXML(xml, {
+      width, scale: width < 500 ? 34 : 40, key: keyRef.current,
+      // the first pages appear as soon as they are drawn; the rest follow in batches
+      onPage: (svg, i) => { pages[i] = svg; if (i === 0) flush(); else if (!raf) raf = requestAnimationFrame(flush); },
+    })
+      .then((r) => { if (alive) { cancelAnimationFrame(raf); drawnFor.current = xml; setState2({ loading: false, pages: r.pages, error: null, all: true }); } })
+      .catch((e) => { if (alive && !e.superseded) setState2({ loading: false, pages: [], error: e.message, all: true }); });
+    return () => { alive = false; cancelAnimationFrame(raf); };
+  }, [xml, active]);
   useEffect(() => {
     const box = boxRef.current;
-    if (!box || state.loading) return;
+    if (!box || !state.all) return;
     const ms = box.querySelectorAll('g.measure');
     flagged.forEach((i) => ms[i]?.classList.add('flagged'));
     if (changed) for (const nid of changed) box.querySelector(`[id="${nid}"]`)?.classList.add('changed');
-  }, [state.pages, flagged.join(','), changed]);
-  useEffect(() => { if (!state.loading && state.pages.length) drawn.current?.(); }, [state.pages, state.loading]);
+  }, [state.pages, state.all, flagged.join(','), changed]);
+  useEffect(() => { if (state.all && state.pages.length) drawn.current?.(); }, [state.pages, state.all]);
   const onClick = (e) => {
     const g = e.target.closest?.('g.note');
-    if (g?.id) onTapId?.(g.id);
+    if (g?.id) { onTapId?.(g.id); return; }
+    // A tap anywhere in a bar (not only on a note head) goes to that bar. Empty space in a drawing doesn't
+    // receive taps, so the bar is found from where the finger landed.
+    const box = boxRef.current;
+    if (!box) return;
+    let m = e.target.closest?.('g.measure');
+    const all = [...box.querySelectorAll('g.measure')];
+    if (!m) {
+      let best = null, bestD = 40;
+      for (const el of all) {
+        const r = el.getBoundingClientRect();
+        if (e.clientY < r.top - 30 || e.clientY > r.bottom + 30) continue;
+        const dx = e.clientX < r.left ? r.left - e.clientX : e.clientX > r.right ? e.clientX - r.right : 0;
+        const dy = e.clientY < r.top ? r.top - e.clientY : e.clientY > r.bottom ? e.clientY - r.bottom : 0;
+        const d = dx + dy;
+        if (d < bestD) { bestD = d; best = el; if (!d) break; }
+      }
+      m = best;
+    }
+    const i = m ? all.indexOf(m) : -1;
+    if (i >= 0) { m.classList.add('tapped'); setTimeout(() => m.classList.remove('tapped'), 350); onTapBar?.(i); }
   };
   return (
     <div ref={wrapRef}>
-      {state.loading && <div class="loading"><Mascot mood="think" size={70} />{state.first ? t('loadingEngine') : ''}</div>}
+      {state.loading && !state.pages.length && <div class="loading"><Mascot mood="think" size={70} />{state.first ? t('loadingEngine') : ''}</div>}
       {state.error && (
         <Card>
           <p>{t('engineFailed')}</p>
@@ -842,10 +951,11 @@ function SheetMusic({ xml, boxRef, layerRef, onDrawn, onTapId, onFallback, flagg
         </Card>
       )}
       <div class="score-wrap">
-        <div class="score-box vrv" ref={boxRef} onClick={onClick} hidden={state.loading && !state.pages.length}
+        <div class="score-box vrv" ref={boxRef} onClick={onClick} hidden={!state.pages.length}
           dangerouslySetInnerHTML={{ __html: html }} />
         <div class="score-layer" ref={layerRef} aria-hidden="true" />
       </div>
+      {!state.all && state.pages.length > 0 && <div class="loading small"><div class="spinner" /></div>}
     </div>
   );
 }
@@ -1106,6 +1216,7 @@ export function MixerSheet({ choices = [], mix: mix0 = {}, onChange, label }) {
 export function InstrumentPickSheet({ value = null, onPick }) {
   return (
     <SheetFrame title={t('writtenFor')}>
+      <div class="chips wrap"><Chip on={!value} onClick={() => { onPick?.(null); closeSheet(); }} id="inst-as-written">{t('asWritten')}</Chip></div>
       {FAMILIES.map((f) => (
         <Section key={f} title={t(`fam_${f}`)}>
           <div class="chips wrap">
@@ -1198,7 +1309,7 @@ export function ExportSheet({ pieceId, semis, title, part = null, partLabel = ''
   const [onlyPart, setOnlyPart] = useState(!!part);
   const [d, setD] = useState(null);
   useEffect(() => { getPiece(pieceId).then(setD); }, [pieceId]);
-  const safe = (title || 'Haptune').replace(/[\\/:*?"<>|]+/g, ' ').trim();
+  const safe = (title || 'ETASheet').replace(/[\\/:*?"<>|]+/g, ' ').trim();
   const suffix = onlyPart && part ? ` (${partLabel})` : '';
   const scoreNow = () => { let sc = transposeScore(d.score, semis); if (onlyPart && part) sc = extractPart(sc, part.pi, part.staff); return sc; };
   const textOf = () => {

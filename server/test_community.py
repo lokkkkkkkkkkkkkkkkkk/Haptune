@@ -1,5 +1,7 @@
 """Accounts, plans (AI allowances) and the community (run: python -m pytest -q server)."""
 import os
+os.environ.setdefault("HAPTUNE_SIGNIN_REQUIRED", "0")   # these tests use guest accounts; test_hub.py checks the sign-in rule
+import os
 import sys
 import time
 import warnings
@@ -348,3 +350,21 @@ def test_song_searches_are_shared_for_a_week(monkeypatch):
     assert client.get("/c/me", headers=b).json()["usage"]["find"]["used"] == 0
     assert client.post("/ai/find", json={"query": "Canon in D", "instrument": "violin"}, headers=a).status_code == 200   # cached: free again
     assert client.post("/ai/find", json={"query": "Air on the G string", "instrument": "violin"}, headers=a).status_code == 429
+
+
+def test_moments_are_everyday_posts_with_photos_and_recordings():
+    import base64 as b64
+    h = _guest("Mia") if "_guest" in globals() else {"Authorization": "Bearer " + client.post("/c/auth/guest", json={"name": "Mia"}).json()["token"]}
+    png = b64.b64encode(b"\x89PNG\r\n\x1a\n" + b"\x00" * 100).decode()
+    audio = b64.b64encode(b"\x00" * 3000).decode()
+    r = client.post("/c/posts", json={"type": "moment", "body": "First recital today!\nSo nervous", "attachments": [
+        {"name": "me.png", "mime": "image/png", "data": png}, {"name": "take.webm", "mime": "audio/webm;codecs=opus", "data": audio}]}, headers=h)
+    assert r.status_code == 200, r.text
+    p = r.json()
+    assert p["type"] == "moment" and p["title"] == "First recital today!" and len(p["attachments"]) == 2
+    aid = [a for a in p["attachments"] if a["mime"].startswith("audio")][0]["id"]
+    assert client.get(f"/c/files/{aid}").status_code == 200                          # anyone can play it
+    assert client.post("/c/posts", json={"type": "moment", "body": ""}, headers=h).status_code == 400
+    assert client.post("/c/posts", json={"type": "question", "title": "x"}, headers=h).status_code == 400
+    feed = client.get("/c/posts", params={"type": "moment"}).json()
+    assert feed["items"][0]["id"] == p["id"]

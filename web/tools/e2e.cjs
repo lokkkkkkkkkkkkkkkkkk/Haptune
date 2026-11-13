@@ -50,7 +50,13 @@ async function run(mode, base, browser) {
   p.on('pageerror', (e) => errors.push('page: ' + e.message));
   const shot = (n) => p.screenshot({ path: path.join(SHOTS, `${mode}-${n}.png`) });
   const step = async (name, fn) => { try { await fn(); } catch (e) { errors.push(`${name}: ${e.message.split('\n')[0]}`); } };
-  const tab = (id) => (id === 'me' && mode !== 'phone' ? p.locator('#top-me').click() : p.locator(`#tab-${id}:visible`).click());
+  // the places: a sidebar on wide screens, a tab bar on phones; Me is the sidebar's account button or the picture
+  const LABEL = { home: 'practice', learn: 'hub', stage: 'stage', library: 'library', write: 'write' };
+  const tab = async (id) => {
+    const wide = await p.evaluate(() => innerWidth >= 900);
+    if (id === 'me') return wide ? p.locator('#top-me').click() : p.locator('.avatar:visible').first().click();
+    return p.locator(`${wide ? '#side' : '#tab'}-${LABEL[id] || id}:visible`).click();
+  };
   const back = () => p.locator('.navbar .back:visible, .back-btn:visible').first().click();
   const overflow = async (where) => {
     const bad = await p.evaluate(() => {
@@ -102,12 +108,12 @@ async function run(mode, base, browser) {
     await p.locator('#piece-views button').filter({ hasText: '簡譜' }).click(); await p.waitForSelector('.jp-svg .jn');
     await shot('03-jianpu'); await overflow('簡譜');
     await p.locator('#piece-views button').first().click();
-    await p.locator('.part-row .chip').filter({ hasText: 'Other' }).click(); await p.locator('.sheet .chip').filter({ hasText: 'Clarinet' }).click();
+    await p.locator('#tool-inst').click(); await p.locator('.sheet .chip').filter({ hasText: 'Clarinet' }).click();
     await p.waitForSelector('#arr-note'); await p.waitForTimeout(600);
-    await p.locator('.part-row .chip').filter({ hasText: 'As written' }).click();
+    await p.locator('#tool-inst').click(); await p.locator('#inst-as-written').click();
   });
   await step('key change', async () => {
-    await p.locator('.meta-chips button.meta').first().click(); await p.waitForSelector('.keybar');
+    await p.locator('#tool-key').click(); await p.waitForSelector('.keybar');
     const k0 = await p.locator('.keybar .stepper-value, .keybar strong').first().innerText().catch(() => '');
     await p.locator('.keybar button').last().click(); await p.waitForTimeout(300);
     await p.keyboard.press('Escape'); await p.waitForTimeout(800);
@@ -154,10 +160,23 @@ async function run(mode, base, browser) {
     if (!/茉莉花/.test(await p.locator('.piece-head h1').innerText())) throw new Error('the typed 簡譜 did not open');
     await back();
   });
+  await step('write a song', async () => {
+    await tab('write'); await p.waitForTimeout(300); await shot('06-write'); await overflow('Write');
+    await p.locator('#write-new').click(); await p.waitForSelector('#new-song-make');
+    await p.fill('#new-song-title', 'My first song'); await p.locator('#new-song-make').click();
+    await p.waitForSelector('.st-score svg', { timeout: 60000 }); await p.waitForTimeout(400);
+    const before = await p.locator('.st-score g.note').count();
+    for (const k of [0, 2, 4, 5]) { await p.locator('.st-kbd .wkey').nth(k).click(); await p.waitForTimeout(120); }
+    await p.waitForFunction((n) => document.querySelectorAll('.st-score g.note').length >= n + 4, before, { timeout: 20000 });
+    await p.locator('#st-back').click(); await p.waitForTimeout(300);
+    await shot('06b-studio'); await overflow('studio');
+    await back(); await p.waitForTimeout(300);
+    if (!(await p.locator('#write .song-tile').filter({ hasText: 'My first song' }).count())) throw new Error('the new song is not in My songs');
+  });
   await step('Stage, Learn, Me, plans', async () => {
-    await tab('stage'); await p.waitForTimeout(300); await shot('06-stage'); await overflow('Stage');
-    await tab('learn'); await p.waitForTimeout(300); await shot('07-learn'); await overflow('Learn');
-    await p.locator('#learn-tools').click(); await p.waitForTimeout(300); await overflow('tools'); await back();
+    await tab('stage'); await p.waitForTimeout(300); await shot('07-stage'); await overflow('Stage');
+    await tab('learn'); await p.waitForTimeout(300); await shot('07b-learn'); await overflow('Learn');
+    await tab('home'); await p.locator('#act-tools').click(); await p.waitForTimeout(300); await overflow('tools'); await back();
     await tab('me'); await p.waitForTimeout(300); await shot('08-me'); await overflow('Me');
     await p.locator('#me-upsell').click(); await p.waitForSelector('#plan-pro'); await shot('09-plans'); await overflow('plans');
     await p.keyboard.press('Escape');
