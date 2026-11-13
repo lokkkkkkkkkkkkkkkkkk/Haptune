@@ -17,6 +17,10 @@ jobs:
             echo "== CNAME www"; dig +short @$R CNAME www.$D; dig +short @$R A www.$D
             echo "== full status"; dig @$R A $D | grep -E "status|flags"
           done
+          echo "##### CAA / TXT / www"; for N in haptune.name.my name.my my; do echo "== CAA $N"; dig +short CAA $N @1.1.1.1; done; dig +short TXT haptune.name.my @1.1.1.1; dig +short www.haptune.name.my @1.1.1.1; dig +short CNAME www.haptune.name.my @1.1.1.1
+          echo "== direct to cloudflare NS"; dig @lucy.ns.cloudflare.com A haptune.name.my +norec | grep -E "status|flags|^haptune"; dig @lucy.ns.cloudflare.com CAA haptune.name.my +norec | grep -E "status|CAA"; dig @lucy.ns.cloudflare.com AAAA haptune.name.my +norec | grep -E "status|AAAA"
+          echo "== parent NS answers from every name.my server"; for S in $(dig +short NS name.my); do echo "-- $S"; dig @$S NS haptune.name.my +norec +time=3 +tries=1 | grep -E "status|IN.NS" ; done
+          echo "== PSL check"; curl -s https://publicsuffix.org/list/public_suffix_list.dat | grep -nE "^(name|com)\.my$"
           echo "##### DS at parent (DNSSEC)"; dig +short DS $D @8.8.8.8
           echo "== NS of name.my"; dig +short NS name.my
           P=$(dig +short NS name.my | head -1); echo "== delegation from parent $P"; dig @$P NS $D +norec | sed -n '/AUTHORITY/,/^$/p;/ADDITIONAL/,/^$/p'
