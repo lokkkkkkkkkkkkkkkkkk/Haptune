@@ -66,7 +66,7 @@ ${pwa ? `<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ETASheet">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-` : ''}<link rel="icon" href="icons/icon-192.png">
+` : ''}<link rel="icon" href="icons/icon-48.png" sizes="48x48"><link rel="icon" href="icons/icon-192.png" sizes="192x192">
 <style>:root{padding-top:var(--sa-top);box-sizing:border-box;height:100%}${css}</style>
 </head>
 <body>
