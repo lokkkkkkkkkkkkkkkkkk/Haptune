@@ -3,7 +3,7 @@ import { useState, useRef, useMemo, useEffect } from 'preact/hooks';
 import { useApp, push, openSheet, closeSheet, toast, addSongbookSong, addScore, getState } from '../state.js';
 import { t, getLang, instrumentName, INSTRUMENTS } from '../../core/i18n.js';
 import { Icon, Badge, List, Row, Chip, Button, Card, Section, Stars, Empty, Segmented } from '../components.jsx';
-import { LargeTitle, NavBar, SheetFrame } from './common.jsx';
+import { LargeTitle, NavBar, SheetFrame, Avatar } from './common.jsx';
 import { Mascot } from '../mascot.jsx';
 import { importFile, importText, ACCEPT } from '../importer.js';
 import { SONGS, songTitle } from '../../data/songs.js';
@@ -14,9 +14,11 @@ import { keyName, parseName, nameOf } from '../../core/pitch.js';
 import { scaleScore } from '../../core/exercises.js';
 
 const FILTERS = [
-  { id: 'all', label: 'allPieces', color: 'blue' }, { id: 'favourite', label: 'favourites', color: 'yellow' }, { id: 'import', label: 'imported', color: 'indigo' },
-  { id: 'sheet', label: 'chordSheets', color: 'green' }, { id: 'improv', label: 'improvisations', color: 'purple' }, { id: 'songbook', label: 'sampleSongs', color: 'pink' },
+  { id: 'all', label: 'allPieces' }, { id: 'favourite', label: 'favourites' }, { id: 'written', label: 'mySongs' }, { id: 'import', label: 'imported' },
+  { id: 'sheet', label: 'chordSheets' }, { id: 'improv', label: 'improvisations' }, { id: 'songbook', label: 'sampleSongs' },
 ];
+const matches = (p, f) => (f === 'all' ? true : f === 'favourite' ? p.favorite : f === 'songbook' ? p.source === 'songbook' : f === 'import' ? p.source === 'import' && !p.edited
+  : f === 'written' ? p.source === 'written' || !!p.edited : f === 'sheet' ? p.kind === 'sheet' || (p.kind === 'pdf' && p.key) : f === 'improv' ? p.source === 'improv' : true);
 
 export function pieceIcon(p) {
   if (p.kind === 'sheet') return ['chords', 'green'];
@@ -36,41 +38,65 @@ function PieceRow({ p }) {
       onClick={() => push('piece', { id: p.id }, 'library')} />
   );
 }
+void PieceRow;
+
+/** A score in the library: what it is, how you did, and Play Along straight away. */
+function PieceCard({ p }) {
+  const [icon, color] = pieceIcon(p);
+  const kind = p.kind === 'sheet' ? t('chordSheets') : p.kind === 'pdf' ? 'PDF' : p.source === 'written' ? t('write') : p.source === 'songbook' ? t('songbook') : p.source === 'improv' ? t('improvise') : p.fmt === 'midi' ? 'MIDI' : t('score');
+  return (
+    <div class={`lib-card c-${color}`}>
+      <button type="button" class="lc-main" onClick={() => push('piece', { id: p.id }, 'library')}>
+        <span class="lc-ic"><Icon name={icon} size={20} stroke={2.2} /></span>
+        <span class="lc-txt"><strong>{p.title}</strong><span class="tiny">{[p.composer, p.keyText].filter(Boolean).join(' · ') || kind}</span></span>
+        {p.favorite && <span class="t-yellow lc-star"><Icon name="star" size={14} fill stroke={1.5} /></span>}
+      </button>
+      <div class="lc-foot">
+        <span class="pill3">{kind}</span>
+        {p.measures ? <span class="tiny">{t('barsN', { n: p.measures })}</span> : null}
+        <span class="spacer" />
+        {p.best !== null && p.best !== undefined && <span class={`lc-best ${p.best >= 85 ? 'good' : p.best >= 60 ? 'mid' : 'low'}`}>{p.best}%</span>}
+        {p.kind === 'score' && <button type="button" class="lc-play" onClick={() => push('piece', { id: p.id, start: 'playAlong' }, 'library')} aria-label={t('playAlong')}><Icon name="mic" size={16} stroke={2.4} /></button>}
+      </div>
+    </div>
+  );
+}
 
 export function LibraryView() {
   const s = useApp();
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState('all');
+  const [count, setCount] = useState(null);
+  useEffect(() => { loadCatalog().then((r) => setCount(r.length)).catch(() => {}); }, []);
+  const counts = useMemo(() => Object.fromEntries(FILTERS.map((f) => [f.id, s.pieces.filter((p) => matches(p, f.id)).length])), [s.pieces]);
   const list = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    return s.pieces.filter((p) => {
-      if (filter === 'favourite' && !p.favorite) return false;
-      if (filter === 'songbook' && p.source !== 'songbook') return false;
-      if (filter === 'import' && p.source !== 'import') return false;
-      if (filter === 'sheet' && p.kind !== 'sheet' && !(p.kind === 'pdf' && p.key)) return false;
-      if (filter === 'improv' && p.source !== 'improv') return false;
-      if (!needle) return true;
-      return `${p.title} ${p.composer} ${p.keyText} ${p.instrument}`.toLowerCase().includes(needle);
-    });
+    return s.pieces.filter((p) => matches(p, filter) && (!needle || `${p.title} ${p.composer} ${p.keyText} ${p.instrument}`.toLowerCase().includes(needle)));
   }, [s.pieces, q, filter]);
-  const recent = !q && filter === 'all' ? [...s.pieces].filter((p) => p.opened).sort((a, b) => b.opened - a.opened).slice(0, 3) : [];
+  const recent = !q && filter === 'all' ? [...s.pieces].filter((p) => p.opened).sort((a, b) => b.opened - a.opened).slice(0, 4) : [];
   return (
-    <div class="scroll">
+    <div class="scroll" id="library">
       <div class="wrap">
-        <LargeTitle title={t('library')} actions={<button type="button" class="btn brand small" onClick={() => openSheet('add')} id="lib-add"><Icon name="plus" size={18} stroke={2.6} />{t('add')}</button>} />
-        <button type="button" class="sr-cta fade-up" id="lib-free" onClick={() => push('catalog')}>
-          <span class="hm-art sm"><Icon name="books" size={21} stroke={2.1} /></span>
-          <div><strong>{t('freeLibrary')}</strong><span>{t('freeLibrarySub')}</span></div>
-          <Icon name="chevronR" size={16} stroke={2.4} />
-        </button>
-        <label class="search" for="lib-search"><Icon name="search" size={18} /><input id="lib-search" type="search" placeholder={t('searchPrompt')} value={q} onInput={(e) => setQ(e.currentTarget.value)} /></label>
-        <div class="chips">{FILTERS.map((f) => <Chip key={f.id} on={filter === f.id} color={f.color} onClick={() => setFilter(f.id)}>{t(f.label)}</Chip>)}</div>
-        {recent.length > 0 && <Section title={t('recentlyPractised')}><List>{recent.map((p) => <PieceRow key={'r' + p.id} p={p} />)}</List></Section>}
-        <Section title={t(FILTERS.find((f) => f.id === filter).label)} footer={list.length ? t('piecesCount', { n: list.length }) : null}>
-          {list.length ? <List>{list.map((p) => <PieceRow key={p.id} p={p} />)}</List>
+        <LargeTitle title={t('library')} eyebrow={t('libEyebrow')} actions={<><button type="button" class="btn brand small" onClick={() => openSheet('add')} id="lib-add"><Icon name="plus" size={18} stroke={2.6} />{t('add')}</button><span class="ph-only"><Avatar /></span></>} />
+        <div class="acts three stagger" id="lib-doors">
+          <button type="button" class="act c-blue" onClick={() => document.getElementById('lib-search')?.focus()}><span class="ic"><Icon name="library" size={22} stroke={2.2} /></span><strong>{t('myScores')}</strong><span>{t('piecesCount', { n: s.pieces.length })}</span></button>
+          <button type="button" class="act c-violet" id="lib-free" onClick={() => push('catalog')}><span class="ic"><Icon name="books" size={22} stroke={2.2} /></span><strong>{t('freeLibrary')}</strong><span>{count ? t('freeLibraryN', { n: count.toLocaleString() }) : t('freeLibrarySub')}</span></button>
+          <button type="button" class="act c-pink" onClick={() => push('songbook', {}, 'library')}><span class="ic"><Icon name="book" size={22} stroke={2.2} /></span><strong>{t('browseSongbook')}</strong><span>{t('browseSongbookSub', { n: SONGS.length })}</span></button>
+        </div>
+        <label class="search3" for="lib-search"><Icon name="search" size={18} stroke={2.3} /><input id="lib-search" type="search" placeholder={t('searchPrompt')} value={q} onInput={(e) => setQ(e.currentTarget.value)} /></label>
+        <div class="ptabs" id="lib-filters">{FILTERS.filter((f) => f.id === 'all' || counts[f.id]).map((f) => <button type="button" key={f.id} class={filter === f.id ? 'on' : ''} onClick={() => setFilter(f.id)}>{t(f.label)}<span class="n">{counts[f.id]}</span></button>)}</div>
+        {recent.length > 0 && (
+          <section class="sec3">
+            <div class="section-head"><h2>{t('recentlyPractised')}</h2></div>
+            <div class="grid3">{recent.map((p) => <PieceCard key={'r' + p.id} p={p} />)}</div>
+          </section>
+        )}
+        <section class="sec3">
+          <div class="section-head"><h2>{t(FILTERS.find((f) => f.id === filter).label)}</h2><span class="tiny">{list.length ? t('piecesCount', { n: list.length }) : ''}</span></div>
+          {list.length ? <div class="grid3" id="lib-list">{list.map((p) => <PieceCard key={p.id} p={p} />)}</div>
             : q ? <Empty icon="search" title={t('noResults', { q })} />
               : <Empty icon="library" title={t('emptyLibrary')} sub={t('emptyLibrarySub')}><Button onClick={() => openSheet('add')} icon="plus">{t('add')}</Button></Empty>}
-        </Section>
+        </section>
       </div>
     </div>
   );

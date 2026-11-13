@@ -9,7 +9,7 @@ import { useApp, getPiece, updatePiece, toast } from '../state.js';
 import { t } from '../../core/i18n.js';
 import { Icon, Chip } from '../components.jsx';
 import { NavBar } from './common.jsx';
-import { renderMusicXML } from '../verovio.js';
+import { renderMusicXML, warmEditor } from '../verovio.js';
 import { writeMusicXML } from '../../core/musicxml.js';
 import { findNote, movePitch, toRest, toNote, splitNote, joinNext, addChordNote, sliceMeasures } from '../../core/edit.js';
 import { performance as perfOf, secondsAt, keyAt } from '../../core/score.js';
@@ -37,6 +37,7 @@ export function EditorView({ id, bar = 0, onSaved, active }) {
   const N = wide ? 4 : 2;
 
   useEffect(() => {
+    warmEditor();
     getPiece(id).then((d) => {
       if (!d?.score) return;
       setHist({ list: [d.score], i: 0 });
@@ -55,7 +56,7 @@ export function EditorView({ id, bar = 0, onSaved, active }) {
     if (!slice) return undefined;
     let alive = true;
     const width = Math.min(900, boxRef.current?.clientWidth || 360);
-    renderMusicXML(writeMusicXML(slice), { width, scale: width < 500 ? 52 : 58 }).then((r) => { if (alive) setSvg(r.pages.join('')); }).catch(() => alive && setSvg(''));
+    renderMusicXML(writeMusicXML(slice), { width, scale: width < 500 ? 52 : 58, lane: 'edit', key: 'editor' }).then((r) => { if (alive) setSvg(r.pages.join('')); }).catch((e) => { if (alive && !e.superseded) setSvg(''); });
     return () => { alive = false; };
   }, [slice]);
   useEffect(() => {

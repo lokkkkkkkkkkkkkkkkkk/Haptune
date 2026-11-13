@@ -65,6 +65,9 @@ accounts = Table("accounts", meta,
                  Column("pass_days", Integer, nullable=True),                  # length of a pass bought with Notes
                  Column("stripe_customer", String(40), nullable=True),
                  Column("stripe_sub", String(40), nullable=True),
+                 Column("google_sub", String(64), nullable=True, index=True),   # Sign in with Google (the Google account id)
+                 Column("email", String(200), nullable=True),                    # from Google, shown only to the person
+                 Column("hub_role", String(10), nullable=False, default=""),     # teacher | student | "" (Learn asks once)
                  Column("created", Float, nullable=False),
                  Column("last_seen", Float, nullable=False))
 ledger = Table("ledger", meta,
@@ -363,7 +366,7 @@ def _token(authorization: str) -> str:
 def current(authorization: str = Header("")) -> Me:
     user = user_from_token(_token(authorization))
     if user is None:
-        raise HTTPException(401, "Please open Haptune online once to make your account.")
+        raise HTTPException(401, "Please open ETASheet online once to make your account.")
     with engine().begin() as c:
         acc = ensure_account(c, user)
         if acc["role"] == "banned":
@@ -452,6 +455,7 @@ def me_json(me: Me) -> dict:
             "tier": me.tier, "tier_until": _iso(acc["tier_until"]) if me.tier not in ("free", "dev") else None,
             "tier_source": acc["tier_source"], "credits": acc["credits"], "streak": acc["streak"], "usage": u,
             "limits": plan_limits(me.tier, acc), "unread": unread, "guidelines": acc["guidelines"], "has_password": bool(acc["pw_hash"]),
+            "registered": is_registered(acc), "google": bool(acc.get("google_sub")), "email": acc.get("email") or "", "hub_role": acc.get("hub_role") or "",
             "devices": n_sessions + 1, "joined": _iso(acc["created"])}
 
 
@@ -494,6 +498,7 @@ class MeIn(BaseModel):
     bio: str | None = Field(None, max_length=300)
     lang: str | None = Field(None, max_length=10)
     guidelines: bool | None = None
+    hub_role: str | None = Field(None, max_length=10)
 
 
 def _check_handle(c, handle: str, uid: str) -> str:
@@ -529,6 +534,8 @@ def patch_me(body: MeIn, me: Me = Depends(current)):
             vals["lang"] = body.lang
         if body.guidelines:
             vals["guidelines"] = True
+        if body.hub_role is not None:
+            vals["hub_role"] = body.hub_role if body.hub_role in ("", "teacher", "student") else ""
         if vals:
             c.execute(update(accounts).where(accounts.c.user_id == me.id).values(**vals))
     return me_json(reload(me.id))
@@ -601,6 +608,142 @@ def logout(authorization: str = Header("")):
     with engine().begin() as c:
         c.execute(delete(sessions).where(sessions.c.token_hash == _hash(_token(authorization))))
     return {"ok": True}
+
+
+# ----------------------------------------------------------------------------------------------- signing in
+def is_registered(acc: dict | None) -> bool:
+    """Signed in with Google, or has a username and password: an account that can come back on any device."""
+    return bool(acc and (acc.get("pw_hash") or acc.get("google_sub")))
+
+
+def signin_required() -> bool:
+    return os.environ.get("HAPTUNE_SIGNIN_REQUIRED", "1") != "0"
+
+
+def require_registered(me: Me) -> None:
+    """Online features that other people see (teaching, joining a class, posting) need a real sign-in."""
+    if signin_required() and not is_registered(me.acc) and not me.is_admin:
+        raise HTTPException(401, {"code": "signin_required", "message": "Sign in first (Google, or a username and password)."})
+
+
+def registered(me: Me = Depends(current)) -> Me:
+    require_registered(me)
+    return me
+
+
+def google_client_ids() -> list[str]:
+    return [x.strip() for x in os.environ.get("GOOGLE_CLIENT_IDS", os.environ.get("GOOGLE_CLIENT_ID", "")).split(",") if x.strip()]
+
+
+def verify_google(credential: str) -> dict:
+    """Checks a Google ID token (from Sign in with Google) with Google and returns its claims.
+    Tests replace this function."""
+    ids = google_client_ids()
+    if not ids:
+        raise HTTPException(503, "Sign in with Google isn't set up on this server yet.")
+    from urllib.parse import quote
+    try:
+        with urllib.request.urlopen("https://oauth2.googleapis.com/tokeninfo?id_token=" + quote(credential), timeout=15) as r:
+            info = json.load(r)
+    except Exception:
+        raise HTTPException(401, "Google could not confirm that sign-in. Please try again.")
+    if info.get("aud") not in ids or info.get("iss") not in ("accounts.google.com", "https://accounts.google.com"):
+        raise HTTPException(401, "That Google sign-in was meant for another app.")
+    if float(info.get("exp", 0)) < time.time():
+        raise HTTPException(401, "That Google sign-in has expired. Please try again.")
+    if not info.get("sub"):
+        raise HTTPException(401, "Google did not say who you are.")
+    return info
+
+
+class GoogleIn(BaseModel):
+    credential: str = Field(..., min_length=20, max_length=4096)
+    device: str = Field("", max_length=60)
+
+
+@router.post("/auth/google")
+def google_signin(body: GoogleIn, request: Request, authorization: str = Header("")):
+    """Sign in with Google. A Google account seen before signs in to its ETASheet account (on this device too);
+    a new one is linked to the account this device already has (so nothing is lost), or gets a new account."""
+    rate(request, "google", 30, 3600)
+    info = verify_google(body.credential)
+    sub = str(info["sub"])[:64]
+    email = (info.get("email") or "")[:200] if str(info.get("email_verified", "true")).lower() in ("true", "1") else ""
+    name = (info.get("given_name") or info.get("name") or "").strip()[:60]
+    with engine().begin() as c:
+        uid = c.execute(select(accounts.c.user_id).where(accounts.c.google_sub == sub)).scalar()
+        if uid:
+            token = _session(c, uid, body.device or "Google")
+            c.execute(update(accounts).where(accounts.c.user_id == uid).values(email=email or accounts.c.email))
+        else:
+            here = user_from_token(_token(authorization))
+            acc = c.execute(select(accounts).where(accounts.c.user_id == here["id"])).mappings().first() if here else None
+            if here and acc and not acc["google_sub"]:
+                uid = here["id"]
+                token = _token(authorization)                           # this device keeps its sign-in
+                c.execute(update(accounts).where(accounts.c.user_id == uid).values(google_sub=sub, email=email))
+                if name and (here.get("name") in ("", "Musician")):
+                    c.execute(update(users).where(users.c.id == uid).values(name=name))
+            else:
+                user, token = _new_identity(c, name)
+                uid = user["id"]
+                ensure_account(c, user)
+                c.execute(update(accounts).where(accounts.c.user_id == uid).values(google_sub=sub, email=email))
+    return {"token": token, "me": me_json(current(f"Bearer {token}"))}
+
+
+# Pairing: the phone or tablet app shows a code, the person signs in on the website (where Google sign-in works)
+# and approves it there, and the app is then signed in to the same account. Codes last 10 minutes.
+PAIR_TTL = 600.0
+PAIR_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+
+
+def _pair_get(c, code: str) -> dict | None:
+    row = c.execute(select(kv.c.v).where(kv.c.k == f"pair:{code}")).scalar()
+    if not row:
+        return None
+    d = json.loads(row)
+    if d.get("created", 0) + PAIR_TTL < _now():
+        c.execute(delete(kv).where(kv.c.k == f"pair:{code}"))
+        return None
+    return d
+
+
+@router.post("/auth/pair")
+def pair_start(request: Request):
+    rate(request, "pair", 30, 3600)
+    code = "".join(secrets.choice(PAIR_CHARS) for _ in range(8))
+    with engine().begin() as c:
+        c.execute(insert(kv).values(k=f"pair:{code}", v=json.dumps({"created": _now(), "user": None})))
+    return {"code": code, "expires_in": int(PAIR_TTL)}
+
+
+@router.post("/auth/pair/{code}/approve")
+def pair_approve(code: str, me: Me = Depends(current)):
+    require_registered(me)
+    code = re.sub(r"[^A-Z0-9]", "", code.upper())
+    with engine().begin() as c:
+        d = _pair_get(c, code)
+        if d is None:
+            raise HTTPException(404, "That code has expired. Make a new one in the app.")
+        d["user"] = me.id
+        c.execute(update(kv).where(kv.c.k == f"pair:{code}").values(v=json.dumps(d)))
+    return {"ok": True}
+
+
+@router.get("/auth/pair/{code}")
+def pair_poll(code: str, request: Request):
+    rate(request, "pair-poll", 600, 3600)
+    code = re.sub(r"[^A-Z0-9]", "", code.upper())
+    with engine().begin() as c:
+        d = _pair_get(c, code)
+        if d is None:
+            raise HTTPException(404, "That code has expired.")
+        if not d.get("user"):
+            return {"status": "waiting"}
+        c.execute(delete(kv).where(kv.c.k == f"pair:{code}"))
+        token = _session(c, d["user"], "paired app")
+    return {"status": "done", "token": token, "me": me_json(current(f"Bearer {token}"))}
 
 
 @router.delete("/me")

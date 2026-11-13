@@ -1,4 +1,4 @@
-// Talks to the Haptune server. The address is built into the app (HAPTUNE_CONFIG.server, set once by the
+// Talks to the ETASheet server. The address is built into the app (HAPTUNE_CONFIG.server, set once by the
 // developer), and each device gets an anonymous id, so people never type a server address or a key.
 import { local } from './storage.js';
 
@@ -23,6 +23,8 @@ export class ApiError extends Error {
   constructor(message, status = 0, detail = null) { super(message); this.status = status; this.detail = detail; }
   /** The server says this needs a plan (402) or this month's allowance is used up (429 with a code). */
   get plan() { return this.detail && ['plan_required', 'plan_limit', 'open_requests'].includes(this.detail.code) ? this.detail : null; }
+  /** The server wants a real sign-in (Google, or a username and password) first. */
+  get signin() { return this.status === 401 && this.detail?.code === 'signin_required'; }
 }
 
 /** The account's token (the same one Academy classes use). */
@@ -45,7 +47,7 @@ export async function call(path, { method = 'GET', json, form, token, raw = fals
   try {
     res = await fetch(base + path, { method, headers, body, signal: ctl.signal });
   } catch (e) {
-    throw new ApiError(e.name === 'AbortError' ? 'The server took too long. Please try again.' : 'Could not reach Haptune online. Check your connection.', 0);
+    throw new ApiError(e.name === 'AbortError' ? 'The server took too long. Please try again.' : 'Could not reach ETASheet online. Check your connection.', 0);
   } finally { clearTimeout(timer); }
   if (!res.ok) {
     let msg = `${res.status}`, detail = null;
@@ -150,14 +152,26 @@ export async function academyMe(name) {
 }
 export const academy = {
   rename: (name) => call('/academy/me', { method: 'PATCH', json: { name }, token: academyToken() }),
-  createClass: (name, description = '', color = 'orange') => call('/academy/classes', { method: 'POST', json: { name, description, color }, token: academyToken() }),
+  createClass: (name, description = '', color = 'orange', extra = {}) => call('/academy/classes', { method: 'POST', json: { name, description, color, ...extra }, token: academyToken() }),
+  editClass: (cid, body) => call(`/academy/classes/${cid}`, { method: 'PATCH', json: body, token: academyToken() }),
+  discover: (params = {}) => call(`/academy/discover?${new URLSearchParams(Object.entries(params).filter(([, v]) => v)).toString()}`, { token: '' }),
+  preview: (code) => call(`/academy/preview/${encodeURIComponent(code)}`, { token: '' }),
+  joinOpen: (cid) => call(`/academy/classes/${cid}/join`, { method: 'POST', token: academyToken() }),
+  progress: (cid) => call(`/academy/classes/${cid}/progress`, { token: academyToken() }),
+  student: (cid, uid) => call(`/academy/classes/${cid}/students/${uid}`, { token: academyToken() }),
+  shareTake: (body) => call('/academy/takes', { method: 'POST', json: body, token: academyToken(), timeout: 180000 }),
+  takeFeedback: (tid, body) => call(`/academy/takes/${tid}/feedback`, { method: 'POST', json: body, token: academyToken() }),
+  takeRecordingURL: async (tid) => {
+    const res = await call(`/academy/takes/${tid}/recording`, { raw: true, token: academyToken() });
+    return URL.createObjectURL(await res.blob());
+  },
   join: (code) => call('/academy/join', { method: 'POST', json: { code }, token: academyToken() }),
   classDetail: (id) => call(`/academy/classes/${id}`, { token: academyToken() }),
   leave: (cid, uid) => call(`/academy/classes/${cid}/members/${uid}`, { method: 'DELETE', token: academyToken() }),
   createAssignment: (cid, body) => call(`/academy/classes/${cid}/assignments`, { method: 'POST', json: body, token: academyToken() }),
   assignment: (id) => call(`/academy/assignments/${id}`, { token: academyToken() }),
   deleteAssignment: (id) => call(`/academy/assignments/${id}`, { method: 'DELETE', token: academyToken() }),
-  submit: (id, body) => call(`/academy/assignments/${id}/submissions`, { method: 'POST', json: body, token: academyToken() }),
+  submit: (id, body) => call(`/academy/assignments/${id}/submissions`, { method: 'POST', json: body, token: academyToken(), timeout: 180000 }),
   feedback: (sid, body) => call(`/academy/submissions/${sid}/feedback`, { method: 'POST', json: body, token: academyToken() }),
   feed: (cid) => call(`/academy/classes/${cid}/feed`, { token: academyToken() }),
   leaderboard: (cid) => call(`/academy/classes/${cid}/leaderboard`, { token: academyToken() }),

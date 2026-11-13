@@ -12,6 +12,7 @@ export const TYPE = {
   question: { icon: 'quiz', color: 'blue', label: 'typeQuestion' },
   share: { icon: 'staff', color: 'green', label: 'typeShare' },
   show: { icon: 'trophy', color: 'orange', label: 'typeShow' },
+  moment: { icon: 'chat', color: 'teal', label: 'typeMoment' },
 };
 
 export function timeAgo(iso) {

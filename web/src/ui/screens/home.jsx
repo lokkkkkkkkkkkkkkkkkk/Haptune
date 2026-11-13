@@ -7,6 +7,7 @@ import { useApp, push, go, openSheet, minutesOn, streakDays, toast, setState } f
 import { t, getLang } from '../../core/i18n.js';
 import { Card, Section, Icon, List, Row } from '../components.jsx';
 import { Mascot } from '../mascot.jsx';
+import { Avatar, Logo } from './common.jsx';
 import { local } from '../storage.js';
 import { hasServer, academyMe, isLink } from '../api.js';
 import { C } from '../account.js';
@@ -48,6 +49,8 @@ async function openCatalog(entry) {
     if (rec) push('piece', { id: rec.id }, 'library');
   } catch (e) { toast(e.message || String(e), 'err'); }
 }
+
+const dateSeed = () => { const d = new Date(); return d.getFullYear() * 400 + d.getMonth() * 32 + d.getDate(); };
 
 export function HomeView({ active }) {
   const s = useApp();
@@ -140,14 +143,16 @@ export function HomeView({ active }) {
         <input ref={camRef} type="file" class="hidden-input" accept="image/*" capture="environment" multiple onChange={onPick} aria-label={t('wayCamera')} />
         <input ref={fileRef} type="file" class="hidden-input" accept={ACCEPT} onChange={onPick} id="home-file" aria-label={t('wayFile')} />
         <header class="hm-top">
-          <span class="logo"><span class="logo-mark"><Icon name="library" size={18} stroke={2.4} /></span>Haptune</span>
+          <span class="logo ph-only"><Logo size={28} />ETASheet</span>
+          <span class="spacer pc-only" />
           {streak > 0 && <span class="hm-pill flame" title={t('streak')}><Icon name="flame" size={15} fill stroke={1.6} />{streak}</span>}
           {online && s.me && <button type="button" class="hm-pill nts" onClick={() => push('wallet', {}, 'me')} aria-label={t('rewards')}><Icon name="gift" size={15} stroke={2.2} />{s.me.credits ?? 0}</button>}
           {online && <button type="button" class="hm-pill" onClick={() => push('notifications', {}, 'me')} aria-label={t('notifications')} style={{ position: 'relative', padding: '0 9px' }}>
             <Icon name="bell" size={17} />{s.me?.unread > 0 && <span class="tab-dot" />}</button>}
+          <span class="ph-only"><Avatar /></span>
         </header>
 
-        <section class="hm-hero fade-up">
+        <section class="hm-hero hero3 hero-practice fade-up">
           <h1>{name ? t('homeAskName', { name }) : t('homeAsk')}</h1>
           <p>{t('homeAskSub')}</p>
           <form class="hm-search" onSubmit={submit} role="search">
@@ -255,6 +260,18 @@ export function HomeView({ active }) {
                 </div>
               </Card>
             )}
+
+            <div class="acts stagger" id="practice-acts">
+              <button type="button" class="act c-violet" onClick={() => (recent ? push('piece', { id: recent.id, start: 'playAlong' }, 'library') : go('library'))} id="act-playalong"><span class="ic"><Icon name="mic" size={22} stroke={2.3} /></span><strong>{t('playAlong')}</strong><span>{t('actPlayAlongSub')}</span></button>
+              <button type="button" class="act c-teal" onClick={() => push('tools')} id="act-tools"><span class="ic"><Icon name="tuningfork" size={22} stroke={2.2} /></span><strong>{t('tools')}</strong><span>{t('toolsSub')}</span></button>
+              <button type="button" class="act c-orange" onClick={() => openSheet('lesson', { lessonId: 'ear2', seed: dateSeed(), daily: true })} id="act-ear"><span class="ic"><Icon name="ear" size={22} stroke={2.2} /></span><strong>{t('earTraining')}</strong><span>{t('earTrainingSub')}</span></button>
+              <button type="button" class="act c-pink" onClick={() => push('improvise')} id="act-solo"><span class="ic"><Icon name="sparkles" size={22} stroke={2.2} /></span><strong>{t('newSolo')}</strong><span>{t('newSoloSub')}</span></button>
+            </div>
+
+            <button type="button" class="tile3 lift courses-tile" onClick={() => push('courses')} id="act-courses">
+              <span class="k"><Icon name="book" size={14} />{t('coursesT')}</span>
+              <strong>{t('coursesTile')}</strong><span class="muted">{t('coursesTileSub')}</span>
+            </button>
 
             <div class="hm-row2 fade-up d2">
               <button type="button" class={`hm-stat${pulse ? ' live' : ''}`} id="home-stage" onClick={() => go('community')}>

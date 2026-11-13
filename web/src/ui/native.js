@@ -2,6 +2,7 @@
 //   * the Android back button closes a sheet, goes back a screen, then to Home, then leaves the app
 //   * in-app purchases go through RevenueCat, which tells the Haptune server what was bought
 import { Capacitor, registerPlugin } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 import { App } from '@capacitor/app';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 
@@ -57,12 +58,13 @@ export async function storeRestore(userId) {
 
 /** Opens a link in the phone's browser (YouTube, the store's subscription page...). */
 export function openExternal(url) {
+  if (isNative()) { Browser.open({ url }).catch(() => { try { window.open(url, '_blank'); } catch { /* nothing to open with */ } }); return; }
   try { window.open(url, '_blank', 'noopener'); } catch { location.href = url; }
 }
 
 /** A short buzz you can feel while playing: 'wrong' (a wrong note), 'bar' (first beat), 'beat'.
  *  The installed app uses the phone's haptics; Android browsers vibrate; iPhone browsers have no vibration
- *  (the Haptune app for iPhone taps the Apple Watch instead). */
+ *  (the ETASheet app for iPhone taps the Apple Watch instead). */
 export function buzz(kind = 'wrong') {
   try {
     if (isNative()) {

@@ -43,6 +43,9 @@ jobs:
         if: env.HAS_TOKEN == 'true'
       - name: Deploy to Fly.io
         if: env.HAS_TOKEN == 'true'
-        run: flyctl deploy --remote-only --ha=false     # one machine: jobs are kept in memory, the Academy database is on its volume
+        # one machine: jobs are kept in memory, the Academy database is on its volume. GOOGLE_CLIENT_ID (a repository
+        # variable, public by design) lets the server check "Sign in with Google".
+        run: flyctl deploy --remote-only --ha=false ${GOOGLE_CLIENT_ID:+-e GOOGLE_CLIENT_IDS=$GOOGLE_CLIENT_ID}
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}

@@ -24,7 +24,7 @@ const result = await build({
 });
 const js = result.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
 // styles.css: layout and every component; theme.css: the Haptune 2 look on top of it
-const css = fs.readFileSync(path.join(root, 'src/ui/styles.css'), 'utf8') + '\n' + fs.readFileSync(path.join(root, 'src/ui/theme.css'), 'utf8');
+const css = ['styles.css', 'theme.css', 'v3.css'].map((f) => fs.readFileSync(path.join(root, 'src/ui', f), 'utf8')).join('\n');
 const VERSION = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version;
 // The server address is built in (GitHub variable HAPTUNE_SERVER_URL -> HAPTUNE_SERVER), so people never type it.
 const SERVER = (process.env.HAPTUNE_SERVER || '').trim().replace(/\/+$/, '');
@@ -34,10 +34,12 @@ const BUILD = createHash('sha256').update(result.outputFiles[0].text).update(css
 // Where the app is published and sold. Each can be set with a repository variable; the defaults are the real ones.
 const SITE = (process.env.HAPTUNE_SITE_URL || 'https://haptune.name.my').trim().replace(/\/+$/, '');
 const PLAY = (process.env.HAPTUNE_PLAY_URL || '').trim();           // the Google Play page, once the app is published
-const CONFIG = (extra) => JSON.stringify({ version: VERSION, build: BUILD, server: SERVER, site: SITE, play: PLAY, ...extra });
+// Sign in with Google: the OAuth client ID (public by design) from Google Cloud Console, GitHub variable GOOGLE_CLIENT_ID.
+const GOOGLE = (process.env.HAPTUNE_GOOGLE_CLIENT_ID || '').trim();
+const CONFIG = (extra) => JSON.stringify({ version: VERSION, build: BUILD, server: SERVER, site: SITE, play: PLAY, google: GOOGLE, ...extra });
 
 // ---- artifact page (the publish skeleton adds doctype/head/body) ----
-const artifact = `<title>Haptune</title>
+const artifact = `<title>ETASheet</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Music practice coach: exact imports, key change, chords, AI improviser and a teaching academy.">
 <style>${css}</style>
@@ -53,14 +55,15 @@ const page = (config, { pwa }) => `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Haptune</title>
-<meta name="description" content="Get the sheet music for any song and practise it with an app that listens. Search a song, drop a PDF, or ask the Stage community.">
+<title>ETASheet: practise, learn and write sheet music</title>
+<meta name="description" content="ETASheet listens while you play and marks every wrong note. Teachers run classes and hear their students' practice. Write and scan sheet music, and share it on Stage.">
+<meta name="robots" content="noindex">
 <meta name="theme-color" content="#F5F5FA" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0E0D15" media="(prefers-color-scheme: dark)">
 ${pwa ? `<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Haptune">
+<meta name="apple-mobile-web-app-title" content="ETASheet">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 ` : ''}<link rel="icon" href="icons/icon-192.png">
@@ -85,6 +88,13 @@ for (const f of fs.readdirSync(path.join(root, 'assets/icons'))) {
   fs.copyFileSync(path.join(root, 'assets/icons', f), out('pages', 'icons', f));
 }
 // Salamander Grand Piano V3 (Alexander Holm, CC BY 3.0), one sample every 3 semitones, trimmed (about 0.8 MB)
+// the interface font (Plus Jakarta Sans, SIL Open Font License), for the app and the website
+for (const dir of [app('fonts'), out('pages', 'fonts')]) {
+  fs.mkdirSync(dir, { recursive: true });
+  const src = path.join(root, 'node_modules/@fontsource-variable/plus-jakarta-sans/files');
+  fs.copyFileSync(path.join(src, 'plus-jakarta-sans-latin-wght-normal.woff2'), path.join(dir, 'jakarta-latin.woff2'));
+  fs.copyFileSync(path.join(src, 'plus-jakarta-sans-latin-ext-wght-normal.woff2'), path.join(dir, 'jakarta-latin-ext.woff2'));
+}
 fs.mkdirSync(app('piano'), { recursive: true });
 for (const f of fs.readdirSync(path.join(root, 'assets/piano'))) fs.copyFileSync(path.join(root, 'assets/piano', f), app('piano', f));
 // the free library: an index searched in the app, and the pieces themselves, fetched when one is opened
@@ -92,13 +102,13 @@ if (fs.existsSync(path.join(root, 'assets/catalog'))) fs.cpSync(path.join(root, 
 // how to pay by DuitNow QR (the picture is optional: without it the app shows the bank account only)
 if (fs.existsSync(path.join(root, 'assets/pay'))) fs.cpSync(path.join(root, 'assets/pay'), app('pay'), { recursive: true });
 fs.writeFileSync(app('manifest.webmanifest'), JSON.stringify({
-  name: 'Haptune', short_name: 'Haptune', description: 'Sheet music for any song, and practice that listens', start_url: './', scope: './', display: 'standalone',
-  background_color: '#F5F5FA', theme_color: '#6A4DFF', orientation: 'any', categories: ['music', 'education'],
+  name: 'ETASheet', short_name: 'ETASheet', description: 'Practise with a microphone that listens, learn in classes, write and share sheet music', start_url: './', scope: './', display: 'standalone',
+  background_color: '#F5F5FA', theme_color: '#6246FF', orientation: 'any', categories: ['music', 'education'],
   icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }, { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' }, { src: 'icons/icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }],
 }, null, 2));
-const cacheList = ['./', 'index.html', `app.js?v=${BUILD}`, 'manifest.webmanifest', 'vendor/verovio-toolkit-wasm.js', 'vendor/pdf.min.js', 'vendor/pdf.worker.min.js', 'icons/apple-touch-icon.png', 'icons/icon-192.png'];
-fs.writeFileSync(app('sw.js'), `// Offline cache for Haptune (cache-first for the app shell, network-first for index.html)
-const CACHE = 'haptune-app-${BUILD}';
+const cacheList = ['./', 'index.html', `app.js?v=${BUILD}`, 'manifest.webmanifest', 'fonts/jakarta-latin.woff2', 'vendor/verovio-toolkit-wasm.js', 'vendor/pdf.min.js', 'vendor/pdf.worker.min.js', 'icons/apple-touch-icon.png', 'icons/icon-192.png'];
+fs.writeFileSync(app('sw.js'), `// Offline cache for ETASheet (cache-first for the app shell, network-first for index.html)
+const CACHE = 'etasheet-app-${BUILD}';
 const FILES = ${JSON.stringify(cacheList)};
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });

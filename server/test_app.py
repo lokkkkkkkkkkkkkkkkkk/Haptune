@@ -1,4 +1,6 @@
 """API smoke tests (run: python -m pytest -q server)."""
+import os
+os.environ.setdefault("HAPTUNE_SIGNIN_REQUIRED", "0")   # these tests use guest accounts; test_hub.py checks the sign-in rule
 import io
 import json
 import os

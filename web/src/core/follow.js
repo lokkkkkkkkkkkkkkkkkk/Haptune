@@ -29,7 +29,7 @@ export class Follower {
    * @param stable    frames a pitch must last to count (3 ≈ 70 ms)
    * @param wrong     frames a wrong pitch must last to count as a mistake (6 ≈ 130 ms)
    */
-  constructor(expected, { octaveOk = false, stable = 3, wrong = 6 } = {}) {
+  constructor(expected, { octaveOk = false, stable = 3, wrong = 6, octaveStable = 5 } = {}) {
     this.exp = expected;
     this.k = 0;
     this.octaveOk = octaveOk;
@@ -42,6 +42,11 @@ export class Follower {
     this.wrongShown = false;
     this.firstTry = expected.map(() => true);
     this.misses = expected.map(() => 0);
+    this.wrongs = [];          // [{index, played}]: each mistake, for the report
+    this.octaveStable = octaveStable;
+    this.peak = 0;             // loudest moment of the note just counted: a dip and a rise again is a new note
+    this.dip = Infinity;
+    this.ignore = null;        // (midi) => true for pitches the app itself is playing right now
   }
 
   get done() { return this.k >= this.exp.length; }
@@ -51,27 +56,50 @@ export class Follower {
     return exp.midis.some((x) => x === m || (this.octaveOk && (x - m) % 12 === 0));
   }
 
+  /** The microphone often hears a note an octave off (the pitch tracker locks on to a harmonic or half the
+   *  frequency): that counts as the right note, after holding it a little longer. */
+  octaveOf(exp, m) {
+    return !this.matches(exp, m) && exp.midis.some((x) => (x - m) % 12 === 0 && Math.abs(x - m) <= 24);
+  }
+
   /** frame: {midi, rms} or null for silence. Returns {type:'ok'|'wrong', index, played?} or null. */
-  push(frame) {
+  push(frame, rmsIfUnclear = 0) {
     if (this.done) return null;
-    if (!frame) { this.cand = null; this.count = 0; this.held = null; this.lastRms = 0; return null; }
+    if (!frame) {
+      // silence ends the held note; an unclear moment (a bow change, a breath) only counts as a dip
+      if (!rmsIfUnclear || rmsIfUnclear < 0.006) { this.cand = null; this.count = 0; this.held = null; this.lastRms = 0; this.peak = 0; this.dip = Infinity; }
+      else if (this.held !== null) this.dip = Math.min(this.dip, rmsIfUnclear);
+      return null;
+    }
     const m = Math.round(frame.midi);
-    const reattack = frame.rms !== undefined && this.lastRms > 0 && frame.rms > this.lastRms * 1.6 && frame.rms > 0.01;
-    this.lastRms = frame.rms ?? this.lastRms;
+    const rms = frame.rms ?? 0;
+    if (this.ignore && this.ignore(m)) return null;         // the app's own accompaniment, heard by the microphone
+    // a new attack on the same pitch (repeated notes): the sound fell well below the note's peak, then rose again
+    let reattack = false;
+    if (this.held !== null && rms) {
+      if (rms > this.peak) this.peak = rms;
+      if (rms < this.peak * 0.55) this.dip = Math.min(this.dip, rms);
+      if (this.dip < Infinity && rms > Math.max(0.01, this.dip * 1.45)) reattack = true;
+      if (!reattack && this.lastRms > 0 && rms > this.lastRms * 1.6 && rms > 0.01) reattack = true;
+    }
+    this.lastRms = rms || this.lastRms;
     if (this.held !== null) {
-      if (m === this.held && !reattack) return null;      // still the note we already counted
+      if ((m === this.held || (this.octaveOk && (m - this.held) % 12 === 0)) && !reattack) return null;   // still the note we already counted
       this.held = null;
     }
     if (m !== this.cand) { this.cand = m; this.count = 1; this.wrongShown = false; }
     else this.count++;
     const exp = this.exp[this.k];
-    if (this.matches(exp, m)) {
-      if (this.count >= this.stable) {
+    const exact = this.matches(exp, m);
+    const octave = !exact && this.octaveOf(exp, m);
+    if (exact || octave) {
+      if (this.count >= (exact ? this.stable : this.octaveStable)) {
         const index = this.k++;
         this.held = m;
+        this.peak = rms; this.dip = Infinity;
         this.cand = null;
         this.count = 0;
-        return { type: 'ok', index };
+        return octave ? { type: 'ok', index, octave: true } : { type: 'ok', index };
       }
       return null;
     }
@@ -79,6 +107,7 @@ export class Follower {
       this.wrongShown = true;
       this.firstTry[this.k] = false;
       this.misses[this.k]++;
+      if (this.wrongs.length < 200) this.wrongs.push({ index: this.k, played: m });
       return { type: 'wrong', index: this.k, played: m };
     }
     return null;
@@ -99,7 +128,16 @@ export class Follower {
       if (this.firstTry[i]) { b.right++; right++; }
       bars.set(e.mi, b);
     }
-    return { accuracy: n ? right / n : 0, right, total: n, bars };
+    // the first wrong note played for each note missed, in order: what the report lists
+    const seen = new Set();
+    const wrong = [];
+    for (const w of this.wrongs) {
+      if (w.index >= n || seen.has(w.index)) continue;
+      seen.add(w.index);
+      const e = this.exp[w.index];
+      wrong.push({ mi: e.mi, want: e.top, wants: e.midis, played: w.played, ids: e.ids });
+    }
+    return { accuracy: n ? right / n : 0, right, total: n, bars, wrong };
   }
 }
 

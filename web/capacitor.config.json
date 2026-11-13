@@ -1,8 +1,17 @@
 {
-  "appId": "com.sloky.haptune",
-  "appName": "Haptune",
+  "appId": "com.sloky.etasheet",
+  "appName": "ETASheet",
   "webDir": "dist/native",
-  "server": { "androidScheme": "https" },
-  "android": { "allowMixedContent": false, "webContentsDebuggingEnabled": false },
-  "plugins": { "SystemBars": { "insetsHandling": "css" } }
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "css"
+    }
+  }
 }

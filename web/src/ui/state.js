@@ -26,7 +26,7 @@ let state = {
   progress: { xp: 0, lessons: {}, badges: [], days: [], minutes: {}, quizzes: 0, challengeWins: 0 },
   examples: false,
   tab: 'summary',
-  stacks: { summary: [], library: [], community: [], academy: [], me: [] },
+  stacks: { summary: [], library: [], community: [], academy: [], write: [], me: [] },
   sheet: null,
   toast: null,
 };
@@ -43,7 +43,7 @@ export function useApp() {
 }
 
 // ---------- navigation ----------
-const TAB_IDS = ['summary', 'library', 'community', 'academy', 'me'];
+const TAB_IDS = ['summary', 'library', 'community', 'academy', 'write', 'me'];
 /** Goes to a tab; anything else (improvise, tools...) is a screen opened on top of the current tab. */
 export function go(tab) { if (TAB_IDS.includes(tab)) setState({ tab }); else push(tab); }
 /** Learn: courses, classes, tutors. */

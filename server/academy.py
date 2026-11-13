@@ -48,6 +48,9 @@ classes = Table("classes", meta,
                 Column("join_code", String(10), unique=True, nullable=False),
                 Column("color", String(12), nullable=False, default="orange"),
                 Column("archived", Boolean, nullable=False, default=False),
+                Column("visibility", String(10), nullable=False, default="private"),   # private (code / link) | public (listed)
+                Column("instrument", String(24), nullable=False, default=""),
+                Column("level", String(16), nullable=False, default=""),
                 Column("created", Float, nullable=False))
 members = Table("members", meta,
                 Column("class_id", String(36), ForeignKey("classes.id"), primary_key=True),
@@ -105,11 +108,38 @@ feedback = Table("feedback", meta,
                  Column("focus_bars", JSON, nullable=True),
                  Column("created", Float, nullable=False))
 
+# Practice takes a student shares with a class outside any assignment ("hear me play this"), so the teacher sees
+# all their practice and can listen any time; with comments from the teacher.
+takes = Table("takes", meta,
+              Column("id", String(36), primary_key=True),
+              Column("class_id", String(36), ForeignKey("classes.id"), nullable=False, index=True),
+              Column("user_id", String(36), ForeignKey("users.id"), nullable=False, index=True),
+              Column("piece_title", String(160), nullable=False, default=""),
+              Column("accuracy", Float, nullable=False),
+              Column("timing", Float, nullable=True),
+              Column("tempo_pct", Integer, nullable=True),
+              Column("seconds", Integer, nullable=False, default=0),
+              Column("bars", JSON, nullable=True),                 # [[bar, accuracy], ...]
+              Column("wrong", JSON, nullable=True),                # [{bar, want, played}], the first wrong notes
+              Column("mode", String(10), nullable=False, default=""),
+              Column("note", Text, nullable=False, default=""),
+              Column("recording", LargeBinary, nullable=True),
+              Column("recording_type", String(40), nullable=True),
+              Column("created", Float, nullable=False))
+take_comments = Table("take_comments", meta,
+                      Column("id", String(36), primary_key=True),
+                      Column("take_id", String(36), ForeignKey("takes.id"), nullable=False, index=True),
+                      Column("teacher_id", String(36), ForeignKey("users.id"), nullable=False),
+                      Column("text", Text, nullable=False, default=""),
+                      Column("stickers", JSON, nullable=True),
+                      Column("focus_bars", JSON, nullable=True),
+                      Column("created", Float, nullable=False))
+
 COLORS = ["blue", "pink", "green", "orange", "purple", "teal", "indigo", "red"]
 STICKERS = {"star", "fire", "clap", "heart", "rocket", "trophy", "music", "thumbs"}
 CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"            # no 0/O, 1/I/L
 MAX_XML = 3 * 1024 * 1024
-MAX_REC = 3 * 1024 * 1024
+MAX_REC = 8 * 1024 * 1024                  # about 15 minutes of compressed audio
 DAY = 86400.0
 
 _engine = None
@@ -315,10 +345,25 @@ class NewClass(BaseModel):
     name: str = Field(..., min_length=1, max_length=80)
     description: str = Field("", max_length=2000)
     color: str = "orange"
+    visibility: str = Field("private", pattern="^(private|public)$")
+    instrument: str = Field("", max_length=24)
+    level: str = Field("", max_length=16)
+
+
+def _registered_or_401(uid: str) -> None:
+    """Teaching and joining classes need a real sign-in (Google, or a username and password)."""
+    from accounts import accounts as acc_t, is_registered, signin_required, effective_tier
+    if not signin_required():
+        return
+    with engine().connect() as c:
+        acc = c.execute(select(acc_t).where(acc_t.c.user_id == uid)).mappings().first()
+    if not is_registered(dict(acc) if acc else None) and effective_tier(dict(acc) if acc else None) != "dev":
+        raise HTTPException(401, {"code": "signin_required", "message": "Sign in first (Google, or a username and password)."})
 
 
 @router.post("/classes")
 def create_class(body: NewClass, me: dict = Depends(current_user)):
+    _registered_or_401(me["id"])
     cid = str(uuid.uuid4())
     with engine().begin() as c:
         for _ in range(20):
@@ -327,9 +372,10 @@ def create_class(body: NewClass, me: dict = Depends(current_user)):
                 break
         c.execute(insert(classes).values(id=cid, name=body.name.strip(), description=body.description.strip(), teacher_id=me["id"],
                                          join_code=code, color=body.color if body.color in COLORS else "orange",
-                                         archived=False, created=_now()))
+                                         archived=False, visibility=body.visibility, instrument=body.instrument.strip(),
+                                         level=body.level.strip(), created=_now()))
         c.execute(insert(members).values(class_id=cid, user_id=me["id"], role="teacher", joined=_now()))
-    return {"class": {"id": cid, "name": body.name.strip(), "join_code": code, "role": "teacher"}}
+    return {"class": {"id": cid, "name": body.name.strip(), "join_code": code, "role": "teacher", "visibility": body.visibility}}
 
 
 class Join(BaseModel):
@@ -340,6 +386,7 @@ class Join(BaseModel):
 def join(body: Join, request: Request, me: dict = Depends(current_user)):
     from app import _limit
     _limit(request, "academy-join", 60)
+    _registered_or_401(me["id"])
     code = body.code.strip().upper().replace("-", "").replace(" ", "")
     with engine().begin() as c:
         cl = c.execute(select(classes).where(classes.c.join_code == code, classes.c.archived.is_(False))).mappings().first()
@@ -415,11 +462,12 @@ def class_detail(cid: str, me: dict = Depends(current_user)):
                 item["tries"] = len(mine)
             asg_out.append(item)
     out = {"id": cl["id"], "name": cl["name"], "description": cl["description"], "color": cl["color"], "role": role,
+           "visibility": cl.get("visibility") or "private", "instrument": cl.get("instrument") or "", "level": cl.get("level") or "",
            "teacher": next(({"id": p["id"], "name": p["name"]} for p in people if p["role"] == "teacher"), None),
            "members": [{"id": p["id"], "name": p["name"], "color": p["color"], "role": p["role"]} for p in people],
            "assignments": asg_out}
-    if role == "teacher":
-        out["join_code"] = cl["join_code"]
+    if role == "teacher" or cl.get("visibility") == "public":
+        out["join_code"] = cl["join_code"]                 # an open class can be passed on by anyone in it
     return out
 
 
@@ -548,7 +596,7 @@ def submit(aid: str, body: SubmissionIn, me: dict = Depends(current_user)):
         except ValueError:
             raise HTTPException(400, "The recording could not be read.")
         if len(rec) > MAX_REC:
-            raise HTTPException(413, "The recording is too long (about a minute fits).")
+            raise HTTPException(413, "The recording is too long (about 15 minutes fit).")
     with engine().begin() as c:
         a = _load_assignment(c, aid)
         _require(c, a["class_id"], me["id"], "student")
@@ -651,3 +699,254 @@ def leaderboard(cid: str, me: dict = Depends(current_user), days: int = 7):
         b["rank"] = i + 1
         b["me"] = b["id"] == me["id"]
     return {"days": days, "board": board}
+
+
+# ---------------------------------------------------------------------------- the open hub
+class ClassEdit(BaseModel):
+    name: str | None = Field(None, min_length=1, max_length=80)
+    description: str | None = Field(None, max_length=2000)
+    color: str | None = None
+    visibility: str | None = Field(None, pattern="^(private|public)$")
+    instrument: str | None = Field(None, max_length=24)
+    level: str | None = Field(None, max_length=16)
+    new_code: bool = False
+
+
+@router.patch("/classes/{cid}")
+def edit_class(cid: str, body: ClassEdit, me: dict = Depends(current_user)):
+    vals = {k: (v.strip() if isinstance(v, str) else v) for k, v in body.model_dump().items() if v is not None and k != "new_code"}
+    if "color" in vals and vals["color"] not in COLORS:
+        vals.pop("color")
+    with engine().begin() as c:
+        _require(c, cid, me["id"], "teacher")
+        if body.new_code:                                              # the old code and link stop working
+            for _ in range(20):
+                code = _code(6)
+                if not c.execute(select(classes.c.id).where(classes.c.join_code == code)).first():
+                    break
+            vals["join_code"] = code
+        if vals:
+            c.execute(update(classes).where(classes.c.id == cid).values(**vals))
+    return class_detail(cid, me)
+
+
+def _class_card(c, cl: dict) -> dict:
+    teacher = c.execute(select(users.c.name, users.c.color).where(users.c.id == cl["teacher_id"])).mappings().first()
+    n = c.execute(select(func.count()).select_from(members).where(members.c.class_id == cl["id"], members.c.role == "student")).scalar()
+    return {"id": cl["id"], "name": cl["name"], "description": cl["description"][:400], "color": cl["color"],
+            "visibility": cl.get("visibility") or "private", "instrument": cl.get("instrument") or "", "level": cl.get("level") or "",
+            "teacher": {"name": teacher["name"] if teacher else "", "color": teacher["color"] if teacher else "blue"}, "students": n}
+
+
+@router.get("/discover")
+def discover(q: str = "", instrument: str = "", limit: int = 40):
+    """Open classes anyone can join (no sign-in needed to look)."""
+    words = [w for w in q.lower().split() if w]
+    with engine().connect() as c:
+        rows = c.execute(select(classes).where(classes.c.archived.is_(False), classes.c.visibility == "public")
+                         .order_by(classes.c.created.desc()).limit(400)).mappings().all()
+        out = []
+        for r in rows:
+            r = dict(r)
+            if instrument and (r.get("instrument") or "") != instrument:
+                continue
+            hay = f"{r['name']} {r['description']} {r.get('instrument', '')}".lower()
+            if words and not all(w in hay for w in words):
+                continue
+            out.append(_class_card(c, r))
+            if len(out) >= max(1, min(100, limit)):
+                break
+    out.sort(key=lambda x: -x["students"])
+    return {"classes": out}
+
+
+@router.get("/preview/{code}")
+def preview(code: str, request: Request):
+    """What a join link or QR code opens: the class, before joining."""
+    from app import _limit
+    _limit(request, "academy-preview", 120)
+    code = code.strip().upper().replace("-", "").replace(" ", "")
+    with engine().connect() as c:
+        cl = c.execute(select(classes).where(classes.c.join_code == code, classes.c.archived.is_(False))).mappings().first()
+        if cl is None:
+            raise HTTPException(404, "No class has that code. Check it with your teacher.")
+        return {"class": _class_card(c, dict(cl)), "code": code}
+
+
+@router.post("/classes/{cid}/join")
+def join_open(cid: str, request: Request, me: dict = Depends(current_user)):
+    """Joins an open (public) class from the list."""
+    from app import _limit
+    _limit(request, "academy-join", 60)
+    _registered_or_401(me["id"])
+    with engine().begin() as c:
+        cl = c.execute(select(classes).where(classes.c.id == cid, classes.c.archived.is_(False))).mappings().first()
+        if cl is None or (cl.get("visibility") or "private") != "public":
+            raise HTTPException(404, "This class is not open to join. Ask the teacher for the code.")
+        if _membership(c, cid, me["id"]) is None:
+            c.execute(insert(members).values(class_id=cid, user_id=me["id"], role="student", joined=_now()))
+    return {"class": {"id": cl["id"], "name": cl["name"], "role": _role(cid, me["id"]), "color": cl["color"]}}
+
+
+def _role(cid: str, uid: str) -> str | None:
+    with engine().connect() as c:
+        return _membership(c, cid, uid)
+
+
+# ---------------------------------------------------------------------------- practice takes
+class TakeIn(BaseModel):
+    class_ids: list[str] = Field(..., min_length=1, max_length=10)
+    piece_title: str = Field("", max_length=160)
+    accuracy: float = Field(..., ge=0, le=1)
+    timing: float | None = Field(None, ge=0, le=1)
+    tempo_pct: int | None = Field(None, ge=10, le=300)
+    seconds: int = Field(0, ge=0, le=6 * 3600)
+    bars: list[list[float]] = Field(default_factory=list, max_length=2000)
+    wrong: list[dict] = Field(default_factory=list, max_length=60)
+    mode: str = Field("", max_length=10)
+    note: str = Field("", max_length=1000)
+    recording_b64: str | None = None
+    recording_type: str | None = Field(None, max_length=40)
+
+
+@router.post("/takes")
+def share_take(body: TakeIn, me: dict = Depends(current_user)):
+    """A student shares a practice take (result, the notes that went wrong, and the recording) with their class."""
+    rec = None
+    if body.recording_b64:
+        try:
+            rec = base64.b64decode(body.recording_b64, validate=True)
+        except ValueError:
+            raise HTTPException(400, "The recording could not be read.")
+        if len(rec) > MAX_REC:
+            raise HTTPException(413, "The recording is too long (about 15 minutes fit).")
+    wrong = [{"bar": int(w.get("bar", 0)), "want": str(w.get("want", ""))[:8], "played": str(w.get("played", ""))[:8]} for w in body.wrong[:60]]
+    bars = [[int(b[0]), round(float(b[1]), 3)] for b in body.bars if len(b) == 2]
+    ids = []
+    with engine().begin() as c:
+        for cid in dict.fromkeys(body.class_ids):
+            if _membership(c, cid, me["id"]) != "student":
+                raise HTTPException(403, "You can share with classes you are a student in.")
+            tid = str(uuid.uuid4())
+            c.execute(insert(takes).values(id=tid, class_id=cid, user_id=me["id"], piece_title=body.piece_title.strip(), accuracy=body.accuracy,
+                                           timing=body.timing, tempo_pct=body.tempo_pct, seconds=body.seconds, bars=bars, wrong=wrong,
+                                           mode=body.mode, note=body.note.strip(), recording=rec,
+                                           recording_type=body.recording_type if rec else None, created=_now()))
+            ids.append(tid)
+    return {"takes": ids}
+
+
+def _take_json(t: dict, comments: list[dict] | None = None) -> dict:
+    return {"id": t["id"], "kind": "take", "class_id": t["class_id"], "piece_title": t["piece_title"], "accuracy": round(t["accuracy"] * 100),
+            "timing": round(t["timing"] * 100) if t["timing"] is not None else None, "tempo_pct": t["tempo_pct"], "seconds": t["seconds"],
+            "bars": t["bars"] or [], "wrong": t["wrong"] or [], "mode": t["mode"], "note": t["note"], "has_recording": bool(t["recording_type"]),
+            "created": _iso(t["created"]), "feedback": comments or []}
+
+
+@router.get("/takes/{tid}/recording")
+def take_recording(tid: str, me: dict = Depends(current_user)):
+    with engine().connect() as c:
+        t = c.execute(select(takes).where(takes.c.id == tid)).mappings().first()
+        if t is None or not t["recording"]:
+            raise HTTPException(404, "No recording.")
+        role = _membership(c, t["class_id"], me["id"])
+        if role != "teacher" and t["user_id"] != me["id"]:
+            raise HTTPException(403, "Only the teacher can listen to this.")
+    return Response(content=t["recording"], media_type=t["recording_type"] or "audio/mp4")
+
+
+@router.post("/takes/{tid}/feedback")
+def take_feedback(tid: str, body: FeedbackIn, me: dict = Depends(current_user)):
+    if not body.text.strip() and not body.stickers and not body.focus_bars:
+        raise HTTPException(400, "Write a comment or pick a sticker.")
+    with engine().begin() as c:
+        t = c.execute(select(takes).where(takes.c.id == tid)).mappings().first()
+        if t is None:
+            raise HTTPException(404, "Take not found.")
+        _require(c, t["class_id"], me["id"], "teacher")
+        fid = str(uuid.uuid4())
+        c.execute(insert(take_comments).values(id=fid, take_id=tid, teacher_id=me["id"], text=body.text.strip(),
+                                               stickers=[x for x in body.stickers if x in STICKERS], focus_bars=body.focus_bars, created=_now()))
+    return {"feedback": {"id": fid}}
+
+
+# ---------------------------------------------------------------------------- progress (what the teacher sees)
+def _student_rows(c, cid: str) -> list[dict]:
+    return [dict(r) for r in c.execute(select(users.c.id, users.c.name, users.c.color, members.c.joined)
+                                       .join(members, members.c.user_id == users.c.id)
+                                       .where(members.c.class_id == cid, members.c.role == "student")
+                                       .order_by(users.c.name)).mappings().all()]
+
+
+@router.get("/classes/{cid}/progress")
+def class_progress(cid: str, me: dict = Depends(current_user)):
+    """One line per student: practice this week, average accuracy, assignments reached, last seen, trend."""
+    now = _now()
+    week = now - 7 * DAY
+    with engine().connect() as c:
+        _require(c, cid, me["id"], "teacher")
+        asg = [dict(a) for a in c.execute(select(assignments.c.id, assignments.c.goal, assignments.c.opens_at).where(assignments.c.class_id == cid)).mappings().all()]
+        open_asg = [a for a in asg if a["opens_at"] <= now]
+        asg_ids = [a["id"] for a in asg]
+        goal = {a["id"]: a["goal"] for a in asg}
+        out = []
+        for st in _student_rows(c, cid):
+            subs = [dict(x) for x in c.execute(select(submissions.c.assignment_id, submissions.c.accuracy, submissions.c.seconds, submissions.c.created)
+                                               .where(submissions.c.user_id == st["id"], submissions.c.assignment_id.in_(asg_ids or ["-"]))).mappings().all()]
+            tks = [dict(x) for x in c.execute(select(takes.c.accuracy, takes.c.seconds, takes.c.created, takes.c.recording_type)
+                                              .where(takes.c.user_id == st["id"], takes.c.class_id == cid)).mappings().all()]
+            allp = sorted([(x["created"], x["accuracy"], x["seconds"]) for x in subs] + [(x["created"], x["accuracy"], x["seconds"]) for x in tks])
+            reached = {x["assignment_id"] for x in subs if x["accuracy"] * 100 >= goal.get(x["assignment_id"], 80)}
+            recent = [a for t0, a, _ in allp if t0 >= week]
+            last5 = [a for _, a, _ in allp[-5:]]
+            first5 = [a for _, a, _ in allp[:5]]
+            out.append({"id": st["id"], "name": st["name"], "color": st["color"], "joined": _iso(st["joined"]),
+                        "takes": len(allp), "minutes_week": round(sum(s for t0, _, s in allp if t0 >= week) / 60),
+                        "accuracy": round(sum(last5) / len(last5) * 100) if last5 else None,
+                        "trend": round((sum(last5) / len(last5) - sum(first5) / len(first5)) * 100) if len(allp) >= 4 else None,
+                        "week_takes": len(recent), "done": len(reached), "assigned": len(open_asg),
+                        "recordings": sum(1 for x in tks if x["recording_type"]),
+                        "last": _iso(allp[-1][0]) if allp else None})
+    return {"students": out}
+
+
+@router.get("/classes/{cid}/students/{uid}")
+def student_detail(cid: str, uid: str, me: dict = Depends(current_user)):
+    """Everything one student has done in the class, newest first: assignment tries and shared practice takes,
+    each with its score, the bars and notes that went wrong, the recording and the teacher's comments."""
+    with engine().connect() as c:
+        role = _require(c, cid, me["id"])
+        if role != "teacher" and uid != me["id"]:
+            raise HTTPException(403, "Only the teacher can see this.")
+        st = c.execute(select(users.c.id, users.c.name, users.c.color).where(users.c.id == uid)).mappings().first()
+        if st is None or _membership(c, cid, uid) != "student":
+            raise HTTPException(404, "Student not found.")
+        rows = c.execute(select(submissions.c.id, submissions.c.accuracy, submissions.c.timing, submissions.c.tempo_pct, submissions.c.seconds,
+                                submissions.c.bars, submissions.c.note, submissions.c.late, submissions.c.created, submissions.c.recording_type,
+                                assignments.c.title, assignments.c.goal, assignments.c.id.label("aid"))
+                         .join(assignments, assignments.c.id == submissions.c.assignment_id)
+                         .where(assignments.c.class_id == cid, submissions.c.user_id == uid)).mappings().all()
+        fb = {}
+        if rows:
+            for f in c.execute(select(feedback).where(feedback.c.submission_id.in_([r["id"] for r in rows]))).mappings().all():
+                fb.setdefault(f["submission_id"], []).append({"text": f["text"], "stickers": f["stickers"] or [], "focus_bars": f["focus_bars"] or [], "created": _iso(f["created"])})
+        items = [{"id": r["id"], "kind": "assignment", "assignment_id": r["aid"], "piece_title": r["title"], "goal": r["goal"],
+                  "accuracy": round(r["accuracy"] * 100), "timing": round(r["timing"] * 100) if r["timing"] is not None else None,
+                  "tempo_pct": r["tempo_pct"], "seconds": r["seconds"], "bars": r["bars"] or [], "note": r["note"], "late": r["late"],
+                  "has_recording": bool(r["recording_type"]), "created": _iso(r["created"]), "feedback": fb.get(r["id"], [])} for r in rows]
+        trows = [dict(t) for t in c.execute(select(takes).where(takes.c.class_id == cid, takes.c.user_id == uid)).mappings().all()]
+        tc = {}
+        if trows:
+            for f in c.execute(select(take_comments).where(take_comments.c.take_id.in_([t["id"] for t in trows]))).mappings().all():
+                tc.setdefault(f["take_id"], []).append({"text": f["text"], "stickers": f["stickers"] or [], "focus_bars": f["focus_bars"] or [], "created": _iso(f["created"])})
+        items += [_take_json(t, tc.get(t["id"])) for t in trows]
+    items.sort(key=lambda x: x["created"], reverse=True)
+    # the bars this student most often gets wrong, over everything
+    weak: dict[int, list[float]] = {}
+    for it in items:
+        for b in it["bars"]:
+            if isinstance(b, list) and len(b) == 2:
+                weak.setdefault(int(b[0]), []).append(float(b[1]))
+    tricky = sorted(((bar, sum(v) / len(v)) for bar, v in weak.items() if len(v) >= 1), key=lambda x: x[1])[:8]
+    return {"student": {"id": st["id"], "name": st["name"], "color": st["color"]}, "role": role, "items": items,
+            "tricky": [{"bar": b, "accuracy": round(a * 100)} for b, a in tricky if a < 0.85]}

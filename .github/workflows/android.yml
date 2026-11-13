@@ -1,10 +1,10 @@
 # Builds the Android app (web/ wrapped with Capacitor) on every push that touches web/.
 #
-#   * Haptune.apk  - install it on your own phone to test (Settings may ask you to allow installing from
+#   * ETASheet.apk  - install it on your own phone to test (Settings may ask you to allow installing from
 #                    your browser or Files app). It is also published as the release "android-test", so the
 #                    newest build is always at:
-#                    https://github.com/<owner>/<repo>/releases/download/android-test/Haptune.apk
-#   * Haptune.aab  - the file you upload to Google Play. Built and signed only when the four signing secrets
+#                    https://github.com/<owner>/<repo>/releases/download/android-test/ETASheet.apk
+#   * ETASheet.aab  - the file you upload to Google Play. Built and signed only when the four signing secrets
 #                    exist (see web/ANDROID.md): HAPTUNE_KEYSTORE_BASE64, HAPTUNE_KEYSTORE_PASSWORD,
 #                    HAPTUNE_KEY_ALIAS, HAPTUNE_KEY_PASSWORD.
 # Repository variables used when set: HAPTUNE_SERVER_URL (the server address built into the app) and
@@ -49,6 +49,7 @@ jobs:
         env:
           HAPTUNE_SERVER: ${{ vars.HAPTUNE_SERVER_URL }}
           HAPTUNE_REVENUECAT_ANDROID: ${{ vars.REVENUECAT_ANDROID_KEY }}
+          HAPTUNE_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
       - name: Copy it into the Android project
         run: npx cap sync android
       - name: Version
@@ -70,18 +71,18 @@ jobs:
       - name: Collect files
         run: |
           mkdir -p ../out
-          cp android/app/build/outputs/apk/debug/app-debug.apk ../out/Haptune.apk
-          if [ -f android/app/build/outputs/bundle/release/app-release.aab ]; then cp android/app/build/outputs/bundle/release/app-release.aab ../out/Haptune.aab; fi
+          cp android/app/build/outputs/apk/debug/app-debug.apk ../out/ETASheet.apk
+          if [ -f android/app/build/outputs/bundle/release/app-release.aab ]; then cp android/app/build/outputs/bundle/release/app-release.aab ../out/ETASheet.aab; fi
           ls -lh ../out
       - uses: actions/upload-artifact@v4
         with:
-          name: Haptune-android
+          name: ETASheet-android
           path: out/
       - name: Publish the test APK (release "android-test")
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete android-test --yes --cleanup-tag 2>/dev/null || true
-          gh release create android-test ../out/Haptune.apk --prerelease --target "$GITHUB_SHA" \
+          gh release create android-test ../out/ETASheet.apk --prerelease --target "$GITHUB_SHA" \
             --title "Android test build ${{ steps.v.outputs.name }} (${{ github.run_number }})" \
-            --notes "Newest test build from branch ${{ github.ref_name }}, commit ${GITHUB_SHA::7}. Download Haptune.apk on your Android phone and open it to install (allow installing from your browser if asked). It updates the app in place; your library stays."
+            --notes "Newest test build from branch ${{ github.ref_name }}, commit ${GITHUB_SHA::7}. Download ETASheet.apk on your Android phone and open it to install (allow installing from your browser if asked). (This build is the ETASheet app, com.sloky.etasheet: it installs next to an older Haptune test app, which you can delete.)"

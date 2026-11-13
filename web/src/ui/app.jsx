@@ -3,10 +3,15 @@ import { useEffect, useState } from 'preact/hooks';
 import { useApp, loadAll, go, pop, popToRoot, push, closeSheet, openSheet, getState, setState, hooks, toast } from './state.js';
 import { t } from '../core/i18n.js';
 import { Icon } from './components.jsx';
+import { Logo } from './screens/common.jsx';
 import { HistoryView } from './screens/summary.jsx';
 import { HomeView } from './screens/home.jsx';
 import { MeView } from './screens/me.jsx';
-import { LearnView } from './screens/learn.jsx';
+import { WriteView, StudioView, NewSongSheet } from './screens/write.jsx';
+import { HubRoleSheet, ClassQRSheet, PairSheet, JoinLinkSheet } from './screens/hub.jsx';
+import { StudentView, TakeSheet } from './screens/progress.jsx';
+import { MomentSheet } from './screens/stagefeed.jsx';
+import { LearnView } from './screens/hub.jsx';
 import { LibraryView, SongbookView, PasteSheet, FindSongSheet, ScaleSheet, ImportReportSheet, CatalogView, InstallHelpSheet } from './screens/library.jsx';
 import { AddSheet, ImportWizardSheet, FinderSheet } from './screens/addmusic.jsx';
 import { WelcomeSheet } from './screens/welcome.jsx';
@@ -33,20 +38,22 @@ import { initNative } from './native.js';
 import { warmVerovio } from './verovio.js';
 import { setSyncOffset, onAudioProblem } from './audio.js';
 
-// Five places. Home gets you a score, Library keeps them, Stage (the community) sits in the middle,
-// Learn has courses, classes and tutors, Me has your plan, rewards and settings.
-// Improvise and the tools open from a song or from Learn; they are screens, not tabs.
+// The places. Practice (getting a score and playing it with the microphone), Learn (the teaching hub: classes,
+// teachers, students), Write (making and fixing scores), Stage (the community) and Library (your scores).
+// Me holds your account, plan and settings. On a computer they sit in a sidebar; on a phone four of them are
+// in the tab bar with Write raised in the middle, and Me is the picture at the top of each page.
 export const TABS = [
-  { id: 'summary', icon: 'home', color: 'violet', label: 'home' },
-  { id: 'library', icon: 'library', color: 'violet', label: 'library' },
-  { id: 'community', icon: 'stage', color: 'violet', label: 'stage', center: true },
-  { id: 'academy', icon: 'academy', color: 'violet', label: 'learn' },
-  { id: 'me', icon: 'person', color: 'violet', label: 'me' },
+  { id: 'summary', icon: 'home', color: 'violet', label: 'practice' },
+  { id: 'academy', icon: 'academy', color: 'orange', label: 'hub' },
+  { id: 'write', icon: 'pencil', color: 'teal', label: 'write', center: true },
+  { id: 'community', icon: 'stage', color: 'pink', label: 'stage' },
+  { id: 'library', icon: 'library', color: 'blue', label: 'library' },
+  { id: 'me', icon: 'person', color: 'gray', label: 'me', side: false },
 ];
-const ROOTS = { summary: HomeView, library: LibraryView, community: CommunityView, academy: LearnView, me: MeView };
+const ROOTS = { summary: HomeView, library: LibraryView, community: CommunityView, academy: LearnView, write: WriteView, me: MeView };
 const VIEWS = {
   improvise: (p) => <ImproviseView {...p} pushed />, tools: (p) => <ToolsView {...p} pushed />, courses: (p) => <AcademyView {...p} pushed />,
-  piece: PieceView, editor: EditorView, tutors: TutorsView, tutor: TutorView, tutorMe: TutorMeView, lessons: LessonsView, songbook: SongbookView, catalog: CatalogView, course: CourseView, tool: ToolView, history: HistoryView, classView: ClassView, assignment: AssignmentView,
+  piece: PieceView, editor: EditorView, studio: StudioView, student: StudentView, tutors: TutorsView, tutor: TutorView, tutorMe: TutorMeView, lessons: LessonsView, songbook: SongbookView, catalog: CatalogView, course: CourseView, tool: ToolView, history: HistoryView, classView: ClassView, assignment: AssignmentView,
   post: PostView, daily: DailyView, profile: ProfileView, leaderboard: LeaderboardView, notifications: NotificationsView, wallet: WalletView, challenge: ChallengeView,
   editProfile: EditProfileView, help: HelpView, admin: AdminView,
 };
@@ -57,6 +64,7 @@ const SHEETS = {
   joinClass: JoinClassSheet, newClass: NewClassSheet, newAssignment: NewAssignmentSheet, review: ReviewSheet,
   plans: PlansSheet, manualPay: ManualPaySheet, compose: ComposeSheet, accept: AcceptSheet, changes: ChangesSheet, addCredits: AddCreditsSheet, submitScore: SubmitScoreSheet,
   image: ImageSheet, reportPost: ReportSheet, more: MoreSheet, feedback: FeedbackSheet, guidelines: GuidelinesSheet, about: AboutSheet, installHelp: InstallHelpSheet, stageGuide: StageGuideSheet, mixer: MixerSheet, instrumentPick: InstrumentPickSheet, lessonAsk: LessonAskSheet, lessonRate: LessonRateSheet,
+  newSong: NewSongSheet, hubRole: HubRoleSheet, classQR: ClassQRSheet, pair: PairSheet, take: TakeSheet, joinLink: JoinLinkSheet, moment: MomentSheet,
   setPassword: SetPasswordSheet, signIn: SignInSheet, deleteAccount: DeleteAccountSheet, devCode: DevCodeSheet,
 };
 
@@ -95,6 +103,13 @@ async function backFromCheckout() {
 /** Links like …/#post/<id> (shared from the community) open that post. */
 function openHash() {
   const h = location.hash.replace('#', '');
+  // a class link or QR code: …/app/#join/ABC123
+  const jn = /^join\/([A-Za-z0-9]{4,12})$/.exec(h);
+  if (jn) { go('academy'); openSheet('joinLink', { code: jn[1].toUpperCase() }); history.replaceState(null, '', location.pathname); return; }
+  // the app asks the website to sign it in: …/app/#pair=ABCD2345
+  const pr = /^pair=([A-Za-z0-9]{8})$/.exec(h);
+  if (pr) { openSheet('pair', { approve: true, code: pr[1].toUpperCase() }); history.replaceState(null, '', location.pathname); return; }
+  if (h === 'write') { go('write'); return; }
   const m = /^post\/([0-9a-f]{6,16})$/.exec(h);
   if (m) { go('community'); push('post', { id: m[1] }, 'community'); return; }
   const u = /^u\/([a-z0-9_.]{3,20})$/.exec(h);
@@ -159,36 +174,43 @@ function App() {
   useEffect(() => onAudioProblem(setSoundTap), []);
   if (!s.ready) return <div class="splash"><div class="spinner" /></div>;
   const tabBtn = (tab, cls) => (
-    <button type="button" key={tab.id} id={`tab-${tab.label}`} class={`c-${tab.color}${s.tab === tab.id ? ' on' : ''}${tab.center && cls === 'bar' ? ' center' : ''}`} onClick={() => {
+    <button type="button" key={tab.id} id={`${cls === 'bar' ? 'tab' : 'side'}-${tab.label}`} class={`c-${tab.color}${s.tab === tab.id ? ' on' : ''}${tab.center && cls === 'bar' ? ' center' : ''}`} onClick={() => {
       if (s.tab === tab.id && s.stacks[tab.id].length) popToRoot(tab.id);
       go(tab.id);
     }} aria-current={s.tab === tab.id ? 'page' : undefined}>
-      <span class="tab-ic"><Icon name={tab.icon} size={tab.center && cls === 'bar' ? 26 : cls === 'top' ? 19 : 24} stroke={s.tab === tab.id || (tab.center && cls === 'bar') ? 2.3 : 1.9} />
+      <span class="tab-ic"><Icon name={tab.center && cls === 'bar' ? 'plus' : tab.icon} size={tab.center && cls === 'bar' ? 26 : cls === 'side' ? 20 : 24} stroke={s.tab === tab.id || (tab.center && cls === 'bar') ? 2.4 : 2} />
         {tab.id === 'community' && s.me?.unread > 0 && <span class="tab-dot" />}</span>
-      <span>{t(tab.label)}</span>
+      <span class="tab-label">{t(tab.label)}</span>
     </button>
   );
   const tier = s.me?.tier || 'free';
   const top = s.stacks[s.tab]?.[s.stacks[s.tab].length - 1]?.view;
-  const immersive = top === 'piece' || top === 'editor';
+  const immersive = top === 'piece' || top === 'editor' || top === 'studio';
+  const name = (s.me?.name && s.me.name !== 'Musician' ? s.me.name : s.settings.name || '').trim();
+  const sec = TABS.find((x) => x.id === s.tab)?.color || 'violet';
   return (
-    <div class={`app${immersive ? ' immersive' : ''}`}>
-      <header class="topnav">
-        <button type="button" class="logo" onClick={() => { popToRoot('summary'); go('summary'); }}><span class="logo-mark"><Icon name="library" size={18} stroke={2.4} /></span>Haptune</button>
-        <nav aria-label="Sections">{TABS.filter((x) => x.id !== 'me').map((tab) => tabBtn(tab, 'top'))}</nav>
-        <div class="right">
-          {tier === 'free' || tier === 'plus'
-            ? <button type="button" class="get-btn pro" onClick={() => openSheet('plans')}>{t(tier === 'free' ? 'getPro' : 'upgradePro')}</button>
-            : <span class={`plan-chip ${tier}`}>{tier === 'dev' ? 'DEV' : 'PRO'}</span>}
-          <button type="button" class="avatar" id="top-me" onClick={() => { popToRoot('me'); go('me'); }} aria-label={t('me')}>
-            {(s.me?.name || s.settings.name || '').trim().slice(0, 1).toUpperCase() || <Icon name="person" size={18} />}
+    <div class={`app v3 sec-${sec}${immersive ? ' immersive' : ''}`}>
+      <aside class="side" aria-label="Sections">
+        <button type="button" class="brand" onClick={() => { popToRoot('summary'); go('summary'); }}><Logo /><span>ETASheet</span></button>
+        <button type="button" class="side-create" onClick={() => openSheet('newSong')} id="side-create"><Icon name="plus" size={18} stroke={2.6} />{t('newSongT')}</button>
+        <nav>{TABS.filter((x) => x.side !== false).map((tab) => tabBtn(tab, 'side'))}</nav>
+        <div class="side-foot">
+          {(tier === 'free' || tier === 'plus') && (
+            <button type="button" class="side-pro" onClick={() => openSheet('plans')}>
+              <strong>{t(tier === 'free' ? 'getPro' : 'upgradePro')}</strong><span>{t('sidePro')}</span>
+            </button>
+          )}
+          <button type="button" class={`side-me${s.tab === 'me' ? ' on' : ''}`} id="top-me" onClick={() => { popToRoot('me'); go('me'); }}>
+            <span class="avatar">{name.slice(0, 1).toUpperCase() || <Icon name="person" size={18} />}</span>
+            <span class="who"><strong>{name || t('me')}</strong><span>{tier === 'free' ? t('plan_free') : tier === 'dev' ? 'DEV' : t(`plan_${tier}`)}</span></span>
+            <Icon name="gear" size={18} />
           </button>
         </div>
-      </header>
+      </aside>
       <main class="content">
         {TABS.map((tab) => <div class="tab-pane" hidden={s.tab !== tab.id} key={tab.id}><Stack tab={tab.id} active={s.tab === tab.id} /></div>)}
       </main>
-      <nav class="tabbar" aria-label="Sections">{TABS.map((tab) => tabBtn(tab, 'bar'))}</nav>
+      <nav class="tabbar" aria-label="Sections">{TABS.filter((x) => x.side !== false).map((tab) => tabBtn(tab, 'bar'))}</nav>
       {s.sheet && <SheetHost sheet={s.sheet} />}
       {soundTap && <button type="button" class="sound-pill" id="sound-pill"><Icon name="speaker" size={18} stroke={2.3} />{t('tapForSound')}</button>}
       {s.toast && <div class={`toast${s.toast.kind === 'err' ? ' err' : ''}`} role="status"><Icon name={s.toast.kind === 'err' ? 'info' : 'check'} size={18} stroke={2.4} />{s.toast.text}</div>}

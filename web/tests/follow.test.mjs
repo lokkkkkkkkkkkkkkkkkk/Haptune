@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { parseABC } from '../src/core/abc.js';
 import { performance } from '../src/core/score.js';
 import { expectedNotes, Follower, trickyBars } from '../src/core/follow.js';
+import { q } from '../src/core/q.js';
 
 const TUNE = `X:1\nT:Test\nM:4/4\nL:1/4\nK:C\nC C G G | A A G2 | [CE] D E F |\n`;
 const perf = performance(parseABC(TUNE));
@@ -52,4 +53,37 @@ test('chords count when any of their notes is heard; singers may be an octave of
 test('tricky bars: worst first, only below the bar', () => {
   const bars = new Map([[0, { right: 4, total: 4 }], [1, { right: 1, total: 4 }], [2, { right: 2, total: 4 }]]);
   assert.deepEqual(trickyBars(bars).map((b) => b.mi), [1, 2]);
+});
+
+test('octave slips of the pitch tracker count after a longer hold, and mistakes are listed', () => {
+  const exp = [{ t: q(0), mi: 0, midis: [64], top: 64, ids: ['a'] }, { t: q(1), mi: 0, midis: [67], top: 67, ids: ['b'] }, { t: q(2), mi: 1, midis: [69], top: 69, ids: ['c'] }];
+  const f = new Follower(exp);
+  const feed = (m, n, rms = 0.05) => { let r = null; for (let i = 0; i < n; i++) r = f.push({ midi: m, rms }) || r; return r; };
+  assert.equal(feed(52, 4), null);                                  // an octave low: not yet
+  assert.deepEqual(feed(52, 1), { type: 'ok', index: 0, octave: true });
+  f.push(null);
+  assert.deepEqual(feed(66, 6), { type: 'wrong', index: 1, played: 66 });   // F# instead of G
+  assert.deepEqual(feed(67, 3), { type: 'ok', index: 1 });
+  // the app's own accompaniment is not taken for the player
+  f.ignore = (m) => m === 72;
+  assert.equal(feed(72, 10), null);
+  f.ignore = null;
+  f.push(null);
+  feed(69, 3);
+  const r = f.result();
+  assert.equal(r.total, 3);
+  assert.equal(r.right, 2);
+  assert.deepEqual(r.wrong.map((w) => [w.mi, w.want, w.played]), [[0, 67, 66]]);
+});
+
+test('a bowed repeated note counts again after the sound dips and rises', () => {
+  const exp = [{ t: q(0), mi: 0, midis: [69], top: 69, ids: ['a'] }, { t: q(1), mi: 0, midis: [69], top: 69, ids: ['b'] }];
+  const f = new Follower(exp);
+  for (let i = 0; i < 3; i++) f.push({ midi: 69, rms: 0.08 });
+  assert.equal(f.k, 1);
+  for (let i = 0; i < 5; i++) assert.equal(f.push({ midi: 69, rms: 0.08 }), null);   // still the same note
+  f.push(null, 0.03);                                                                  // a bow change: quieter, unclear
+  let r = null;
+  for (let i = 0; i < 4; i++) r = f.push({ midi: 69, rms: 0.07 }) || r;
+  assert.deepEqual(r, { type: 'ok', index: 1 });
 });

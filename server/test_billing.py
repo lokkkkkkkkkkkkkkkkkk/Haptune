@@ -1,4 +1,6 @@
 """Paying on the website: Stripe checkout and renewals, and DuitNow / bank transfer approved by the developer."""
+import os
+os.environ.setdefault("HAPTUNE_SIGNIN_REQUIRED", "0")   # these tests use guest accounts; test_hub.py checks the sign-in rule
 import hashlib
 import hmac
 import json

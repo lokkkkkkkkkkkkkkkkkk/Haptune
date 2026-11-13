@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /app/
+Allow: /app/$
+
+Sitemap: {{SITE}}/sitemap.xml

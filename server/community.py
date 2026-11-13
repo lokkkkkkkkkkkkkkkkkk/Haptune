@@ -344,8 +344,8 @@ class Attachment(BaseModel):
 
 
 class PostIn(BaseModel):
-    type: Literal["request", "question", "share", "show"]
-    title: str = Field(..., min_length=2, max_length=120)
+    type: Literal["request", "question", "share", "show", "moment"]
+    title: str = Field("", max_length=120)
     body: str = Field("", max_length=4000)
     song: str = Field("", max_length=140)
     artist: str = Field("", max_length=100)
@@ -355,7 +355,7 @@ class PostIn(BaseModel):
     licence: str = Field("", max_length=12)
     visibility: str = Field("public", max_length=10)
     xml: str | None = None
-    attachments: list[Attachment] = Field(default_factory=list, max_length=3)
+    attachments: list[Attachment] = Field(default_factory=list, max_length=4)
     pot: int = Field(0, ge=0, le=REWARDS["max_pot"])
     data: dict | None = None
     lang: str = Field("", max_length=10)
@@ -363,9 +363,21 @@ class PostIn(BaseModel):
 
 @router.post("/posts")
 def create_post(body: PostIn, me: A.Me = Depends(A.current)):
+    A.require_registered(me)
     _limit_user(me, "post", 10, 3600, "That's a lot of posts for one hour. Please take a short break.")
     title = clean_text(body.title, 120)
     text = clean_text(body.body, 4000)
+    # a "moment" is an everyday post: words, photos, a recording, a video link (Stage as a music feed)
+    if body.type == "moment":
+        if not text and not body.attachments and not body.link.strip():
+            raise HTTPException(400, "Write something, or add a photo, a recording or a link.")
+        if not title:
+            first = (text.split("\n", 1)[0] if text else "").strip()
+            title = (first[:80] + ("…" if len(first) > 80 else "")) or "🎵"
+    elif len(title) < 2:
+        raise HTTPException(400, "Give it a title.")
+    if body.type != "moment" and len(body.attachments) > 3:
+        raise HTTPException(400, "Attach up to 3 files.")
     link = body.link.strip()
     if link and not re.match(r"^https?://\S+$", link):
         raise HTTPException(400, "The link should start with http:// or https://")
@@ -393,14 +405,16 @@ def create_post(body: PostIn, me: A.Me = Depends(A.current)):
         if body.type == "show":
             data = {k: data[k] for k in ("accuracy", "minutes", "piece", "mode", "tempo_pct", "instrument") if k in data}
         atts = []
-        for a in body.attachments if body.type in ("request", "question") else []:
+        for a in body.attachments if body.type in ("request", "question", "moment") else []:
             try:
                 raw = base64.b64decode(a.data, validate=True)
             except ValueError:
                 raise HTTPException(400, "An attachment couldn't be read.")
-            kind = "pdf" if a.mime == "application/pdf" else "image" if a.mime in ("image/jpeg", "image/png", "image/webp") else None
+            mime = a.mime.split(";")[0].strip().lower()
+            kind = "pdf" if mime == "application/pdf" else "image" if mime in ("image/jpeg", "image/png", "image/webp", "image/gif") else \
+                "audio" if body.type == "moment" and mime in ("audio/mp4", "audio/webm", "audio/mpeg", "audio/ogg", "audio/wav", "audio/x-m4a", "audio/aac") else None
             if not kind or len(raw) > MAX_ATTACH:
-                raise HTTPException(400, "Attach photos (JPEG/PNG) or a PDF of up to 2 MB each.")
+                raise HTTPException(400, "Attach photos, a short recording (moments) or a PDF of up to 2 MB each.")
             fid = _save_file(c, me.id, kind, a.name or kind, a.mime, raw, pid)
             atts.append({"id": fid, "name": a.name[:120], "mime": a.mime, "size": len(raw)})
         c.execute(insert(posts).values(
@@ -418,7 +432,7 @@ def create_post(body: PostIn, me: A.Me = Depends(A.current)):
             if shared_today < REWARDS["shares_per_day"]:
                 A.grant(c, me.id, REWARDS["share"], "share", ref=pid, note=title[:80])
         # followers hear about new requests and shares
-        if body.type in ("request", "share", "show"):
+        if body.type in ("request", "share", "show", "moment"):
             for (fid_,) in c.execute(select(follows.c.follower).where(follows.c.followee == me.id).limit(500)).all():
                 A.notify(c, fid_, "new_post", actor=me.id, post=pid, type=body.type)
     return get_post(pid, me)
@@ -467,6 +481,9 @@ def _can_see_file(c, me: A.Me | None, f: dict) -> bool:
         return True
     if f["kind"] in ("image", "pdf"):
         return True                                              # pictures of a request: helpers need them
+    if f["kind"] == "audio":                                     # a recording in a moment: as visible as its post
+        p = c.execute(select(posts.c.visibility, posts.c.hidden).where(posts.c.id == f["post_id"])).mappings().first() if f["post_id"] else None
+        return bool(p and p["visibility"] in ("public", "unlisted") and not p["hidden"])
     p = c.execute(select(posts).where(posts.c.id == f["post_id"])).mappings().first() if f["post_id"] else None
     if p and p["file_id"] == f["id"]:
         return p["visibility"] in ("public", "unlisted") and not p["hidden"]
@@ -655,6 +672,7 @@ class ReplyIn(BaseModel):
 
 @router.post("/posts/{pid}/replies")
 def reply(pid: str, body: ReplyIn, me: A.Me = Depends(A.current)):
+    A.require_registered(me)
     _limit_user(me, "reply", 40, 3600, "That's a lot of replies for one hour. Please take a short break.")
     text = clean_text(body.body, 2000)
     with engine().begin() as c:

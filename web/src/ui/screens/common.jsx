@@ -1,3 +1,4 @@
+import { useState } from 'preact/hooks';
 import { useApp, pop, closeSheet, go } from '../state.js';
 import { t } from '../../core/i18n.js';
 import { Icon } from '../components.jsx';
@@ -60,3 +61,19 @@ export function SheetFrame({ title, children, right, onRight, rightDisabled, ful
 export const dateLabel = (lang) => {
   try { return new Date().toLocaleDateString(lang, { weekday: 'long', day: 'numeric', month: 'long' }); } catch { return ''; }
 };
+
+/** The ETASheet mark: a note head on a staff line, in the brand gradient. */
+let logoSeq = 0;
+export function Logo({ size = 30 }) {
+  // each mark has its own gradient id: a gradient inside a hidden copy (the sidebar on phones) would paint nothing
+  const [id] = useState(() => `etaLogo${++logoSeq}`);
+  return (
+    <svg class="logo-svg" width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
+      <defs><linearGradient id={id} x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5B5BF6" /><stop offset=".55" stop-color="#9B5CF6" /><stop offset="1" stop-color="#F65C9B" /></linearGradient></defs>
+      <rect width="32" height="32" rx="9" fill={`url(#${id})`} />
+      <path d="M7 21.5h18M7 16.5h18M7 11.5h18" stroke="#fff" stroke-opacity=".35" stroke-width="1.4" />
+      <ellipse cx="13" cy="21.3" rx="4.2" ry="3.2" transform="rotate(-20 13 21.3)" fill="#fff" />
+      <path d="M16.6 20V7.5c2.8.6 5.6 2.4 6.4 5.3" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" />
+    </svg>
+  );
+}

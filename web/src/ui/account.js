@@ -41,10 +41,13 @@ export function setMe(me) {
 export const refreshMe = () => ensureAccount({ fresh: true });
 export const myTier = () => getState().me?.tier || 'free';
 export const isDev = () => getState().me?.tier === 'dev';
+/** Signed in with Google or a username and password (online features others see need it). */
+export const isRegistered = () => !!getState().me?.registered;
 export const hasPlan = (min = 'plus') => ({ free: 0, plus: 1, pro: 2, dev: 3 }[myTier()] || 0) >= ({ plus: 1, pro: 2 }[min] || 1);
 
 /** Shows the plans when a feature needs one; returns true when it did. Use in catch blocks. */
 export function planError(e) {
+  if (e instanceof ApiError && e.signin) { openSheet('hubRole', { need: true }); return true; }
   if (e instanceof ApiError && e.plan) { openSheet('plans', { reason: e.plan }); return true; }
   if (e instanceof ApiError && e.detail?.code === 'credits') { toast(t('notEnoughCredits'), 'err'); return true; }
   return false;
@@ -80,6 +83,16 @@ export const C = {
     local.set('academyToken', r.token); setMe(r.me);
     return r;
   },
+  /** Sign in with Google: `credential` is the ID token Google's button gives the page. */
+  google: async (credential) => {
+    const r = await call('/c/auth/google', { method: 'POST', json: { credential, device: navigator.userAgent.slice(0, 60) } });
+    local.set('academyToken', r.token); local.set('academyUser', null); setMe(r.me);
+    return r.me;
+  },
+  pairStart: () => call('/c/auth/pair', { method: 'POST', token: '' }),
+  pairPoll: (code) => call(`/c/auth/pair/${code}`, { token: '' }),
+  pairApprove: (code) => call(`/c/auth/pair/${code}/approve`, { method: 'POST' }),
+  pairDone: (r) => { local.set('academyToken', r.token); local.set('academyUser', null); setMe(r.me); return r.me; },
   logout: async () => {
     try { await call('/c/auth/logout', { method: 'POST' }); } catch { /* offline: forget it here anyway */ }
     local.set('academyToken', ''); local.set('me', null); local.set('academyUser', null);

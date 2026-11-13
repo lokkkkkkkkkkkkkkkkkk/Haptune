@@ -40,6 +40,17 @@ export function MeView({ active }) {
           <button type="button" class="hm-stat" onClick={() => push('courses')}><span class="k"><Icon name="academy" size={13} stroke={2.4} />{t('level')}</span><span class="v num">{lv.level}</span><span class="s">{s.progress.xp} {t('xp')}</span></button>
         </div>
 
+        {online && me && !me.registered && (
+          <div class="signin-card" id="me-signin">
+            <div><strong>{t('meSignIn')}</strong><span>{t('meSignInSub')}</span></div>
+            <button type="button" class="btn" onClick={() => openSheet('hubRole', {})}><Icon name="person" size={17} stroke={2.4} />{t('signIn')}</button>
+          </div>
+        )}
+        {online && me?.registered && (
+          <div class="signed-line"><Icon name="check" size={15} stroke={2.6} />{me.google ? t('signedGoogle', { email: me.email || '' }) : t('signedUser', { handle: me.handle })}
+            {!isNative() && <button type="button" class="hw-skip" onClick={() => openSheet('pair', { approve: true })}>{t('pairApproveBtn')}</button>}</div>
+        )}
+
         {tier === 'free' || tier === 'plus' ? (
           <button type="button" class="upsell" id="me-upsell" onClick={() => openSheet('plans')}>
             <Icon name="crown" size={26} stroke={2} />
