@@ -587,3 +587,17 @@ body.ce-dragging, body.ce-dragging * { cursor: grabbing !important; }
 .rq-steps i { width: 8px; height: 8px; border-radius: 50%; background: var(--ink3); opacity: .5; }
 .rq-steps .done { color: var(--s-teal); } .rq-steps .done i { background: var(--s-teal); opacity: 1; }
 .rq-steps .now { color: var(--ink); font-weight: 700; background: color-mix(in srgb, var(--s-pink) 14%, transparent); } .rq-steps .now i { background: var(--s-pink); opacity: 1; }
+
+/* ---------------- practice report ---------------- */
+.rep-head { display: flex; align-items: center; gap: 18px; }
+.rep-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
+.rep-metric { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; }
+.rep-metric strong { font-size: 24px; }
+.rep-metric span { color: var(--ink2); font-size: 13px; }
+.rep-bars { display: flex; flex-direction: column; gap: 6px; background: var(--card); border-radius: 14px; padding: 10px 12px; border: 1px solid var(--line); }
+.rep-bar { display: grid; grid-template-columns: 64px 1fr 48px auto; align-items: center; gap: 10px; font-size: 14px; }
+.rep-bar .track { height: 8px; border-radius: 4px; background: var(--fill2); overflow: hidden; }
+.rep-bar .track i { display: block; height: 100%; border-radius: 4px; background: var(--s-teal); }
+.rep-bar.mid .track i { background: var(--s-orange); } .rep-bar.low .track i { background: var(--s-pink); }
+.rep-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 20px; }
+.rep-trend { padding: 12px; }

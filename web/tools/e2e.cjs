@@ -154,6 +154,22 @@ async function run(mode, base, browser) {
       }
     });
   }
+  if (mode === 'desktop') {
+    await step('Play Along take -> report -> details -> export', async () => {
+      await p.locator('#play-along').click(); await p.waitForSelector('.mode-cards');
+      await p.locator('.mode-card').nth(1).click();                       // keep the beat: ends with the music
+      await p.locator('.sheet .btn.brand').filter({ hasText: /Start/ }).click();
+      await p.waitForSelector('#take-report', { timeout: 120000 });
+      await shot('11-take'); 
+      await p.locator('#view-details').click(); await p.waitForSelector('#report');
+      await p.waitForSelector('#rep-next');
+      await shot('12-report'); await overflow('report');
+      const [dl] = await Promise.all([p.waitForEvent('download', { timeout: 30000 }), p.locator('#rep-png').click()]);
+      const file = path.join(SHOTS, 'export-report.png'); await dl.saveAs(file);
+      if (fs.readFileSync(file).subarray(1, 4).toString() !== 'PNG') throw new Error('the report picture is not a PNG');
+      await back();
+    });
+  }
   await step('library and the free library', async () => {
     await back(); await tab('library'); await p.waitForTimeout(300);
     await shot('05-library'); await overflow('library'); await primaries('library');

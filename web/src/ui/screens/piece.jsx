@@ -481,7 +481,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
     const keyF = sheetKey?.fifths || 0;
     const nm = (m) => pitchName(spellMidi(m, keyF));
     const wrong = (r.wrong || []).slice(0, 40).map((w) => ({ bar: barNo(w.mi), mi: w.mi, want: nm(w.want), played: w.played == null ? '' : nm(w.played) }));
-    setResult({ ...r, wrong, seconds: secs, tricky: trickyBars(r.bars), barsList, mode: pr?.mode, speed: pr?.speed ?? speed, part: pr?.sel?.id, title: meta.title });
+    setResult({ ...r, wrong, seconds: secs, tricky: trickyBars(r.bars), barsList, mode: pr?.mode, speed: pr?.speed ?? speed, part: pr?.sel?.id, title: meta.title, pieceId: meta.id, keySig: sheetKey || null });
     const recP = takeRec.current;
     takeRec.current = null;
     if (recP) recP().then((rec) => { if (rec?.blob?.size > 2000) setResult((x) => x && ({ ...x, recording: rec, recordingURL: URL.createObjectURL(rec.blob) })); }).catch(() => {});
@@ -857,6 +857,7 @@ function ResultCard({ result, barNo, onPractise, onAgain, assignment, onSend, ch
         <div class="r3-rec"><span class="k"><Icon name="mic" size={14} />{t('yourTake')}</span><audio controls preload="metadata" src={result.recordingURL} /></div>
       )}
       <div class="btn-row">
+        <Button small kind="brand" icon="doc" onClick={() => push('report', { result, pieceId: result.pieceId, title: result.title, keySig: result.keySig, onPractise, onShowBar, onSend, onClass, onShare, assignment })} id="view-details">{t('viewDetails')}</Button>
         <Button small icon="mic" onClick={onAgain}>{good && next > Math.round(result.speed * 100) ? t('tryAt', { p: next }) : t('tryAgain')}</Button>
         {assignment && <Button small icon="send" kind="brand" onClick={onSend} disabled={result.sent}>{result.sent ? t('sentToTeacher') : t('submitToTeacher')}</Button>}
         {!assignment && hasServer() && <Button small icon="academy" kind="secondary" onClick={onClass} id="share-class">{result.shared ? t('sharedWithClass') : t('shareWithClass')}</Button>}

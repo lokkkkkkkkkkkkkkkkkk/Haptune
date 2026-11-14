@@ -17,6 +17,7 @@ import { AddSheet, ImportWizardSheet, FinderSheet } from './screens/addmusic.jsx
 import { WelcomeSheet } from './screens/welcome.jsx';
 import { PracticeView } from './screens/practice.jsx';
 import { SoundCheckView } from './screens/soundcheck.jsx';
+import { ReportView } from './screens/report.jsx';
 import { VaryView } from './screens/moretools.jsx';
 import { LearnView as LearnMoreView } from './screens/learn.jsx';
 import { PieceMoreSheet } from './screens/piecemore.jsx';
@@ -65,7 +66,7 @@ const VIEWS = {
   piece: PieceView, editor: EditorView, studio: StudioView, student: StudentView, tutors: TutorsView, tutor: TutorView, tutorMe: TutorMeView, lessons: LessonsView, songbook: SongbookView, catalog: CatalogView, course: CourseView, tool: ToolView, history: HistoryView, classView: ClassView, assignment: AssignmentView,
   post: PostView, daily: DailyView, profile: ProfileView, leaderboard: LeaderboardView, notifications: NotificationsView, wallet: WalletView, challenge: ChallengeView,
   editProfile: EditProfileView, help: HelpView, admin: AdminView,
-  practice: PracticeView, soundCheck: SoundCheckView, vary: VaryView, chordEditor: ChordEditorView, learnMore: (p) => <LearnMoreView {...p} pushed />,
+  practice: PracticeView, soundCheck: SoundCheckView, report: ReportView, vary: VaryView, chordEditor: ChordEditorView, learnMore: (p) => <LearnMoreView {...p} pushed />,
 };
 const SHEETS = {
   add: AddSheet, paste: PasteSheet, findSong: FindSongSheet, scale: ScaleSheet, report: ImportReportSheet, chord: ChordSheet, findKey: FindKeySheet,
