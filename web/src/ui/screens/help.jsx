@@ -1,6 +1,7 @@
 // Help: questions and answers, sending feedback or a problem report (with optional technical details), the
 // community guidelines, and About (credits for the music engine, sounds and fonts).
 import { useState } from 'preact/hooks';
+import { deviceAudioLog } from '../audio.js';
 import { useApp, closeSheet, openSheet, toast, getState, push } from '../state.js';
 import { t } from '../../core/i18n.js';
 import { Icon, Button, Section, Card, Chip, Toggle, List, Row } from '../components.jsx';
@@ -78,7 +79,7 @@ function diagnostics() {
   return {
     app: `${cfg.version || '?'} (${cfg.build || '?'})`, platform: platform(), ua: navigator.userAgent.slice(0, 200),
     screen: `${innerWidth}x${innerHeight}@${devicePixelRatio}`, lang: s.settings.lang, tab: s.tab, view: top?.view || 'root',
-    pieces: s.pieces.length, audio: globalThis.__haptuneAudio?.() || null, errors: [...errors],
+    pieces: s.pieces.length, audio: globalThis.__haptuneAudio?.() || null, sound: deviceAudioLog(), errors: [...errors],
   };
 }
 

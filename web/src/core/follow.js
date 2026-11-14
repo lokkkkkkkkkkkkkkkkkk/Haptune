@@ -29,8 +29,9 @@ export class Follower {
    * @param stable    frames a pitch must last to count (3 ≈ 70 ms)
    * @param wrong     frames a wrong pitch must last to count as a mistake (6 ≈ 130 ms)
    */
-  constructor(expected, { octaveOk = false, stable = 3, wrong = 6, octaveStable = 5 } = {}) {
+  constructor(expected, { octaveOk = false, stable = 3, wrong = 6, octaveStable = 5, lookahead = 2 } = {}) {
     this.exp = expected;
+    this.lookahead = lookahead;      // a note played that is 1-2 notes ahead: the missed ones are skipped (a lost note can't derail the take)
     this.k = 0;
     this.octaveOk = octaveOk;
     this.stable = stable;
@@ -93,7 +94,8 @@ export class Follower {
     const exact = this.matches(exp, m);
     const octave = !exact && this.octaveOf(exp, m);
     if (exact || octave) {
-      if (this.count >= (exact ? this.stable : this.octaveStable)) {
+      const need = exact ? (frame.conf > 0.8 ? Math.max(2, this.stable - 1) : this.stable) : this.octaveStable;
+      if (this.count >= need) {
         const index = this.k++;
         this.held = m;
         this.peak = rms; this.dip = Infinity;
@@ -102,6 +104,17 @@ export class Follower {
         return octave ? { type: 'ok', index, octave: true } : { type: 'ok', index };
       }
       return null;
+    }
+    // tolerant window: the player is already on a later note (one we missed, e.g. a frame lost to noise). Needs a
+    // little longer than a normal match, then counts the skipped notes as missed and carries on from there.
+    for (let j = 1; j <= this.lookahead && this.k + j < this.exp.length; j++) {
+      if (this.matches(this.exp[this.k + j], m) && !this.matches(this.exp[this.k + j - 1], m) && this.count >= this.stable + 2) {
+        for (let i = this.k; i < this.k + j; i++) { this.firstTry[i] = false; this.misses[i]++; }
+        const index = this.k + j;
+        this.k = index + 1;
+        this.held = m; this.peak = rms; this.dip = Infinity; this.cand = null; this.count = 0;
+        return { type: 'ok', index, skipped: j };
+      }
     }
     if (this.count >= this.wrongN && !this.wrongShown) {
       this.wrongShown = true;

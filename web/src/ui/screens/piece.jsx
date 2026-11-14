@@ -373,7 +373,9 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
     try {
       micStop.current?.();
       takeRec.current = null;
-      const stopMic = await listen((p, rms) => onFrame(p, rms), { record: true });
+      // a second of the room first: the detector learns its noise (café, TV, traffic), then the take starts
+      toast(t('listeningRoom'));
+      const stopMic = await listen((p, rms) => onFrame(p, rms), { record: true, calibrate: 1000, echo: mode === 'beat' && choices.length > 1 });
       micStop.current = stopMic;
       takeRec.current = stopMic.recording;
     } catch (e) {
@@ -426,6 +428,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
     }
     const f = follower.current;
     if (!f) return;
+    micStop.current?.expect?.(f.current ? [...f.current.midis, ...(f.exp[f.k + 1]?.midis || [])] : []);
     const r = f.push(p ? { midi: p.midi, rms: p.rms } : null, rms);
     if (!r) return;
     const box = scoreBox.current;
@@ -1426,6 +1429,7 @@ export function PlayAlongSheet({ choices = [], part, mode = 'wait', speed = 1, c
         <p class="note-text">{t(canBuzz() ? 'buzzNote' : 'buzzNoteIOS')}</p>
       </Section>
       <Button kind="brand" full icon="play" onClick={() => onStart?.({ part: p, mode: m, speed: sp, countIn: ci, buzzWrong: bw, buzzBeat: bb && m === 'beat' })}>{t('start')}</Button>
+      <button type="button" class="link-btn" style={{ alignSelf: 'center' }} id="pa-soundcheck" onClick={() => { closeSheet(); push('soundCheck'); }}><Icon name="speaker" size={14} /> {t('scT')}</button>
     </SheetFrame>
   );
 }

@@ -32,7 +32,7 @@ function serve() {
 }
 
 async function run(mode, base, browser) {
-  const ctx = await browser.newContext({ ...SIZES[mode], acceptDownloads: true });
+  const ctx = await browser.newContext({ ...SIZES[mode], acceptDownloads: true, permissions: ['microphone'] });
   // lets the test freeze one AudioContext's clock, the way iOS does after an interruption
   await ctx.addInitScript(() => {
     const frozen = new WeakMap();
@@ -182,6 +182,19 @@ async function run(mode, base, browser) {
       if (!(await p.locator('#more-tools.open').count())) throw new Error('More tools forgot that it was open');
     });
   }
+  if (mode === 'phone') {
+    await step('Sound check: the microphone is analysed, the speaker tone is measured, nothing reaches the output', async () => {
+      await tab('home');
+      if (!(await p.locator('#more-tools.open').count())) await p.locator('#more-tools-toggle').click();
+      await p.locator('#mt-soundcheck').click(); await p.waitForSelector('#sc-run');
+      await p.locator('#sc-run').click();
+      await p.waitForSelector('#sound-check .list .row', { timeout: 20000 });
+      await shot('10-soundcheck'); await overflow('sound check');
+      const r = await p.evaluate(() => JSON.parse(localStorage.getItem('haptune.soundCheck') || 'null'));
+      if (!r || !r.playbackRate || r.roomDb === undefined) throw new Error('no sound check result: ' + JSON.stringify(r));
+      await back();
+    });
+  }
   await step('type 簡譜', async () => {
     await tab('home'); await p.fill('#home-search', '');
     if (!(await p.locator('#more-tools.open').count())) await p.locator('#more-tools-toggle').click();
@@ -246,7 +259,7 @@ async function run(mode, base, browser) {
   fs.mkdirSync(SHOTS, { recursive: true });
   const server = await serve();
   const base = `http://127.0.0.1:${server.address().port}`;
-  const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
+  const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required', '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
   let failed = 0;
   for (const mode of process.argv[2] ? [process.argv[2]] : Object.keys(SIZES)) {
     const errors = await run(mode, base, browser);

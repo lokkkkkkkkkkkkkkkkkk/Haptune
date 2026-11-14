@@ -1,0 +1,24 @@
+# Play Along note detection with background noise: runs the test corpus (web/tools/noise-corpus.mjs: violin,
+# flute, voice and piano-like takes mixed with café, TV speech and traffic at 20, 10 and 5 dB SNR) and prints the
+# accuracy table in the job summary. Fails if fewer than 95 % of notes are right at 20 dB, 90 % at 10 dB, or the
+# median latency is over 120 ms.
+name: play-along-accuracy
+on:
+  push:
+    paths: ["web/src/core/detect.js", "web/src/core/follow.js", "web/tools/noise-corpus.mjs", ".github/workflows/play-along-accuracy.yml"]
+  workflow_dispatch:
+jobs:
+  corpus:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Noise corpus
+        run: |
+          node tools/noise-corpus.mjs | tee corpus.md
+          cat corpus.md >> "$GITHUB_STEP_SUMMARY"

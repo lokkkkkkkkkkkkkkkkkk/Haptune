@@ -1,6 +1,9 @@
+import { Detector } from '../core/detect.js';
+import { buildMicGraph } from './micgraph.js';
 // Web Audio engine: a recorded grand piano (Salamander Grand Piano, CC BY 3.0, Alexander Holm) with light
 // synthesised voices for the other instruments, a look-ahead scheduler on the audio clock, metronome, drone,
-// and YIN pitch tracking for the tuner and practising with the microphone.
+// and note detection for the tuner and Play Along (core/detect.js: room calibration, spectral subtraction, YIN,
+// onsets, median, octave correction, chroma).
 //
 // Why it is built this way (dense scores used to stutter and get "stuck"):
 //  * every voice is 2-4 audio nodes (it was ~11), and at most MAX_VOICES sound at once, so busy piano music
@@ -17,7 +20,8 @@ const waves = {};
 const MASTER = 0.8;
 const LOOKAHEAD = 1.0;          // seconds scheduled ahead of the audio clock (a jump or stop fades the bus, so this costs nothing)
 const TICK_MS = 40;
-const MAX_VOICES = 64;
+const LOW_END = (globalThis.navigator?.hardwareConcurrency || 8) <= 4 || (globalThis.navigator?.deviceMemory || 8) <= 3;
+const MAX_VOICES = LOW_END ? 32 : 64;   // a low-end phone that runs out of time per audio block crackles
 const STALL_MS = 1500;          // the audio clock standing still this long while playing = the sound system is stuck
 const stats = { scheduled: 0, dropped: 0, stolen: 0, transports: 0, rebuilds: 0, stalls: 0 };
 let userOffset = 0;              // seconds, from Settings > Sound > Sync (calibration)
@@ -62,12 +66,20 @@ function build() {
   const AC = globalThis.AudioContext || globalThis.webkitAudioContext;
   if (!AC) return false;
   try { if (navigator.audioSession) navigator.audioSession.type = micOpen ? 'play-and-record' : 'playback'; } catch { /* plays through the silent switch on iOS 17+ */ }
-  ctx = new AC({ latencyHint: 'interactive' });
+  // 'playback' gives the output bigger buffers: no crackle from underruns on low-end Android phones. The cursor
+  // and Play Along use the audible time (outputDelay), so the larger latency is accounted for. Only the
+  // microphone's own context (listen) asks for 'interactive'.
+  ctx = new AC({ latencyHint: 'playback' });
   const mine = ctx;
   const comp = ctx.createDynamicsCompressor();
   comp.threshold.value = -12; comp.knee.value = 10; comp.ratio.value = 3; comp.attack.value = 0.004; comp.release.value = 0.2;
   out = ctx.createGain(); out.gain.value = MASTER;
-  out.connect(comp); comp.connect(ctx.destination);
+  // a fast limiter at the very end: the compressor plus the reverb could still go over 0 dB and clip (heard as
+  // crackle on phone speakers)
+  const limit = ctx.createDynamicsCompressor();
+  limit.threshold.value = -2; limit.knee.value = 0; limit.ratio.value = 20; limit.attack.value = 0.001; limit.release.value = 0.08;
+  const trim = ctx.createGain(); trim.gain.value = 0.9;
+  out.connect(comp); comp.connect(limit); limit.connect(trim); trim.connect(ctx.destination);
   // iOS pauses audio after a call, Siri or another app ("interrupted"): try to carry on, and ask for a tap if it won't
   ctx.onstatechange = () => {
     if (mine !== ctx) return;
@@ -187,7 +199,10 @@ function installUnlock() {
   globalThis.addEventListener?.('pageshow', wake);
   globalThis.addEventListener?.('focus', wake);
   globalThis.document?.addEventListener?.('visibilitychange', () => {
-    if (document.hidden) { try { if (!anythingPlaying()) silentEl?.pause(); } catch { /* fine */ } return; }
+    if (document.hidden) {
+      try { if (!anythingPlaying() && !micOpen) { silentEl?.pause(); ctx?.suspend?.().catch(() => {}); } } catch { /* fine */ }
+      return;
+    }
     wake();
     setTimeout(() => { if (ctx && ctx.state !== 'running' && anythingPlaying()) setProblem('tap'); }, 800);
   });
@@ -664,7 +679,7 @@ function recordingType() {
  * (above all as an app on the Home Screen) feeding the microphone into the playback sound system, whose rate can
  * differ, gave silence: Play Along then heard nothing.
  */
-export async function listen(onPitch, { record = false } = {}) {
+export async function listen(onPitch, { record = false, calibrate = 0, onCalibrated = null, echo = false } = {}) {
   audioContext();
   if (!navigator.mediaDevices?.getUserMedia) throw Object.assign(new Error('nomic'), { code: 'unavailable' });
   // iOS: a page that only "plays" is not given the microphone, so say we play and record while it is open
@@ -677,7 +692,9 @@ export async function listen(onPitch, { record = false } = {}) {
   try { mctx = new AC({ latencyHint: 'interactive' }); mctx.resume?.().catch(() => {}); } catch { mctx = null; }
   let stream;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } });
+    // echo cancellation only when the app's own backing plays through the speaker (it would otherwise be heard
+    // as notes and can ring); never noise suppression or auto gain, which smear sustained musical notes
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: !!echo, noiseSuppression: false, autoGainControl: false, channelCount: 1 } });
   } catch (e) {
     micOpen = false; session('playback');
     try { mctx?.close(); } catch { /* already closed */ }
@@ -685,26 +702,27 @@ export async function listen(onPitch, { record = false } = {}) {
   }
   if (!ctx || ctx.state === 'closed') audioContext();
   if (ctx.state !== 'running') await ctx.resume().catch(() => {});
-  // the microphone's rate: if the new sound system doesn't match it, make one that does
-  const micRate = stream.getAudioTracks()[0]?.getSettings?.().sampleRate;
+  // the microphone's rate: if the new sound system doesn't match it, make one that does (no resampling between them)
+  const track = stream.getAudioTracks()[0];
+  const micRate = track?.getSettings?.().sampleRate;
   if (mctx && micRate && Math.abs(mctx.sampleRate - micRate) > 1) {
     try { mctx.close(); } catch { /* fine */ }
     try { mctx = new AC({ sampleRate: micRate, latencyHint: 'interactive' }); } catch { mctx = null; }
   }
   if (mctx && mctx.state !== 'running') await Promise.race([mctx.resume().catch(() => {}), new Promise((r) => setTimeout(r, 400))]);
   const actx = mctx && mctx.state === 'running' ? mctx : ctx;          // fall back to the playback sound system
-  const src = actx.createMediaStreamSource(stream);
-  const an = actx.createAnalyser(); an.fftSize = 2048;
-  src.connect(an);
-  // Safari only runs an analyser that leads somewhere: a silent path to the speakers keeps it awake
-  let sink = null;
-  if (actx === mctx) { try { sink = actx.createGain(); sink.gain.value = 0; an.connect(sink); sink.connect(actx.destination); } catch { sink = null; } }
+  // microphone -> high-pass -> analyser; on Safari a gain of exactly 0 keeps the analyser running. Never a route to the speakers.
+  const graph = buildMicGraph(actx, stream);
+  const an = graph.an;
   const buf = new Float32Array(an.fftSize);
+  const det = new Detector({ sr: actx.sampleRate, size: an.fftSize });
+  lastMic = { sampleRate: actx.sampleRate, micRate: micRate || null, own: actx === mctx, label: track?.label || '', echo: !!echo, playbackRate: ctx?.sampleRate || null };
   let running = true;
   // the recording (Play Along takes a teacher can listen to)
   let rec = null, chunks = [], recStart = 0, recDone = null;
   const type = record ? recordingType() : null;
-  if (record && type !== null) {
+  const startRecording = () => {
+    if (!record || type === null) return;
     try {
       rec = new MediaRecorder(stream, type ? { mimeType: type, audioBitsPerSecond: 48000 } : undefined);
       rec.ondataavailable = (e) => { if (e.data?.size) chunks.push(e.data); };
@@ -712,20 +730,34 @@ export async function listen(onPitch, { record = false } = {}) {
       rec.start(1000);
       recStart = performance.now();
     } catch { rec = null; recDone = null; }
+  };
+  // a second of the room first (the take starts afterwards): the detector learns its noise
+  if (calibrate > 0) {
+    det.startCalibration();
+    const until = performance.now() + calibrate;
+    while (performance.now() < until && running) {
+      an.getFloatTimeDomainData(buf);
+      det.calibrate(buf);
+      await new Promise((r) => setTimeout(r, 25));
+    }
+    const room = det.finishCalibration();
+    lastMic.roomDb = room.db;
+    onCalibrated?.(room);
   }
+  startRecording();
   let silentFrames = 0;
   const loop = () => {
     if (!running) return;
     an.getFloatTimeDomainData(buf);
-    const r = yin(buf, actx.sampleRate);
-    if (r && r.clarity > 0.78) {
+    const r = det.process(buf);
+    if (r) {
       silentFrames = 0;
-      const midi = 69 + 12 * Math.log2(r.freq / 440);
-      onPitch({ midi, freq: r.freq, cents: Math.round((midi - Math.round(midi)) * 100), clarity: r.clarity, rms: r.rms, time: actx.currentTime });
+      onPitch({ midi: r.midi, freq: r.freq, cents: Math.round((r.midi - Math.round(r.midi)) * 100), clarity: r.clarity, rms: r.rms, onset: r.onset, conf: r.conf, time: actx.currentTime });
     } else {
-      onPitch(null, r ? r.rms : 0);                      // no clear pitch (silence, or a noisy moment)
+      const level = rmsOfFrame(buf);
+      onPitch(null, level);                                // no clear pitch (silence, or a noisy moment)
       // a sound system the phone paused (a call, another app) gives only zeros: wake it
-      if (!r && ++silentFrames % 90 === 0 && actx.state !== 'running') actx.resume().catch(() => {});
+      if (level < 1e-6 && ++silentFrames % 90 === 0 && actx.state !== 'running') actx.resume().catch(() => {});
     }
     setTimeout(loop, 20);
   };
@@ -735,7 +767,7 @@ export async function listen(onPitch, { record = false } = {}) {
     running = false;
     try { if (rec && rec.state !== 'inactive') rec.stop(); } catch { /* already stopped */ }
     stream.getTracks().forEach((t) => t.stop());
-    try { src.disconnect(); an.disconnect(); sink?.disconnect(); } catch { /* the sound system was rebuilt meanwhile */ }
+    graph.disconnect();
     if (actx === mctx) setTimeout(() => { try { mctx.close(); } catch { /* closed */ } }, 300);
     micOpen = false; session('playback');
     // closing the microphone changes the phone's sound route; make sure playback is awake afterwards
@@ -743,7 +775,55 @@ export async function listen(onPitch, { record = false } = {}) {
   };
   stop.recording = () => recDone || Promise.resolve(null);
   stop.analyser = actx === mctx ? 'own' : 'shared';
+  /** The notes the score expects now (octave correction, piano chords). */
+  stop.expect = (midis) => { det.expect = midis || []; };
+  stop.room = () => ({ noiseRms: det.noiseRms });
   return stop;
+}
+
+const rmsOfFrame = (b) => { let s = 0; for (let i = 0; i < b.length; i++) s += b[i] * b[i]; return Math.sqrt(s / b.length); };
+let lastMic = null;
+
+/**
+ * Sound check: plays a test tone and listens to how much of it comes back through the microphone (feedback),
+ * measures the room, and reports the device's sound set-up. Resolves to a plain object (also kept for problem
+ * reports, see deviceAudioLog).
+ */
+export async function soundCheck({ seconds = 1.2 } = {}) {
+  const c = audioContext();
+  const roomFrames = [], toneFrames = [];
+  let phase = 'room';
+  const stop = await listen((p, rms) => { const level = p ? p.rms : rms; (phase === 'room' ? roomFrames : toneFrames).push(level); }, { calibrate: 0 });
+  await new Promise((r) => setTimeout(r, 900));
+  phase = 'tone';
+  // a quiet 1 kHz tone from the speaker, through the normal output
+  const osc = c.createOscillator(), g = c.createGain();
+  osc.frequency.value = 1000; g.gain.value = 0.0001;
+  osc.connect(g); g.connect(out);
+  const t0 = c.currentTime + 0.05;
+  g.gain.setTargetAtTime(0.25, t0, 0.02); g.gain.setTargetAtTime(0.0001, t0 + seconds, 0.03);
+  osc.start(t0); osc.stop(t0 + seconds + 0.3);
+  await new Promise((r) => setTimeout(r, seconds * 1000 + 400));
+  stop();
+  const med = (xs) => { const a = [...xs].sort((x, y) => x - y); return a.length ? a[a.length >> 1] : 0; };
+  const room = med(roomFrames), back = med(toneFrames);
+  const db = (x) => Math.round(20 * Math.log10(Math.max(x, 1e-5)));       // floor at -100 dB (a silent input)
+  const result = {
+    at: new Date().toISOString(), roomDb: db(room), feedbackDb: db(back) - db(room), heard: back > Math.max(room * 2, 0.003),
+    playbackRate: c.sampleRate, micRate: lastMic?.micRate, micContextRate: lastMic?.sampleRate, ownMicContext: lastMic?.own,
+    baseLatencyMs: Math.round((c.baseLatency || 0) * 1000), outputLatencyMs: Math.round((c.outputLatency || 0) * 1000),
+    device: lastMic?.label || '', lowEnd: LOW_END, maxVoices: MAX_VOICES, ua: navigator.userAgent.slice(0, 160),
+    cores: navigator.hardwareConcurrency || null, memoryGb: navigator.deviceMemory || null, stalls: stats.stalls, rebuilds: stats.rebuilds,
+  };
+  try { localStorage.setItem('haptune.soundCheck', JSON.stringify(result)); } catch { /* storage blocked */ }
+  return result;
+}
+
+/** What a problem report carries about sound: the last Sound check and the engine's counters. */
+export function deviceAudioLog() {
+  let check = null;
+  try { check = JSON.parse(localStorage.getItem('haptune.soundCheck') || 'null'); } catch { check = null; }
+  return { engine: globalThis.__haptuneAudio?.(), lastMic, soundCheck: check, lowEnd: LOW_END };
 }
 
 globalThis.__haptuneRebuild = () => rebuildAudio();     // for automated checks

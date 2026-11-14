@@ -20,6 +20,7 @@ export function moreToolItems(s, { scan } = {}) {
     { id: 'scan', icon: 'camera', color: 'purple', title: 'mtScan', go: () => (scan ? scan() : openSheet('add')) },
     { id: 'jianpu', icon: 'pencil', color: 'red', title: 'mtJianpu', go: () => openSheet('paste') },
     { id: 'tuner', icon: 'tuningfork', color: 'teal', title: 'mtTunerMetro', go: () => push('tools') },
+    { id: 'soundcheck', icon: 'speaker', color: 'green', title: 'mtSoundCheck', go: () => push('soundCheck') },
     { id: 'scales', icon: 'stairs', color: 'blue', title: 'mtScales', go: () => openSheet('scale') },
     { id: 'exercises', icon: 'book', color: 'orange', title: 'mtExercises', go: () => push('learnMore') },
     { id: 'ear', icon: 'ear', color: 'orange', title: 'mtEar', go: () => openSheet('lesson', { lessonId: 'ear2', seed: dateSeed(), daily: true }) },
