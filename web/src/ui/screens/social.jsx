@@ -86,6 +86,18 @@ export function Reactions({ target }) {
   );
 }
 
+/** Where a request stands: open → someone is writing → done → practise it now. */
+export function RequestSteps({ p }) {
+  if (p.type !== 'request' || p.status === 'closed') return null;
+  const at = p.status === 'done' ? 3 : p.claimed ? 1 : 0;
+  const steps = ['rqOpen', 'rqWriting', 'rqDone', 'rqPractise'];
+  return (
+    <span class="rq-steps" aria-label={t(steps[Math.min(at, 3)])}>
+      {steps.map((k, i) => <span key={k} class={i < at ? 'done' : i === at || (at === 3 && i === 3) ? 'now' : ''}><i />{t(k)}</span>)}
+    </span>
+  );
+}
+
 export function StatusPill({ p }) {
   if (p.type === 'request') {
     if (p.status === 'done') return <span class="pill green"><Icon name="check" size={13} stroke={2.8} />{t('delivered')}</span>;
@@ -129,6 +141,7 @@ export function PostCard({ p, compact = false }) {
           <StatusPill p={p} />
           {p.type === 'share' && p.licence && <span class="pill gray">{t(`lic_${p.licence}`)}</span>}
         </span>
+        {!compact && <RequestSteps p={p} />}
         <span class="pc-title">{p.title}</span>
         {(p.song || p.artist) && p.song !== p.title && <span class="pc-sub">{[p.song, p.artist].filter(Boolean).join(' · ')}</span>}
         {!compact && p.body && <span class="pc-body">{p.body}</span>}

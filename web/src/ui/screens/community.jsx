@@ -9,7 +9,8 @@ import { useApp, push, openSheet, closeSheet, setState, addSongbookSong, toast }
 import { t, instrumentName } from '../../core/i18n.js';
 import { Icon, Chip, Button, Section, Card, Segmented, Empty, List, Row } from '../components.jsx';
 import { LargeTitle, NavBar, SheetFrame, Avatar } from './common.jsx';
-import { Composer, Feed } from './stagefeed.jsx';
+import { Feed } from './stagefeed.jsx';
+import { whenSignedIn } from './hub.jsx';
 import { Mascot } from '../mascot.jsx';
 import { hasServer } from '../api.js';
 import { C, ensureAccount, attempt } from '../account.js';
@@ -33,6 +34,7 @@ export function CommunityView({ active }) {
   const online = hasServer();
   useEffect(() => { if (active && online) ensureAccount(); }, [active]);
   const actions = online ? <>
+    <button type="button" class="stage-plus" id="stage-plus" aria-label={t('stageWhatDo')} onClick={() => openSheet('stageNew')}><Icon name="plus" size={24} stroke={2.8} /></button>
     <button type="button" class="hm-pill nts" id="stage-notes" onClick={() => push('wallet')} aria-label={t('rewards')}><Icon name="gift" size={15} stroke={2.2} />{s.me?.credits ?? '·'}</button>
     <button type="button" class="hm-pill" onClick={() => push('notifications')} aria-label={t('notifications')} style={{ position: 'relative', padding: '0 9px' }}>
       <Icon name="bell" size={17} />{s.me?.unread > 0 && <span class="tab-dot" />}
@@ -45,11 +47,17 @@ export function CommunityView({ active }) {
   return (
     <div class="scroll" id="stage">
       <div class="wrap">
-        <LargeTitle title="Stage" eyebrow={t('stageEyebrow3')} actions={<>{actions}<span class="ph-only"><Avatar /></span></>} />
+        <LargeTitle title="Stage" color="pink" actions={<>{actions}<span class="ph-only"><Avatar /></span></>} />
+        <p class="stage-purpose" id="stage-purpose">{t('stagePurpose')}</p>
         {!online ? <Empty icon="globe" title={t('communityOffline')} sub={t('communityOfflineSub')} /> : <>
-          <Composer />
-          <div class="ptabs" id="community-seg">
-            {SEGMENTS.map((o) => <button type="button" key={o.value} class={seg === o.value ? 'on' : ''} onClick={() => setState({ communitySeg: o.value, stageMine: false })}>{t(o.label)}</button>)}
+          <StageExplainer />
+          <button type="button" class="stage-request" id="st-request-big" onClick={() => whenSignedIn(() => openSheet('compose', { type: 'request' }))}>
+            <span class="ic"><Icon name="flag" size={24} stroke={2.3} /></span>
+            <span class="t"><strong>{t('requestSheetBig')}</strong><span>{t('requestSheetBigSub')}</span></span>
+            <Icon name="chevronR" size={18} stroke={2.6} />
+          </button>
+          <div class="chips stage-chips" id="community-seg" role="tablist">
+            {SEGMENTS.map((o) => <Chip key={o.value} on={seg === o.value} color="pink" onClick={() => setState({ communitySeg: o.value, stageMine: false })}>{t(o.label)}</Chip>)}
           </div>
           {seg === 'home' ? <ForYou active={active} />
             : seg === 'following' ? <Feed active={active} following />
@@ -63,6 +71,45 @@ export function CommunityView({ active }) {
     </div>
   );
 }
+
+/** First visit: what Stage is for, in three steps. */
+function StageExplainer() {
+  const [seen, setSeen] = useState(() => local.get('stageExplained', false));
+  if (seen) return null;
+  return (
+    <Card class="stage-how" id="stage-how">
+      <strong>{t('stageHowT')}</strong>
+      <ol>{['stageHow1', 'stageHow2', 'stageHow3'].map((k) => <li key={k}>{t(k)}</li>)}</ol>
+      <Button small kind="secondary" onClick={() => { local.set('stageExplained', true); setSeen(true); }} id="stage-how-ok">{t('gotIt')}</Button>
+    </Card>
+  );
+}
+
+/** The one "+": what do you want to do? Share a take, share a sound, request a sheet, ask a question, post a score. */
+export function StageNewSheet() {
+  const go = (fn) => { closeSheet(); setTimeout(() => whenSignedIn(fn), 0); };
+  const items = [
+    ['request', 'flag', 'pink', 'stRequestSheet', () => openSheet('compose', { type: 'request' })],
+    ['take', 'mic', 'teal', 'stShareTake', () => openSheet('moment', { record: true })],
+    ['sound', 'wave', 'violet', 'stShareSound', () => push('sound', {}, 'write')],
+    ['question', 'quiz', 'blue', 'stAskQuestion', () => openSheet('compose', { type: 'question' })],
+    ['score', 'staff', 'green', 'stPostScore', () => openSheet('compose', { type: 'share' })],
+  ].filter(([id]) => id !== 'sound' || SOUNDS_READY());
+  return (
+    <SheetFrame title={t('stageWhatDo')}>
+      <div class="list inset" id="stage-new">
+        {items.map(([id, icon, color, label, fn]) => (
+          <button type="button" class="row" key={id} id={`stn-${id}`} onClick={() => go(fn)}>
+            <span class={`badge c-${color} solid`} style={{ width: 34, height: 34, borderRadius: 9 }}><Icon name={icon} size={20} stroke={2.1} /></span>
+            <span class="row-main"><span class="row-title">{t(label)}</span><span class="row-sub">{t(`${label}Sub`)}</span></span>
+            <Icon name="chevronR" size={15} stroke={2.4} style={{ opacity: 0.35 }} />
+          </button>
+        ))}
+      </div>
+    </SheetFrame>
+  );
+}
+export const SOUNDS_READY = () => !!globalThis.__melovynSounds;
 
 /** Who is here: real counts. With few people online the day's and the week's numbers lead instead. */
 function LiveStrip({ c }) {

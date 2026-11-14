@@ -94,9 +94,9 @@ export function Badge({ icon, color = 'blue', size = 30, solid = true }) {
   );
 }
 
-export function Card({ children, class: cls = '', onClick, style }) {
+export function Card({ children, class: cls = '', onClick, style, id }) {
   const Tag = onClick ? 'button' : 'div';
-  return <Tag class={`card ${cls}`} onClick={onClick} style={style} type={onClick ? 'button' : undefined}>{children}</Tag>;
+  return <Tag class={`card ${cls}`} id={id} onClick={onClick} style={style} type={onClick ? 'button' : undefined}>{children}</Tag>;
 }
 
 export function CardHead({ icon, color, title, detail, chevron = true }) {

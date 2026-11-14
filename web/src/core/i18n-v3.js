@@ -188,7 +188,7 @@ export const V3 = {
   recordingNow: ['Recording', 'Merakam', '正在录音', '正在錄音'],
   videoLink: ['Video link (optional)', 'Pautan video (pilihan)', '视频链接（可选）', '影片連結（可選）'],
   momentRules: ['Posts are public. Share your own playing and photos; for copyrighted scores use a request instead.', 'Siaran adalah awam. Kongsi permainan dan foto anda sendiri; untuk skor berhak cipta gunakan permintaan.', '帖子是公开的。请分享你自己的演奏和照片；有版权的乐谱请用求谱。', '貼文是公開的。請分享你自己的演奏和照片；有版權的樂譜請用求譜。'],
-  typeMoment: ['Post', 'Siaran', '动态', '動態'],
+  typeMoment: ['Share a take', 'Kongsi rakaman', '分享演奏', '分享演奏'],
   // Library and the song screen
   libEyebrow: ['Your scores and free music', 'Skor anda dan muzik percuma', '你的乐谱和免费曲库', '你的樂譜和免費曲庫'],
   myScores: ['My scores', 'Skor saya', '我的乐谱', '我的樂譜'],

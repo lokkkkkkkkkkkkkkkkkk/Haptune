@@ -10,7 +10,7 @@ import { parseMusicXML, writeMusicXML } from '../../core/musicxml.js';
 import { C, attempt, ensureAccount } from '../account.js';
 import { youtubeId } from '../api.js';
 import { openExternal } from '../native.js';
-import { Reactions, TYPE, PersonLine, Person, Coins, StatusPill, InstrumentChips, StarsInput, timeAgo, timeLeft, openReport } from './social.jsx';
+import { Reactions, TYPE, PersonLine, Person, Coins, StatusPill, RequestSteps, InstrumentChips, StarsInput, timeAgo, timeLeft, openReport } from './social.jsx';
 
 const live = { reload: null };            // the open post refreshes itself after a sheet changes it
 export const reloadPost = () => live.reload?.();
@@ -58,7 +58,8 @@ export function PostView({ id, active }) {
       <NavBar title={t(ty.label)} backLabel={t('community')} color={ty.color} actions={<button type="button" class="nav-btn" onClick={more} aria-label={t('more')}><Icon name="more" size={22} /></button>} />
       <div class="wrap post-view">
         <div class="pv-head">
-          <div class="pc-top"><span class={`pill ${ty.color}`}><Icon name={ty.icon} size={13} stroke={2.6} />{t(ty.label)}</span><StatusPill p={p} />
+          <div class="pc-top"><span class={`pill ${ty.color}`}><Icon name={ty.icon} size={13} stroke={2.6} />{t(ty.label)}</span><StatusPill p={p} /></div>
+          <div><RequestSteps p={p} />
             {p.spotlight && <span class="pill yellow"><Icon name="star" size={12} stroke={2.6} />{t('spotlight')}</span>}
             {p.type === 'share' && p.licence && <span class="pill gray">{t(`lic_${p.licence}`)}</span>}</div>
           <h1>{p.title}</h1>

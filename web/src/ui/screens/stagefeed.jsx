@@ -55,7 +55,11 @@ export function Feed({ active, following = false }) {
   useEffect(() => { if (active) load(0); }, [active, following, s.me?.id, s.stageRev]);
   if (err && !items) return <div class="empty3 card"><Mascot mood="sad" size={70} /><p>{err}</p><Button kind="secondary" onClick={() => load(0)}>{t('tryAgain')}</Button></div>;
   if (!items) return <div class="loading"><Mascot mood="think" size={70} /></div>;
-  if (!items.length) return <div class="empty3 card"><Mascot mood="wave" size={80} /><h3>{following ? t('feedFollowEmpty') : t('feedEmpty3')}</h3><p>{t('feedEmptySub')}</p></div>;
+  if (!items.length) return (
+    <div class="empty3 card" id="stage-empty"><Mascot mood="wave" size={80} /><h3>{following ? t('feedFollowEmpty') : t('stageEmptyT')}</h3><p>{t('stageEmptySub')}</p>
+      <ol class="stage-how-list">{['stageHow1', 'stageHow2', 'stageHow3'].map((k) => <li key={k}>{t(k)}</li>)}</ol>
+      <Button icon="flag" onClick={() => whenSignedIn(() => openSheet('compose', { type: 'request' }))}>{t('requestSheetBig')}</Button></div>
+  );
   return (
     <div class="feed3" id="stage-feed">
       {items.map((p) => <FeedCard key={p.id} p={p} />)}

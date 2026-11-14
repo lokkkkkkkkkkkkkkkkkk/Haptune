@@ -50,7 +50,7 @@ export const MORE = {
   empty_request: ['Ask for any song: musicians make the score.', 'Minta apa-apa lagu: pemuzik akan buat skornya.', '求任何歌曲的谱，乐手们帮你做。', '求任何歌曲的譜，樂手們幫你做。'],
   empty_share: ['Share a score you made, or a public-domain piece.', 'Kongsi skor yang anda buat, atau karya domain awam.', '分享你做的乐谱，或公有领域的作品。', '分享你做的樂譜，或公有領域的作品。'],
   empty_question: ['Ask anything about music or practising.', 'Tanya apa sahaja tentang muzik atau latihan.', '关于音乐或练习，什么都可以问。', '關於音樂或練習，什麼都可以問。'],
-  typeRequest: ['Request', 'Permintaan', '求谱', '求譜'], typeQuestion: ['Question', 'Soalan', '问题', '問題'], typeShare: ['Score', 'Skor', '乐谱', '樂譜'], typeShow: ['Win', 'Kejayaan', '成果', '成果'],
+  typeRequest: ['Request a sheet', 'Minta skor', '求谱', '求譜'], typeQuestion: ['Ask a question', 'Tanya soalan', '提问', '提問'], typeShare: ['Post a score', 'Siar skor', '发布乐谱', '發布樂譜'], typeShow: ['Win', 'Kejayaan', '成果', '成果'],
   delivered: ['Delivered', 'Siap', '已完成', '已完成'], closed: ['Closed', 'Ditutup', '已关闭', '已關閉'], beingMade: ['Being made', 'Sedang dibuat', '制作中', '製作中'], answered: ['Answered', 'Dijawab', '已回答', '已回答'],
   showLine: ['{name} played {piece}', '{name} memainkan {piece}', '{name} 弹了《{piece}》', '{name} 彈了《{piece}》'],
   daysLeft: ['{n} days left', 'Tinggal {n} hari', '剩 {n} 天', '剩 {n} 天'], hoursLeft: ['{n} h left', 'Tinggal {n} jam', '剩 {n} 小时', '剩 {n} 小時'],

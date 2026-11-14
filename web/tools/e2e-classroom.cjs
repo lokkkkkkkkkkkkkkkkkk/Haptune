@@ -164,6 +164,26 @@ async function person(browser, base, api, { name, role, handle }) {
       }, api);
       for (const k of ['class_announcement', 'class_graded']) if (!n.includes(k)) throw new Error(`no ${k} notification`);
     });
+    await step('Stage: the purpose is on screen and a request takes 2 taps', async () => {
+      await tab(s, 'stage'); await s.waitForSelector('#stage-purpose');
+      if (!/request any sheet/i.test(await s.locator('#stage-purpose').innerText())) throw new Error('no purpose line');
+      if (!(await s.locator('#stage-how').count())) throw new Error('no first-visit explainer');
+      await s.screenshot({ path: path.join(SHOTS, 'stage-first-visit.png') });
+      await s.locator('#st-request-big').click();                                   // tap 1
+      await s.waitForSelector('#c-song'); await s.fill('#c-song', 'Yesterday'); await s.fill('#c-artist', 'The Beatles');
+      await s.screenshot({ path: path.join(SHOTS, 'stage-compose.png') });
+      await s.locator('.sheet .sheet-head .r').click();                              // tap 2
+      await s.waitForSelector('.rq-steps', { timeout: 20000 });                      // the new request, with where it stands
+      await s.screenshot({ path: path.join(SHOTS, 'stage-request-posted.png') });
+      if (await s.locator('.sheet').count()) await s.keyboard.press('Escape');
+      await tab(s, 'stage'); await tab(s, 'stage'); await s.waitForSelector('#stage-purpose');
+      await s.locator('#stage-how-ok').click({ timeout: 3000 }).catch(() => {});
+      await s.locator('#community-seg .chip').nth(2).click(); await s.waitForSelector('.rq-steps', { timeout: 20000 });
+      await s.locator('#stage-plus').click(); await s.waitForSelector('#stage-new');
+      if (await s.locator('#stage-new .row').count() < 4) throw new Error('the + sheet should offer the post types');
+      await s.keyboard.press('Escape');
+      await s.screenshot({ path: path.join(SHOTS, 'stage-requests.png') });
+    });
   } catch (e) { problems.push(e.message); }
   for (const x of [T, S]) if (x) problems.push(...x.errors);
   await browser.close(); web.close(); proc.kill();
