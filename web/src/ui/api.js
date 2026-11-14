@@ -179,6 +179,27 @@ export const academy = {
     const res = await call(`/academy/submissions/${sid}/recording`, { raw: true, token: academyToken() });
     return URL.createObjectURL(await res.blob());
   },
+  // Classroom (server/classroom.py)
+  stream: (cid) => call(`/academy/classes/${cid}/stream`, { token: academyToken() }),
+  post: (cid, body) => call(`/academy/classes/${cid}/stream`, { method: 'POST', json: body, token: academyToken() }),
+  comment: (pid, text) => call(`/academy/stream/${pid}/comments`, { method: 'POST', json: { text }, token: academyToken() }),
+  deletePost: (pid) => call(`/academy/stream/${pid}`, { method: 'DELETE', token: academyToken() }),
+  classwork: (cid) => call(`/academy/classes/${cid}/classwork`, { token: academyToken() }),
+  addTopic: (cid, name) => call(`/academy/classes/${cid}/topics`, { method: 'POST', json: { name }, token: academyToken() }),
+  setMeta: (aid, body) => call(`/academy/assignments/${aid}/meta`, { method: 'PUT', json: body, token: academyToken() }),
+  people: (cid) => call(`/academy/classes/${cid}/people`, { token: academyToken() }),
+  mute: (cid, uid, minutes) => call(`/academy/classes/${cid}/people/${uid}/mute`, { method: 'POST', json: { minutes }, token: academyToken() }),
+  invite: (cid, emails) => call(`/academy/classes/${cid}/invite`, { method: 'POST', json: { emails }, token: academyToken() }),
+  grades: (cid) => call(`/academy/classes/${cid}/grades`, { token: academyToken() }),
+  gradesCsv: (cid) => call(`/academy/classes/${cid}/grades.csv`, { raw: true, token: academyToken() }),
+  grade: (aid, uid, body) => call(`/academy/assignments/${aid}/grades/${uid}`, { method: 'PUT', json: body, token: academyToken() }),
+  audioNote: (target, id, body) => call(`/academy/${target}s/${id}/audio-feedback`, { method: 'POST', json: body, token: academyToken(), timeout: 120000 }),
+  audioNotes: (target, id) => call(`/academy/${target}s/${id}/audio-feedback`, { token: academyToken() }),
+  audioNoteURL: async (nid) => { const res = await call(`/academy/audio-feedback/${nid}`, { raw: true, token: academyToken() }); return URL.createObjectURL(await res.blob()); },
+  sessions: (cid) => call(`/academy/classes/${cid}/sessions`, { token: academyToken() }),
+  addSession: (cid, body) => call(`/academy/classes/${cid}/sessions`, { method: 'POST', json: body, token: academyToken() }),
+  editSession: (sid, body) => call(`/academy/sessions/${sid}`, { method: 'PATCH', json: body, token: academyToken() }),
+  sessionsIcs: (cid) => call(`/academy/classes/${cid}/sessions.ics`, { raw: true, token: academyToken() }),
   linkCode: () => call('/academy/me/link-code', { method: 'POST', token: academyToken() }),
   claim: async (code) => {
     const r = await call('/academy/me/claim', { method: 'POST', json: { code } });

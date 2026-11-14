@@ -451,7 +451,9 @@ def me_json(me: Me) -> dict:
         unread = c.execute(select(func.count()).select_from(notifications).where(notifications.c.user_id == me.id, notifications.c.read.is_(False))).scalar()
         u = usage_of(c, me.id, me.tier, acc)
         n_sessions = c.execute(select(func.count()).select_from(sessions).where(sessions.c.user_id == me.id)).scalar()
-    return {**public_user(me.user, acc), "bio": acc["bio"], "lang": acc["lang"], "role": acc["role"], "is_admin": me.is_admin,
+        import teachers
+        verified_teacher = teachers.is_verified(me.id, c)
+    return {**public_user(me.user, acc), "verified_teacher": verified_teacher, "bio": acc["bio"], "lang": acc["lang"], "role": acc["role"], "is_admin": me.is_admin,
             "tier": me.tier, "tier_until": _iso(acc["tier_until"]) if me.tier not in ("free", "dev") else None,
             "tier_source": acc["tier_source"], "credits": acc["credits"], "streak": acc["streak"], "usage": u,
             "limits": plan_limits(me.tier, acc), "unread": unread, "guidelines": acc["guidelines"], "has_password": bool(acc["pw_hash"]),

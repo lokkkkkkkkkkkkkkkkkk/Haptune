@@ -90,6 +90,7 @@ export function AccountSheet() {
       <Section>
         <List>
           <Row icon="bolt" color="orange" title={t('hapticsT')} subtitle={t('hapticsSub')} right={<Toggle id="acc-haptics" checked={st.haptics !== false} onChange={(v) => updateSettings({ haptics: v })} label={t('hapticsT')} />} />
+          <Row icon="link" color="blue" title={t('connectionsT')} subtitle={t('connectionsSub')} onClick={() => { closeSheet(); setTimeout(() => openSheet('connections'), 0); }} id="acc-connections" />
           <Row icon="sparkles" color="violet" title={t('replayTour')} onClick={() => { closeSheet(); setTimeout(() => openSheet('welcome'), 0); }} id="acc-tour" />
         </List>
       </Section>

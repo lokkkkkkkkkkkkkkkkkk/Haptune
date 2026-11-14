@@ -3,7 +3,7 @@
 name: web-test
 on:
   push:
-    paths: ["web/**", ".github/workflows/web-test.yml"]
+    paths: ["web/**", "server/**", ".github/workflows/web-test.yml"]
   workflow_dispatch:
 jobs:
   test:
@@ -24,6 +24,15 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e
+      # the Classroom (teacher and student) against a real server on this machine
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Server for the Classroom walk-through
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends libsndfile1
+          pip install fastapi "uvicorn[standard]" python-multipart numpy scipy soundfile music21 mido verovio pymupdf pillow anthropic sqlalchemy httpx cryptography
+      - run: npm run e2e:classroom
       - uses: actions/upload-artifact@v4
         if: always()
         with:

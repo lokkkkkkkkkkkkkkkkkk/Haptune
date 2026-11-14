@@ -67,6 +67,7 @@ export function MeView({ active }) {
               <Row icon="gift" color="violet" title={t('rewards')} subtitle={t('rewardsRowSub')} detail={me?.credits ?? ''} onClick={() => push('wallet')} id="me-rewards" />
               <Row icon="bell" color="pink" title={t('notifications')} detail={me?.unread || ''} onClick={() => push('notifications')} />
               <Row icon="academy" color="orange" title={t('teachOnMelovyn')} subtitle={t('teachOnMelovynSub')} onClick={() => push('tutorMe')} id="me-teach" />
+              <Row icon="check" color="green" title={t('verifyT')} subtitle={s.me?.verified_teacher ? t('verifiedTeacher') : t('verifySub')} onClick={() => openSheet('teacherVerify')} id="me-verify" />
               <Row icon="calendar" color="green" title={t('myLessons')} subtitle={t('myLessonsSub')} onClick={() => push('lessons')} />
               {me?.handle && <Row icon="person" color="blue" title={t('myStagePage')} subtitle={t('myStagePageSub')} onClick={() => push('profile', { handle: me.handle })} />}
             </List>

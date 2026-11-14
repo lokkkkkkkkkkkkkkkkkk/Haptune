@@ -19,6 +19,8 @@ import { PracticeView } from './screens/practice.jsx';
 import { VaryView } from './screens/moretools.jsx';
 import { LearnView as LearnMoreView } from './screens/learn.jsx';
 import { PieceMoreSheet } from './screens/piecemore.jsx';
+import { ConnectionsSheet, TeacherVerifySheet } from './screens/connections.jsx';
+import { AsgMetaSheet, SessionSheet, InviteSheet, GradeSheet } from './screens/classroom.jsx';
 import { ChordEditorView, ChordPickSheet, ChordSongSheet, ChordSectionSheet, ChordExportSheet } from './screens/chordeditor.jsx';
 import { tick } from './native.js';
 import { local } from './storage.js';
@@ -74,6 +76,7 @@ const SHEETS = {
   newSong: NewSongSheet, hubRole: HubRoleSheet, classQR: ClassQRSheet, pair: PairSheet, take: TakeSheet, joinLink: JoinLinkSheet, moment: MomentSheet,
   setPassword: SetPasswordSheet, signIn: SignInSheet, deleteAccount: DeleteAccountSheet, devCode: DevCodeSheet,
   pieceMore: PieceMoreSheet, chordPick: ChordPickSheet, ceSong: ChordSongSheet, ceSection: ChordSectionSheet, ceExport: ChordExportSheet,
+  connections: ConnectionsSheet, teacherVerify: TeacherVerifySheet, asgMeta: AsgMetaSheet, session: SessionSheet, invite: InviteSheet, grade: GradeSheet,
 };
 
 /** Android back button: close a sheet, go back a screen, go Home, then leave the app. */

@@ -14,10 +14,11 @@ export function AdminView({ active }) {
     <div class="scroll">
       <NavBar title={t('devPanel')} backLabel={t('back')} color="purple" />
       <div class="wrap">
-        <Segmented value={tab} onChange={setTab} options={[{ value: 'overview', label: t('overview') }, { value: 'payments', label: t('payments') }, { value: 'tutors', label: t('tutorsTab') }, { value: 'reports', label: t('reports') }, { value: 'feedback', label: t('feedback') }, { value: 'tools', label: t('tools') }]} />
+        <Segmented value={tab} onChange={setTab} options={[{ value: 'overview', label: t('overview') }, { value: 'payments', label: t('payments') }, { value: 'tutors', label: t('tutorsTab') }, { value: 'teachers', label: t('adminTeachers') }, { value: 'reports', label: t('reports') }, { value: 'feedback', label: t('feedback') }, { value: 'tools', label: t('tools') }]} />
         {tab === 'overview' && <Overview active={active} />}
         {tab === 'payments' && <Payments active={active} />}
         {tab === 'tutors' && <TutorsAdmin active={active} />}
+        {tab === 'teachers' && <TeachersAdmin active={active} />}
         {tab === 'reports' && <Reports active={active} />}
         {tab === 'feedback' && <Inbox active={active} />}
         {tab === 'tools' && <Tools />}
@@ -171,5 +172,36 @@ function Tools() {
       </Section>
       <p class="note-text"><Icon name="info" size={13} /> {t('devNote')}</p>
     </>
+  );
+}
+
+/** Teacher verification requests: who, which school, the document, and Verify / Reject. */
+function TeachersAdmin({ active }) {
+  const [list, setList] = useState(null);
+  const load = () => C.teacher.adminList().then((r) => setList(r.teachers)).catch((e) => toast(e.message, 'err'));
+  useEffect(() => { if (active) load(); }, [active]);
+  const decide = async (uid, decision) => {
+    const note = decision === 'reject' ? (prompt(t('verifyReject')) || '') : '';
+    try { await C.teacher.adminDecide(uid, decision, note); load(); } catch (e) { toast(e.message, 'err'); }
+  };
+  const doc = async (uid) => {
+    try { const res = await C.teacher.adminDoc(uid); const url = URL.createObjectURL(await res.blob()); window.open(url, '_blank', 'noopener'); } catch (e) { toast(e.message, 'err'); }
+  };
+  if (!list) return <div class="loading"><div class="spinner" /></div>;
+  if (!list.length) return <Empty icon="check" title={t('adminTeachers')} sub="0" />;
+  return (
+    <div class="admin-list">
+      {list.map((x) => (
+        <Card key={x.user_id}>
+          <strong>{x.name}</strong> · {x.org}
+          <p class="tiny muted">{[x.role_text, x.email, x.created?.slice(0, 10)].filter(Boolean).join(' · ')}</p>
+          <div class="row-gap" style={{ gap: 8, flexWrap: 'wrap' }}>
+            {x.has_doc && <Button small kind="secondary" icon="doc" onClick={() => doc(x.user_id)}>{t('viewDoc')}</Button>}
+            <Button small icon="check" onClick={() => decide(x.user_id, 'verify')}>{t('verifyApprove')}</Button>
+            <Button small kind="plain" onClick={() => decide(x.user_id, 'reject')}>{t('verifyReject')}</Button>
+          </div>
+        </Card>
+      ))}
+    </div>
   );
 }

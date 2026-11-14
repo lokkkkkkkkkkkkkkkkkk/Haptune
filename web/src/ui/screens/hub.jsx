@@ -91,7 +91,7 @@ export function LearnView({ active }) {
         <div class="acts stagger" id="hub-acts">
           {asTeacher ? <>
             <button type="button" class="act c-orange" id="hub-new-class" onClick={() => whenSignedIn(() => openSheet('newClass'), 'teacher')}><span class="ic"><Icon name="plus" size={22} stroke={2.4} /></span><strong>{t('hubNewClass')}</strong><span>{t('hubNewClassSub')}</span></button>
-            <button type="button" class="act c-pink" onClick={() => (teaching[0] ? push('classView', { id: teaching[0].id, tab: 'students' }) : whenSignedIn(() => openSheet('newClass'), 'teacher'))}><span class="ic"><Icon name="users" size={22} stroke={2.2} /></span><strong>{t('hubProgress')}</strong><span>{toReview ? t('toReview', { n: toReview }) : t('hubProgressSub')}</span></button>
+            <button type="button" class="act c-pink" onClick={() => (teaching[0] ? push('classView', { id: teaching[0].id, tab: 'grades' }) : whenSignedIn(() => openSheet('newClass'), 'teacher'))}><span class="ic"><Icon name="users" size={22} stroke={2.2} /></span><strong>{t('hubProgress')}</strong><span>{toReview ? t('toReview', { n: toReview }) : t('hubProgressSub')}</span></button>
             <button type="button" class="act c-teal" onClick={() => (teaching[0] ? openSheet('classQR', { classId: teaching[0].id }) : whenSignedIn(() => openSheet('newClass'), 'teacher'))}><span class="ic"><Icon name="link" size={22} stroke={2.2} /></span><strong>{t('hubInvite')}</strong><span>{t('hubInviteSub')}</span></button>
             <button type="button" class="act c-blue" onClick={() => (teaching[0] ? openSheet('newAssignment', { classId: teaching[0].id }) : whenSignedIn(() => openSheet('newClass'), 'teacher'))}><span class="ic"><Icon name="flag" size={22} stroke={2.2} /></span><strong>{t('hubAssign')}</strong><span>{t('hubAssignSub')}</span></button>
           </> : <>
@@ -221,7 +221,7 @@ function HubWelcome() {
 
 // ---------------------------------------------------------------- sign in (Google, username, or the app code)
 let gsiLoading = null;
-function loadGoogle() {
+export function loadGoogle() {
   if (globalThis.google?.accounts?.id) return Promise.resolve(globalThis.google);
   if (gsiLoading) return gsiLoading;
   gsiLoading = new Promise((resolve, reject) => {
@@ -248,7 +248,7 @@ export function GoogleButton({ onDone }) {
       g.accounts.id.initialize({
         client_id: id, ux_mode: 'popup', auto_select: false, itp_support: true,
         callback: async (resp) => {
-          try { const me = await C.google(resp.credential); onDone?.(me); } catch (e) { setErr(e.message || String(e)); }
+          try { const me = await C.googleSignIn(resp.credential); onDone?.(me); } catch (e) { setErr(e.message || String(e)); }
         },
       });
       g.accounts.id.renderButton(ref.current, { theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with', width: Math.min(360, ref.current.clientWidth || 320) });

@@ -366,6 +366,9 @@ def create_class(body: NewClass, me: dict = Depends(current_user)):
     _registered_or_401(me["id"])
     cid = str(uuid.uuid4())
     with engine().begin() as c:
+        if body.visibility == "public":
+            import teachers
+            teachers.require_for_open_class(c, me["id"])
         for _ in range(20):
             code = _code(6)
             if not c.execute(select(classes.c.id).where(classes.c.join_code == code)).first():
@@ -393,6 +396,8 @@ def join(body: Join, request: Request, me: dict = Depends(current_user)):
         if cl is None:
             raise HTTPException(404, "No class has that code. Check it with your teacher.")
         if _membership(c, cl["id"], me["id"]) is None:
+            import teachers
+            teachers.check_join(c, cl["id"])
             c.execute(insert(members).values(class_id=cl["id"], user_id=me["id"], role="student", joined=_now()))
         role = _membership(c, cl["id"], me["id"])
     return {"class": {"id": cl["id"], "name": cl["name"], "role": role, "color": cl["color"]}}
@@ -521,6 +526,9 @@ def create_assignment(cid: str, body: AssignmentIn, me: dict = Depends(current_u
                                              goal=body.goal, points=body.points, attempts=body.attempts, listen_url=body.listen_url,
                                              opens_at=opens, due_at=due, created=now))
         a = c.execute(select(assignments).where(assignments.c.id == aid)).mappings().first()
+        import classroom
+        classroom._tell_class(c, cid, "class_assignment", exclude=me["id"], assignment=aid, title=body.title.strip(),
+                              email_subject=f"New assignment: {body.title.strip()}", email_body=f"{body.title.strip()}\nOpen Melovyn to practise it.")
     return {"assignment": _assignment_json(dict(a))}
 
 
@@ -656,6 +664,8 @@ def give_feedback(sid: str, body: FeedbackIn, me: dict = Depends(current_user)):
         c.execute(insert(feedback).values(id=fid, submission_id=sid, teacher_id=me["id"], text=body.text.strip(),
                                           stickers=[x for x in body.stickers if x in STICKERS], focus_bars=body.focus_bars,
                                           created=_now()))
+        from accounts import notify
+        notify(c, s["user_id"], "class_feedback", class_id=a["class_id"], target="submission", target_id=sid)
     return {"feedback": {"id": fid}}
 
 
@@ -719,6 +729,9 @@ def edit_class(cid: str, body: ClassEdit, me: dict = Depends(current_user)):
         vals.pop("color")
     with engine().begin() as c:
         _require(c, cid, me["id"], "teacher")
+        if vals.get("visibility") == "public":
+            import teachers
+            teachers.require_for_open_class(c, me["id"])
         if body.new_code:                                              # the old code and link stop working
             for _ in range(20):
                 code = _code(6)
@@ -735,7 +748,12 @@ def _class_card(c, cl: dict) -> dict:
     n = c.execute(select(func.count()).select_from(members).where(members.c.class_id == cl["id"], members.c.role == "student")).scalar()
     return {"id": cl["id"], "name": cl["name"], "description": cl["description"][:400], "color": cl["color"],
             "visibility": cl.get("visibility") or "private", "instrument": cl.get("instrument") or "", "level": cl.get("level") or "",
-            "teacher": {"name": teacher["name"] if teacher else "", "color": teacher["color"] if teacher else "blue"}, "students": n}
+            "teacher": {"name": teacher["name"] if teacher else "", "color": teacher["color"] if teacher else "blue", "verified": _verified(c, cl["teacher_id"])}, "students": n}
+
+
+def _verified(c, uid: str) -> bool:
+    import teachers
+    return teachers.is_verified(uid, c)
 
 
 @router.get("/discover")
@@ -784,6 +802,8 @@ def join_open(cid: str, request: Request, me: dict = Depends(current_user)):
         if cl is None or (cl.get("visibility") or "private") != "public":
             raise HTTPException(404, "This class is not open to join. Ask the teacher for the code.")
         if _membership(c, cid, me["id"]) is None:
+            import teachers
+            teachers.check_join(c, cid)
             c.execute(insert(members).values(class_id=cid, user_id=me["id"], role="student", joined=_now()))
     return {"class": {"id": cl["id"], "name": cl["name"], "role": _role(cid, me["id"]), "color": cl["color"]}}
 
@@ -885,6 +905,8 @@ def class_progress(cid: str, me: dict = Depends(current_user)):
     week = now - 7 * DAY
     with engine().connect() as c:
         _require(c, cid, me["id"], "teacher")
+        import teachers
+        teachers.check_reports(c, cid, me["id"])
         asg = [dict(a) for a in c.execute(select(assignments.c.id, assignments.c.goal, assignments.c.opens_at).where(assignments.c.class_id == cid)).mappings().all()]
         open_asg = [a for a in asg if a["opens_at"] <= now]
         asg_ids = [a["id"] for a in asg]
@@ -918,6 +940,9 @@ def student_detail(cid: str, uid: str, me: dict = Depends(current_user)):
         role = _require(c, cid, me["id"])
         if role != "teacher" and uid != me["id"]:
             raise HTTPException(403, "Only the teacher can see this.")
+        if role == "teacher":
+            import teachers
+            teachers.check_reports(c, cid, me["id"])
         st = c.execute(select(users.c.id, users.c.name, users.c.color).where(users.c.id == uid)).mappings().first()
         if st is None or _membership(c, cid, uid) != "student":
             raise HTTPException(404, "Student not found.")

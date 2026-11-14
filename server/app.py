@@ -79,6 +79,12 @@ from billing import router as billing_router  # noqa: E402  (card payments with 
 app.include_router(billing_router)
 from tutors import router as tutors_router  # noqa: E402  (find a tutor: profiles, lesson requests, ratings)
 app.include_router(tutors_router)
+import teachers  # noqa: E402  (verified teachers)
+app.include_router(teachers.router)
+import google_link  # noqa: E402  (Google Calendar, Drive, Contacts, asked for only when used)
+app.include_router(google_link.router)
+import classroom  # noqa: E402  (stream, classwork topics and rubrics, people, grades, sessions)
+app.include_router(classroom.router)
 _jobs: dict[str, dict] = {}
 _lock = threading.Lock()
 _pool = ThreadPoolExecutor(max_workers=int(os.environ.get("HAPTUNE_WORKERS", "1")))

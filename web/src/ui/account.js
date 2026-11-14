@@ -84,7 +84,7 @@ export const C = {
     return r;
   },
   /** Sign in with Google: `credential` is the ID token Google's button gives the page. */
-  google: async (credential) => {
+  googleSignIn: async (credential) => {
     const r = await call('/c/auth/google', { method: 'POST', json: { credential, device: navigator.userAgent.slice(0, 60) } });
     local.set('academyToken', r.token); local.set('academyUser', null); setMe(r.me);
     return r.me;
@@ -124,6 +124,20 @@ export const C = {
     ask: (body) => call('/c/lessons', { method: 'POST', json: body }),
     lessons: () => call('/c/lessons'),
     act: (id, body) => call(`/c/lessons/${id}`, { method: 'POST', json: body }),
+  },
+  teacher: {
+    status: () => call('/c/teacher/verify'),
+    request: (body) => call('/c/teacher/verify', { method: 'POST', json: body, timeout: 60000 }),
+    adminList: (status = 'pending') => call(`/c/admin/teachers${q({ status })}`),
+    adminDecide: (uid, decision, note = '') => call(`/c/admin/teachers/${uid}`, { method: 'POST', json: { decision, note } }),
+    adminDoc: (uid) => call(`/c/admin/teachers/${uid}/doc`, { raw: true }),
+  },
+  gconn: {
+    list: () => call('/c/google/connections'),
+    connect: (code, feature) => call('/c/google/connect', { method: 'POST', json: { code, feature } }),
+    revoke: (feature) => call(`/c/google/connections/${feature}`, { method: 'DELETE' }),
+    drive: (name, mime, dataB64) => call('/c/google/drive/upload', { method: 'POST', json: { name, mime, data_b64: dataB64 }, timeout: 120000 }),
+    contacts: (text = '') => call(`/c/google/contacts${q({ q: text })}`),
   },
   wallet: () => call('/c/wallet'),
   plusWeek: () => call('/c/credits/plus-week', { method: 'POST' }).then((me) => { setMe(me); return me; }),
