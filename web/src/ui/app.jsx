@@ -1,5 +1,5 @@
 import { render } from 'preact';
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, loadAll, go, pop, popToRoot, push, closeSheet, openSheet, getState, setState, hooks, toast } from './state.js';
 import { t } from '../core/i18n.js';
 import { Icon } from './components.jsx';
@@ -15,6 +15,11 @@ import { LearnView } from './screens/hub.jsx';
 import { LibraryView, SongbookView, PasteSheet, FindSongSheet, ScaleSheet, ImportReportSheet, CatalogView, InstallHelpSheet } from './screens/library.jsx';
 import { AddSheet, ImportWizardSheet, FinderSheet } from './screens/addmusic.jsx';
 import { WelcomeSheet } from './screens/welcome.jsx';
+import { PracticeView } from './screens/practice.jsx';
+import { VaryView } from './screens/moretools.jsx';
+import { LearnView as LearnMoreView } from './screens/learn.jsx';
+import { PieceMoreSheet } from './screens/piecemore.jsx';
+import { tick } from './native.js';
 import { local } from './storage.js';
 import { PieceView, ChordSheet, FindKeySheet, ExportSheet, PlayAlongSheet, KeySheet, DetailsSheet, MixerSheet, InstrumentPickSheet } from './screens/piece.jsx';
 import { EditorView } from './screens/editor.jsx';
@@ -45,7 +50,7 @@ import { setSyncOffset, onAudioProblem } from './audio.js';
 export const TABS = [
   { id: 'summary', icon: 'home', color: 'violet', label: 'practice' },
   { id: 'academy', icon: 'academy', color: 'orange', label: 'hub' },
-  { id: 'write', icon: 'pencil', color: 'teal', label: 'write', center: true },
+  { id: 'write', icon: 'pencil', color: 'teal', label: 'create', center: true },
   { id: 'community', icon: 'stage', color: 'pink', label: 'stage' },
   { id: 'library', icon: 'library', color: 'blue', label: 'library' },
   { id: 'me', icon: 'person', color: 'gray', label: 'me', side: false },
@@ -56,6 +61,7 @@ const VIEWS = {
   piece: PieceView, editor: EditorView, studio: StudioView, student: StudentView, tutors: TutorsView, tutor: TutorView, tutorMe: TutorMeView, lessons: LessonsView, songbook: SongbookView, catalog: CatalogView, course: CourseView, tool: ToolView, history: HistoryView, classView: ClassView, assignment: AssignmentView,
   post: PostView, daily: DailyView, profile: ProfileView, leaderboard: LeaderboardView, notifications: NotificationsView, wallet: WalletView, challenge: ChallengeView,
   editProfile: EditProfileView, help: HelpView, admin: AdminView,
+  practice: PracticeView, vary: VaryView, learnMore: (p) => <LearnMoreView {...p} pushed />,
 };
 const SHEETS = {
   add: AddSheet, paste: PasteSheet, findSong: FindSongSheet, scale: ScaleSheet, report: ImportReportSheet, chord: ChordSheet, findKey: FindKeySheet,
@@ -66,6 +72,7 @@ const SHEETS = {
   image: ImageSheet, reportPost: ReportSheet, more: MoreSheet, feedback: FeedbackSheet, guidelines: GuidelinesSheet, about: AboutSheet, installHelp: InstallHelpSheet, stageGuide: StageGuideSheet, mixer: MixerSheet, instrumentPick: InstrumentPickSheet, lessonAsk: LessonAskSheet, lessonRate: LessonRateSheet,
   newSong: NewSongSheet, hubRole: HubRoleSheet, classQR: ClassQRSheet, pair: PairSheet, take: TakeSheet, joinLink: JoinLinkSheet, moment: MomentSheet,
   setPassword: SetPasswordSheet, signIn: SignInSheet, deleteAccount: DeleteAccountSheet, devCode: DevCodeSheet,
+  pieceMore: PieceMoreSheet,
 };
 
 /** Android back button: close a sheet, go back a screen, go Home, then leave the app. */
@@ -128,12 +135,17 @@ function Stack({ tab, active }) {
   const s = useApp();
   const stack = s.stacks[tab];
   const Root = ROOTS[tab];
+  // a screen that comes back into view after a pop slides in from the left, like iOS
+  const prev = useRef(stack.length);
+  const popped = stack.length < prev.current;
+  useEffect(() => { prev.current = stack.length; });
   return (
     <>
-      <div class="view" hidden={stack.length > 0}><Root active={active && stack.length === 0} /></div>
+      <div class={`view${popped && stack.length === 0 ? ' popped' : ''}`} hidden={stack.length > 0}><Root active={active && stack.length === 0} /></div>
       {stack.map((v, i) => {
         const V = VIEWS[v.view];
-        return <div class="view pushed" hidden={i !== stack.length - 1} key={v.key}><V {...v.props} active={active && i === stack.length - 1} /></div>;
+        const top = i === stack.length - 1;
+        return <div class={`view pushed${popped && top ? ' popped' : ''}`} hidden={!top} key={v.key}><V {...v.props} active={active && top} /></div>;
       })}
     </>
   );
@@ -175,6 +187,7 @@ function App() {
   if (!s.ready) return <div class="splash"><div class="spinner" /></div>;
   const tabBtn = (tab, cls) => (
     <button type="button" key={tab.id} id={`${cls === 'bar' ? 'tab' : 'side'}-${tab.label}`} class={`c-${tab.color}${s.tab === tab.id ? ' on' : ''}${tab.center && cls === 'bar' ? ' center' : ''}`} onClick={() => {
+      if (s.tab !== tab.id) tick();
       if (s.tab === tab.id && s.stacks[tab.id].length) popToRoot(tab.id);
       go(tab.id);
     }} aria-current={s.tab === tab.id ? 'page' : undefined}>
@@ -192,7 +205,7 @@ function App() {
     <div class={`app v3 sec-${sec}${immersive ? ' immersive' : ''}`}>
       <aside class="side" aria-label="Sections">
         <button type="button" class="brand" onClick={() => { popToRoot('summary'); go('summary'); }}><Logo /><span>Melovyn</span></button>
-        <button type="button" class="side-create" onClick={() => openSheet('newSong')} id="side-create"><Icon name="plus" size={18} stroke={2.6} />{t('newSongT')}</button>
+        <button type="button" class="side-create" onClick={() => openSheet('newSong')} id="side-newsong"><Icon name="plus" size={18} stroke={2.6} />{t('newSongT')}</button>
         <nav>{TABS.filter((x) => x.side !== false).map((tab) => tabBtn(tab, 'side'))}</nav>
         <div class="side-foot">
           {(tier === 'free' || tier === 'plus') && (

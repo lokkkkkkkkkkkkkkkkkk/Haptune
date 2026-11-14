@@ -1,13 +1,15 @@
-// Home: the fastest way to the sheet music you want.
-// One box takes a song name, a composer or a link; three buttons take a file, a photo or typed notes.
+// Home: the fastest way to a sheet and to practising it. A search box (a song name, a composer or a link), then
+// exactly three things: Practice, Learn, Create; a smaller Stage row; where you left off; and every other tool
+// folded under More tools. Files can still be dropped or pasted anywhere.
 // Results come from your library, the free library and Stage at once; when nothing fits, one tap asks
 // the web (AI) or the community for it.
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { useApp, push, go, openSheet, minutesOn, streakDays, toast, setState } from '../state.js';
+import { useApp, push, go, openSheet, streakDays, toast, setState } from '../state.js';
 import { t, getLang } from '../../core/i18n.js';
-import { Card, Section, Icon, List, Row } from '../components.jsx';
-import { Mascot } from '../mascot.jsx';
-import { Avatar, Logo } from './common.jsx';
+import { Section, Icon, List, Row } from '../components.jsx';
+import { Avatar, LargeTitle, dateLabel } from './common.jsx';
+import { MoreTools } from './moretools.jsx';
+import { tick } from '../native.js';
 import { local } from '../storage.js';
 import { hasServer, academyMe, isLink } from '../api.js';
 import { C } from '../account.js';
@@ -50,7 +52,6 @@ async function openCatalog(entry) {
   } catch (e) { toast(e.message || String(e), 'err'); }
 }
 
-const dateSeed = () => { const d = new Date(); return d.getFullYear() * 400 + d.getMonth() * 32 + d.getDate(); };
 
 export function HomeView({ active }) {
   const s = useApp();
@@ -108,33 +109,25 @@ export function HomeView({ active }) {
     return s.pieces.filter((p) => { const k = norm(`${p.title} ${p.composer}`); return words.every((w) => k.includes(w)); }).slice(0, 5);
   }, [query, s.pieces]);
   const free = useMemo(() => (catalog && query ? searchCatalog(catalog, query, { limit: 8 }).filter((r) => !mine.some((p) => p.catalogId === r.id || (r.songId && p.songId === r.songId))) : []), [catalog, query, mine]);
-  const picks = useMemo(() => {
-    if (!catalog) return [];
-    const day = Math.floor(Date.now() / 86400000);
-    const have = new Set(s.pieces.map((p) => p.catalogId || (p.songId && `song:${p.songId}`)));
-    const pool = catalog.filter((r) => !have.has(r.id));
-    // two of each kind of music, different every day
-    const byGenre = new Map();
-    for (const r of pool) { if (!byGenre.has(r.genre)) byGenre.set(r.genre, []); byGenre.get(r.genre).push(r); }
-    const out = [];
-    for (const round of [0, 1]) for (const list of byGenre.values()) out.push(list[(day * 31 + round * 17 + list.length * 7) % list.length]);
-    return [...new Set(out)].slice(0, 14);
-  }, [catalog, s.pieces.length]);
-
   const onPick = (e) => { const files = [...(e.currentTarget.files || [])]; e.currentTarget.value = ''; openFiles(files); };
   const submit = (e) => {
     e?.preventDefault();
     if (!query) return;
     if (isLink(query)) openSheet('finder', { query });           // a YouTube / Spotify link: straight to the finder
   };
-  const recent = [...s.pieces].filter((p) => p.opened && p.kind === 'score').sort((a, b) => b.opened - a.opened)[0] || s.pieces.find((p) => p.kind === 'score');
-  const today = new Date().toISOString().slice(0, 10);
-  const todayMin = Math.round(minutesOn(today));
-  const goal = s.settings.dailyGoal || 20;
   const streak = Math.max(streakDays(), s.me?.streak || 0);
   const name = (s.me?.name && s.me.name !== 'Musician' ? s.me.name : s.settings.name || '').trim().split(/\s+/)[0] || '';
   const tier = s.me?.tier || 'free';
   const nothing = query && !mine.length && !free.length && stage && !stage.scores.length && !stage.requests.length;
+
+  const greet = name ? t('homeHelloName', { name }) : t('homeHello');
+  const recents = [...s.pieces].filter((p) => p.kind === 'score').sort((a, b) => (b.opened || b.created || 0) - (a.opened || a.created || 0)).slice(0, 3);
+  const tile = (id, color, icon, title, sub, onGo) => (
+    <button type="button" class={`home-tile c-${color}`} id={`tile-${id}`} onClick={() => { tick(); onGo(); }}>
+      <span class="ic"><Icon name={icon} size={24} stroke={2.2} /></span>
+      <strong>{t(title)}</strong><span>{t(sub)}</span>
+    </button>
+  );
 
   return (
     <div class="scroll" id="home">
@@ -142,42 +135,17 @@ export function HomeView({ active }) {
         <input ref={pageRef} type="file" class="hidden-input" accept=".pdf,application/pdf,image/*" multiple onChange={onPick} id="home-pages" aria-label={t('wayScan')} />
         <input ref={camRef} type="file" class="hidden-input" accept="image/*" capture="environment" multiple onChange={onPick} aria-label={t('wayCamera')} />
         <input ref={fileRef} type="file" class="hidden-input" accept={ACCEPT} onChange={onPick} id="home-file" aria-label={t('wayFile')} />
-        <header class="hm-top">
-          <span class="logo ph-only"><Logo size={28} />Melovyn</span>
-          <span class="spacer pc-only" />
+        <LargeTitle title={greet} eyebrow={dateLabel(lang)} color="violet" actions={<>
           {streak > 0 && <span class="hm-pill flame" title={t('streak')}><Icon name="flame" size={15} fill stroke={1.6} />{streak}</span>}
-          {online && s.me && <button type="button" class="hm-pill nts" onClick={() => push('wallet', {}, 'me')} aria-label={t('rewards')}><Icon name="gift" size={15} stroke={2.2} />{s.me.credits ?? 0}</button>}
           {online && <button type="button" class="hm-pill" onClick={() => push('notifications', {}, 'me')} aria-label={t('notifications')} style={{ position: 'relative', padding: '0 9px' }}>
             <Icon name="bell" size={17} />{s.me?.unread > 0 && <span class="tab-dot" />}</button>}
           <span class="ph-only"><Avatar /></span>
-        </header>
-
-        <section class="hm-hero hero3 hero-practice fade-up">
-          <h1>{name ? t('homeAskName', { name }) : t('homeAsk')}</h1>
-          <p>{t('homeAskSub')}</p>
-          <form class="hm-search" onSubmit={submit} role="search">
-            <Icon name="search" size={21} stroke={2.3} />
-            <input id="home-search" type="search" enterkeyhint="search" autocomplete="off" placeholder={t('homeSearchPh')} value={q} onInput={(e) => setQ(e.currentTarget.value)} aria-label={t('homeSearchPh')} />
-            {q && <button type="button" class="clear" onClick={() => setQ('')} aria-label={t('clear')}><Icon name="close" size={16} stroke={2.6} /></button>}
-            <button type="submit" class="go" aria-label={t('search')}><Icon name="chevronR" size={20} stroke={2.8} /></button>
-          </form>
-          {!query && <>
-            <div class="hm-ways">
-              <button type="button" class="hm-way" id="way-scan" onClick={() => pageRef.current?.click()}>
-                <Icon name="camera" size={22} stroke={2.1} /><div><strong>{t('wayScan')}</strong><span>{t('wayScanSub')}</span></div>
-              </button>
-              <button type="button" class="hm-way" id="way-file" onClick={() => fileRef.current?.click()}>
-                <Icon name="upload" size={22} stroke={2.1} /><div><strong>{t('wayFile')}</strong><span>{t('wayFileSub')}</span></div>
-              </button>
-              <button type="button" class="hm-way" id="way-type" onClick={() => openSheet('paste')}>
-                <Icon name="pencil" size={22} stroke={2.1} /><div><strong>{t('wayType')}</strong><span>{t('wayTypeSub')}</span></div>
-              </button>
-            </div>
-            <div class="hm-tries">
-              {['Canon in D', 'Ode to Joy', lang.startsWith('zh') ? '茉莉花' : 'Amazing Grace', 'Für Elise'].map((x) => <button type="button" key={x} onClick={() => setQ(x)}>{x}</button>)}
-            </div>
-          </>}
-        </section>
+        </>} />
+        <form class="ios-search" onSubmit={submit} role="search">
+          <Icon name="search" size={17} stroke={2.4} />
+          <input id="home-search" type="search" enterkeyhint="search" autocomplete="off" placeholder={t('homeSearchPh')} value={q} onInput={(e) => setQ(e.currentTarget.value)} aria-label={t('homeSearchPh')} />
+          {q && <button type="button" class="ios-cancel" onClick={() => setQ('')}>{t('cancel')}</button>}
+        </form>
 
         {query ? (
           <div class="section fade-up" id="results">
@@ -246,90 +214,35 @@ export function HomeView({ active }) {
           </div>
         ) : (
           <>
-            {recent && (
-              <Card class="fade-up d1" onClick={() => push('piece', { id: recent.id }, 'library')}>
-                <div class="hm-continue">
-                  <span class="hm-art"><Icon name="library" size={26} stroke={2.1} /></span>
-                  <div class="t">
-                    <span class="sub" style={{ fontWeight: 650 }}>{t('keepGoing')}</span>
-                    <strong>{recent.title}</strong>
-                    <span class="sub">{recent.best !== null && recent.best !== undefined ? `${t('rightNotes')}: ${recent.best}%` : recent.composer || recent.keyText || ''}</span>
-                  </div>
-                  <span class="hm-play" id="home-continue" role="button" tabIndex={0} aria-label={t('playAlong')}
-                    onClick={(e) => { e.stopPropagation(); push('piece', { id: recent.id, start: 'playAlong' }, 'library'); }}><Icon name="mic" size={22} stroke={2.3} /></span>
-                </div>
-              </Card>
-            )}
-
-            <div class="acts stagger" id="practice-acts">
-              <button type="button" class="act c-violet" onClick={() => (recent ? push('piece', { id: recent.id, start: 'playAlong' }, 'library') : go('library'))} id="act-playalong"><span class="ic"><Icon name="mic" size={22} stroke={2.3} /></span><strong>{t('playAlong')}</strong><span>{t('actPlayAlongSub')}</span></button>
-              <button type="button" class="act c-teal" onClick={() => push('tools')} id="act-tools"><span class="ic"><Icon name="tuningfork" size={22} stroke={2.2} /></span><strong>{t('tools')}</strong><span>{t('toolsSub')}</span></button>
-              <button type="button" class="act c-orange" onClick={() => openSheet('lesson', { lessonId: 'ear2', seed: dateSeed(), daily: true })} id="act-ear"><span class="ic"><Icon name="ear" size={22} stroke={2.2} /></span><strong>{t('earTraining')}</strong><span>{t('earTrainingSub')}</span></button>
-              <button type="button" class="act c-pink" onClick={() => push('improvise')} id="act-solo"><span class="ic"><Icon name="sparkles" size={22} stroke={2.2} /></span><strong>{t('newSolo')}</strong><span>{t('newSoloSub')}</span></button>
+            <div class="home-tiles fade-up" id="home-tiles">
+              {tile('practice', 'violet', 'mic', 'tilePractice', 'tilePracticeSub', () => push('practice'))}
+              {tile('learn', 'orange', 'academy', 'tileLearn', 'tileLearnSub', () => go('academy'))}
+              {tile('create', 'teal', 'pencil', 'tileCreate', 'tileCreateSub', () => go('write'))}
             </div>
+            <List>
+              <Row id="home-stage" icon="stage" color="pink" title={t('stageRow')} subtitle={t('stageRowSub')}
+                detail={pulse ? <span class="live-n"><span class="live-dot" />{pulse.online}</span> : null} onClick={() => { tick(); go('community'); }} />
+            </List>
 
-            <button type="button" class="tile3 lift courses-tile" onClick={() => push('courses')} id="act-courses">
-              <span class="k"><Icon name="book" size={14} />{t('coursesT')}</span>
-              <strong>{t('coursesTile')}</strong><span class="muted">{t('coursesTileSub')}</span>
-            </button>
+            <Section title={t('continueWhere')}>
+              <List>
+                {recents.map((p, i) => (
+                  <Row key={p.id} icon="library" color="blue" title={p.title}
+                    subtitle={p.best !== null && p.best !== undefined ? `${t('rightNotes')}: ${p.best}%` : p.composer || p.keyText || ''}
+                    onClick={() => push('piece', { id: p.id }, 'library')} chevron={false}
+                    right={<button type="button" class="row-play" id={i === 0 ? 'home-continue' : undefined} aria-label={t('playAlong')}
+                      onClick={(e) => { e.stopPropagation(); tick(); push('piece', { id: p.id, start: 'playAlong' }, 'library'); }}><Icon name="mic" size={18} stroke={2.4} /></button>} />
+                ))}
+                {todo && todo.slice(0, 2).map((a) => (
+                  <Row key={a.id} icon="flag" color={a.status === 'due-soon' || a.status === 'late' ? 'orange' : 'violet'} title={a.title}
+                    subtitle={`${a.class_name} · ${a.status === 'upcoming' ? t('opensOn', { d: dueLabel(a.opens_at, lang) }) : t('dueOn', { d: dueLabel(a.due_at, lang) })}`}
+                    onClick={() => push('assignment', { id: a.id }, 'academy')} />
+                ))}
+                {!recents.length && !(todo && todo.length) && <Row icon="info" color="gray" title={t('continueEmpty')} />}
+              </List>
+            </Section>
 
-            <div class="hm-row2 fade-up d2">
-              <button type="button" class={`hm-stat${pulse ? ' live' : ''}`} id="home-stage" onClick={() => go('community')}>
-                <span class="k">{pulse ? <><span class="live-dot" />{t('liveNow')}</> : <><Icon name="stage" size={13} stroke={2.4} />Stage</>}</span>
-                <span class="v num">{pulse ? pulse.online : '—'}</span>
-                <span class="s">{pulse ? t('onlineNowSub', { n: pulse.open_requests }) : t('stageOfflineSub')}</span>
-              </button>
-              <button type="button" class="hm-stat" onClick={() => push('history', {}, 'summary')}>
-                <span class="k"><Icon name="flame" size={13} stroke={2.4} />{t('today')}</span>
-                <span class="v num">{todayMin}<span style={{ fontSize: 14, fontWeight: 650, color: 'var(--ink3)' }}> / {goal} {t('min')}</span></span>
-                <div class="goal-bar" style={{ margin: '2px 0 0' }}><span style={{ width: `${Math.min(100, (todayMin / goal) * 100)}%` }} /></div>
-              </button>
-            </div>
-
-            {pulse?.daily && (
-              <Card class="fade-up d2" onClick={() => push('daily', {}, 'community')}>
-                <div class="hm-continue">
-                  <span class="hm-art c-orange" style={{ color: 'var(--orange)', background: 'color-mix(in srgb, var(--orange) 14%, transparent)' }}><Icon name="bolt" size={26} stroke={2.1} /></span>
-                  <div class="t">
-                    <span class="sub" style={{ fontWeight: 650 }}>{t('dailyChallenge')} · {t('nPlayingToday', { n: pulse.daily.players })}</span>
-                    <strong>{pulse.daily.title}</strong>
-                    <span class="sub">{pulse.daily.mine ? t('yourBestToday', { n: Math.round(pulse.daily.mine * 100) }) : t('dailySub')}</span>
-                  </div>
-                  <Icon name="chevronR" size={18} stroke={2.4} />
-                </div>
-              </Card>
-            )}
-
-            {todo && todo.length > 0 && (
-              <Section title={t('classTodo')}>
-                <List>
-                  {todo.slice(0, 3).map((a) => (
-                    <Row key={a.id} icon="flag" color={a.status === 'due-soon' || a.status === 'late' ? 'orange' : 'violet'} title={a.title}
-                      subtitle={`${a.class_name} · ${a.status === 'upcoming' ? t('opensOn', { d: dueLabel(a.opens_at, lang) }) : t('dueOn', { d: dueLabel(a.due_at, lang) })}`}
-                      onClick={() => push('assignment', { id: a.id }, 'academy')} />
-                  ))}
-                </List>
-              </Section>
-            )}
-
-            {pulse?.trending?.length > 0 && (
-              <Section title={t('trendingOnStage')} action={<button type="button" onClick={() => go('community')}>{t('seeAll')}</button>}>
-                <div class="shelf">
-                  {pulse.trending.map((p) => <ScoreCard key={p.id} title={p.title} by={p.artist || p.author?.name} genre={p.kind === 'request' ? 'song' : 'classical'} heat={p.heat}
-                    tag={p.kind === 'request' ? t('wanted') : (p.instrument || t('score'))} onClick={() => push('post', { id: p.id }, 'community')} />)}
-                </div>
-              </Section>
-            )}
-
-            {picks.length > 0 && (
-              <Section title={t('freeLibrary')} action={<button type="button" onClick={() => push('catalog', {}, 'library')}>{t('browseAll', { n: catalog.length })}</button>}>
-                <div class="shelf" id="home-shelf">
-                  {picks.map((r) => <ScoreCard key={r.id} title={r.title} by={r.composer} genre={r.genre} tag={t(`genre_${r.genre}`)} onClick={() => openCatalog(r)} />)}
-                </div>
-              </Section>
-            )}
-
-            {!recent && <Card><div class="report-line" style={{ alignItems: 'center' }}><Mascot mood="wave" size={56} /><p class="sub">{t('homeEmpty')}</p></div></Card>}
+            <MoreTools scan={() => pageRef.current?.click()} />
           </>
         )}
       </div>

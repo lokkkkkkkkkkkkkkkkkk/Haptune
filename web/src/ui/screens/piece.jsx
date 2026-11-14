@@ -643,14 +643,17 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
               <span class="ic"><Icon name="key" size={19} stroke={2.2} /></span><b>{curKeyText || '–'}</b>{t('changeKey')}</button>
             <button type="button" class="tool-btn c-blue" id="tool-speed" onClick={() => setSpeed((x) => (x >= 1 ? 0.75 : x >= 0.75 ? 0.5 : 1))}>
               <span class="ic"><Icon name="clock" size={19} stroke={2.2} /></span><b>{Math.round(speed * 100)}%</b>{t('speed')}</button>
-            {choices.length > 0 && <button type="button" class={`tool-btn c-pink${Object.values(mix).some((m) => m.mute || m.solo || (m.vol ?? 1) < 1) ? ' on' : ''}`} id="tool-mixer" onClick={() => openSheet('mixer', { choices, mix, onChange: setMix, label: handLabel })}>
-              <span class="ic"><Icon name="mixer" size={19} stroke={2.2} /></span><b>{t('partsN', { n: choices.length })}</b>{t('mixer')}</button>}
             <button type="button" class={`tool-btn c-orange${loop ? ' on' : ''}`} id="tool-loop" onClick={toggleLoop}>
               <span class="ic"><Icon name="loop" size={19} stroke={2.2} /></span><b>{loop ? `${barNo(loop.from)}–${barNo(loop.to)}` : t('off')}</b>{t('loop')}</button>
-            <button type="button" class={`tool-btn c-teal${metro ? ' on' : ''}`} onClick={() => setMetro(!metro)}>
-              <span class="ic"><Icon name="metronome" size={19} stroke={2.2} /></span><b>{metro ? t('on') : t('off')}</b>{t('metronome')}</button>
-            <button type="button" class={`tool-btn c-blue${forInst ? ' on' : ''}`} id="tool-inst" onClick={() => openSheet('instrumentPick', { value: forInst, onPick: setForInst })}>
-              <span class="ic"><Icon name="violin" size={19} stroke={2.2} /></span><b>{forInst ? instrumentName(forInst) : t('asWritten')}</b>{t('writtenFor')}</button>
+            <button type="button" class="tool-btn c-gray" id="tool-more" onClick={() => openSheet('pieceMore', {
+              parts: choices.length, mixed: Object.values(mix).some((m) => m.mute || m.solo || (m.vol ?? 1) < 1), metro, forInst,
+              onMixer: () => openSheet('mixer', { choices, mix, onChange: setMix, label: handLabel }), onMetro: setMetro,
+              onInstrument: () => openSheet('instrumentPick', { value: forInst, onPick: setForInst }),
+              onDetails: () => openSheet('details', { pieceId: meta.id, semis }),
+              onEdit: score ? () => { stop(true); push('editor', { id: meta.id, bar: curMi, onSaved: reload }); } : null,
+              onExport: () => openSheet('export', { pieceId: meta.id, semis, title: meta.title, part: sel.pi !== null ? sel : null, partLabel: sel.pi !== null ? handLabel(sel) : '' }),
+            })}>
+              <span class="ic"><Icon name="more" size={19} stroke={2.6} /></span><b>{(metro ? 1 : 0) + (forInst ? 1 : 0) || '\u00a0'}</b>{t('moreDots')}</button>
           </div>
         )}
 

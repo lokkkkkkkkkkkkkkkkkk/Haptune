@@ -48,10 +48,10 @@ async function run(mode, base, browser) {
   const errors = [];
   p.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push('console: ' + m.text()); });
   p.on('pageerror', (e) => errors.push('page: ' + e.message));
-  const shot = (n) => p.screenshot({ path: path.join(SHOTS, `${mode}-${n}.png`) });
+  const shot = async (n) => { await p.waitForTimeout(450); await p.screenshot({ path: path.join(SHOTS, `${mode}-${n}.png`) }); };
   const step = async (name, fn) => { try { await fn(); } catch (e) { errors.push(`${name}: ${e.message.split('\n')[0]}`); } };
   // the places: a sidebar on wide screens, a tab bar on phones; Me is the sidebar's account button or the picture
-  const LABEL = { home: 'practice', learn: 'hub', stage: 'stage', library: 'library', write: 'write' };
+  const LABEL = { home: 'practice', learn: 'hub', stage: 'stage', library: 'library', write: 'create' };
   const tab = async (id) => {
     const wide = await p.evaluate(() => innerWidth >= 900);
     if (id === 'me') return wide ? p.locator('#top-me').click() : p.locator('.avatar:visible').first().click();
@@ -81,9 +81,19 @@ async function run(mode, base, browser) {
     await p.fill('#try-q', 'ode to joy'); await p.keyboard.press('Enter');
     await p.waitForSelector('.welcome', { timeout: 20000 });
   });
-  await step('first-run guide', async () => {
-    for (let i = 0; i < 3; i++) { await p.locator('.welcome .btn.brand:visible').click(); await p.waitForTimeout(250); }
-    await p.locator('.welcome .btn.brand:visible').click(); await p.waitForTimeout(500);
+  // "No screen shows more than 6 primary actions above the fold": big buttons (tiles, big play buttons, tool
+  // buttons, brand buttons) fully inside the first screenful.
+  const primaries = (where) => p.evaluate(() => {
+    const sel = '.home-tile, .act, .ftile, .tile, .tile3, .hm-way, .big-play, .tool-btn, .btn.brand, .stage-plus, .wiz-opt';
+    return [...document.querySelectorAll(sel)].filter((el) => {
+      if (!el.closest('.tab-pane:not([hidden]) .view:not([hidden]), .sheet')) return false;
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && r.height > 0 && r.top >= 0 && r.bottom <= innerHeight;
+    }).length;
+  }).then((n) => { if (n > 6) errors.push(`${where} shows ${n} primary actions above the fold (max 6)`); return n; });
+  await step('first-run tour (3 cards)', async () => {
+    for (let i = 0; i < 2; i++) { await p.locator('.welcome .btn.brand:visible').click(); await p.waitForTimeout(250); }
+    await p.locator('#tour-start').click(); await p.waitForTimeout(500);
     if ((await p.inputValue('#home-search')) !== 'ode to joy') throw new Error('the song typed on the website did not arrive in the app');
     await shot('01-search'); await overflow('search');
   });
@@ -108,9 +118,10 @@ async function run(mode, base, browser) {
     await p.locator('#piece-views button').filter({ hasText: '簡譜' }).click(); await p.waitForSelector('.jp-svg .jn');
     await shot('03-jianpu'); await overflow('簡譜');
     await p.locator('#piece-views button').first().click();
-    await p.locator('#tool-inst').click(); await p.locator('.sheet .chip').filter({ hasText: 'Clarinet' }).click();
+    await primaries('song');
+    await p.locator('#tool-more').click(); await p.locator('#tool-inst').click(); await p.locator('.sheet .chip').filter({ hasText: 'Clarinet' }).click();
     await p.waitForSelector('#arr-note'); await p.waitForTimeout(600);
-    await p.locator('#tool-inst').click(); await p.locator('#inst-as-written').click();
+    await p.locator('#tool-more').click(); await p.locator('#tool-inst').click(); await p.locator('#inst-as-written').click();
   });
   await step('key change', async () => {
     await p.locator('#tool-key').click(); await p.waitForSelector('.keybar');
@@ -145,14 +156,36 @@ async function run(mode, base, browser) {
   }
   await step('library and the free library', async () => {
     await back(); await tab('library'); await p.waitForTimeout(300);
-    await shot('05-library'); await overflow('library');
+    await shot('05-library'); await overflow('library'); await primaries('library');
     await p.locator('#lib-free').click(); await p.waitForSelector('#cat-search');
     await p.fill('#cat-search', 'washerwoman'); await p.waitForTimeout(500);
     await p.locator('.list .row:visible').first().click(); await p.waitForSelector('.vrv-page svg', { timeout: 60000 });
     await back(); await back();
   });
+  await step('Home: three tiles, a playable sheet in two taps, More tools remembered', async () => {
+    await tab('home'); await p.fill('#home-search', ''); await p.waitForTimeout(200);
+    if (await p.locator('.home-tile:visible').count() !== 3) throw new Error('Home should show exactly three tiles');
+    await shot('01-home'); await overflow('home'); await primaries('home');
+    // tap 1: Practice, tap 2: a suggested piece -> the song screen with Play Along
+    await p.locator('#tile-practice').click(); await p.waitForSelector('#practice-suggest');
+    await shot('01b-practice'); await overflow('practice'); await primaries('practice');
+    await p.locator('#practice-suggest').click(); await p.waitForSelector('#play-along', { timeout: 60000 });
+    await p.waitForSelector('.vrv-page svg', { timeout: 60000 });
+    await back(); await back();
+    if (await p.locator('#more-tools.open').count()) await p.locator('#more-tools-toggle').click();
+    await p.locator('#more-tools-toggle').click(); await p.waitForSelector('#mt-jianpu');
+  });
+  if (mode === 'phone') {
+    await step('reload: tour shown once, More tools stays open', async () => {
+      await p.reload({ waitUntil: 'networkidle' }); await p.waitForSelector('#home-tiles');
+      if (await p.locator('.welcome').count()) throw new Error('the tour came back after it was finished');
+      if (!(await p.locator('#more-tools.open').count())) throw new Error('More tools forgot that it was open');
+    });
+  }
   await step('type 簡譜', async () => {
-    await tab('home'); await p.fill('#home-search', ''); await p.locator('#way-type').click();
+    await tab('home'); await p.fill('#home-search', '');
+    if (!(await p.locator('#more-tools.open').count())) await p.locator('#more-tools-toggle').click();
+    await p.locator('#mt-jianpu').click();
     await p.locator('.sheet .chip').filter({ hasText: '簡譜' }).click(); await p.waitForTimeout(250);
     await p.locator('.sheet .btn.full').click(); await p.waitForTimeout(500);
     await p.locator('.sheet .btn').filter({ hasText: /Continue|Open/ }).first().click();
@@ -161,7 +194,7 @@ async function run(mode, base, browser) {
     await back();
   });
   await step('write a song', async () => {
-    await tab('write'); await p.waitForTimeout(300); await shot('06-write'); await overflow('Write');
+    await tab('write'); await p.waitForTimeout(300); await shot('06-write'); await overflow('Create'); await primaries('Create');
     await p.locator('#write-new').click(); await p.waitForSelector('#new-song-make');
     await p.fill('#new-song-title', 'My first song'); await p.locator('#new-song-make').click();
     await p.waitForSelector('.st-score svg', { timeout: 60000 }); await p.waitForTimeout(400);
@@ -174,9 +207,9 @@ async function run(mode, base, browser) {
     if (!(await p.locator('#write .song-tile').filter({ hasText: 'My first song' }).count())) throw new Error('the new song is not in My songs');
   });
   await step('Stage, Learn, Me, plans', async () => {
-    await tab('stage'); await p.waitForTimeout(300); await shot('07-stage'); await overflow('Stage');
-    await tab('learn'); await p.waitForTimeout(300); await shot('07b-learn'); await overflow('Learn');
-    await tab('home'); await p.locator('#act-tools').click(); await p.waitForTimeout(300); await overflow('tools'); await back();
+    await tab('stage'); await p.waitForTimeout(300); await shot('07-stage'); await overflow('Stage'); await primaries('Stage');
+    await tab('learn'); await p.waitForTimeout(300); await shot('07b-learn'); await overflow('Learn'); await primaries('Learn');
+    await tab('home'); await p.locator('#mt-tuner').click(); await p.waitForTimeout(300); await overflow('tools'); await back();
     await tab('me'); await p.waitForTimeout(300); await shot('08-me'); await overflow('Me');
     await p.locator('#me-upsell').click(); await p.waitForSelector('#plan-pro'); await shot('09-plans'); await overflow('plans');
     await p.keyboard.press('Escape');

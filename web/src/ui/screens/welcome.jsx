@@ -1,9 +1,8 @@
-// First-run guide: Hapi says hello, asks what you play, then three quick tips. Replay it from Account.
+// First-run tour: three cards (Practice; Learn; Create and Stage), skippable and shown once. Replay it from Settings.
 import { useState } from 'preact/hooks';
 import { useApp, updateSettings, closeSheet, go } from '../state.js';
 import { t, instrumentName } from '../../core/i18n.js';
 import { Chip, Button, Icon } from '../components.jsx';
-import { Mascot } from '../mascot.jsx';
 import { local } from '../storage.js';
 
 const PICK = ['piano', 'guitar', 'violin', 'voice', 'flute', 'cello', 'ukulele', 'erhu', 'sax', 'trumpet', 'dizi', 'clarinet'];
@@ -16,28 +15,29 @@ export function WelcomeSheet() {
     closeSheet();
     if (then) then();
   };
+  // Three cards: what Practice, Learn, and Create + Stage are. Shown once (skippable); replay it from Settings.
   const slides = [
-    { mood: 'wave', title: t('welcomeHapi'), body: t('welcomeHapiSub') },
-    { mood: 'think', title: t('tip1Title'), body: t('welcomeAdd'), icon: 'folder', color: 'purple' },
-    { mood: 'listen', title: t('tip2Title'), body: t('tip2'), icon: 'mic', color: 'pink' },
-    { mood: 'cheer', title: t('welcomeCommunityTitle'), body: t('welcomeCommunity'), icon: 'stage', color: 'orange' },
+    { title: t('tour1T'), body: t('tour1'), icons: [['mic', 'violet']] },
+    { title: t('tour2T'), body: t('tour2'), icons: [['academy', 'orange']] },
+    { title: t('tour3T'), body: t('tour3'), icons: [['pencil', 'teal'], ['stage', 'pink']] },
   ];
   const sl = slides[i];
   return (
-    <div class="sheet full welcome" role="dialog" aria-modal="true" aria-label={t('welcomeHapi')}>
+    <div class="sheet full welcome" role="dialog" aria-modal="true" aria-label={sl.title}>
       <div class="sheet-head">
         <span />
         <h2 aria-hidden="true" />
-        <button type="button" class="r" onClick={() => finish()}>{t('skip')}</button>
+        <button type="button" class="r" id="tour-skip" onClick={() => finish()}>{t('tourSkip')}</button>
       </div>
       <div class="sheet-body" style={{ alignItems: 'center', textAlign: 'center', justifyContent: 'center' }} key={i}>
-        <div class="fade-up"><Mascot mood={sl.mood} size={150} label="Hapi" /></div>
-        <h2 class="fade-up d1" style={{ font: '800 28px/1.15 var(--round)' }}>{sl.title}</h2>
-        <p class="fade-up d2" style={{ fontSize: 17, color: 'var(--ink2)', maxWidth: 420, lineHeight: 1.45 }}>{sl.body}</p>
+        <div class="tour-card">
+          <div class="tour-pair fade-up">{sl.icons.map(([ic, c]) => <span key={ic} class={`tour-ic c-${c}`}><Icon name={ic} size={46} stroke={2} /></span>)}</div>
+          <h2 class="fade-up d1" style={{ font: '800 28px/1.15 var(--round)' }}>{sl.title}</h2>
+          <p class="fade-up d2" style={{ fontSize: 17, color: 'var(--ink2)', lineHeight: 1.45, margin: 0 }}>{sl.body}</p>
+        </div>
         {i === 0 && (
-          <div class="fade-up d3" style={{ width: '100%', maxWidth: 460, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <input class="field" type="text" placeholder={t('yourName')} value={s.settings.name || ''} onInput={(e) => updateSettings({ name: e.currentTarget.value })} aria-label={t('yourName')} style={{ textAlign: 'center' }} />
-            <strong style={{ fontSize: 16 }}>{t('whatDoYouPlay')}</strong>
+          <div class="fade-up d3" style={{ width: '100%', maxWidth: 460, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <strong style={{ fontSize: 15 }}>{t('whatDoYouPlay')}</strong>
             <div class="choice-chips" style={{ justifyContent: 'center' }}>
               {PICK.map((k) => <Chip key={k} on={s.settings.instrument === k} color="purple" onClick={() => updateSettings({ instrument: k })}>{instrumentName(k)}</Chip>)}
             </div>
@@ -47,10 +47,7 @@ export function WelcomeSheet() {
         <div style={{ width: '100%', maxWidth: 460, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {i < slides.length - 1
             ? <Button kind="brand" full onClick={() => setI(i + 1)}>{t('next')} <Icon name="chevronR" size={18} stroke={2.6} /></Button>
-            : <>
-                <Button kind="brand" full icon="search" onClick={() => finish(() => go('summary'))}>{t('findFirstSong')}</Button>
-                <Button kind="secondary" full icon="stage" onClick={() => finish(() => go('community'))}>{t('openStage')}</Button>
-              </>}
+            : <Button kind="brand" full icon="mic" id="tour-start" onClick={() => finish(() => go('summary'))}>{t('tourStart')}</Button>}
           {i > 0 && <Button kind="plain" full onClick={() => setI(i - 1)}>{t('back')}</Button>}
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useState, useRef, useEffect } from 'preact/hooks';
 import { useApp, pop, closeSheet, go } from '../state.js';
 import { t } from '../../core/i18n.js';
 import { Icon } from '../components.jsx';
@@ -14,18 +14,36 @@ export function Avatar() {
   );
 }
 
+/** The iOS large title: big at the top of a page, and once the page scrolls under it, a small centred title in a
+ *  frosted bar (like Settings, Reminders and Health). */
 export function LargeTitle({ title, eyebrow, actions, color, back = false, avatar = false }) {
+  const ref = useRef(null);
+  const [small, setSmall] = useState(false);
+  useEffect(() => {
+    const sc = ref.current?.closest('.scroll');
+    if (!sc) return undefined;
+    const on = () => setSmall(sc.scrollTop > 48);
+    sc.addEventListener('scroll', on, { passive: true });
+    on();
+    return () => sc.removeEventListener('scroll', on);
+  }, []);
   return (
-    <header class={`large-title c-${color || 'violet'}`}>
-      <div>
-        {back && <button type="button" class="back-btn" onClick={() => pop()} aria-label={t('back')}><Icon name="chevronL" size={20} stroke={2.6} /></button>}
-        <div style={{ minWidth: 0 }}>
-          {eyebrow && <div class="eyebrow">{eyebrow}</div>}
-          <h1>{title}</h1>
-        </div>
+    <>
+      <div class={`lt-bar c-${color || 'violet'}${small ? ' on' : ''}`} aria-hidden={small ? undefined : 'true'}>
+        {back ? <button type="button" class="lt-back" tabIndex={small ? 0 : -1} onClick={() => pop()} aria-label={t('back')}><Icon name="chevronL" size={22} stroke={2.6} /></button> : <span />}
+        <span class="lt-title">{title}</span><span />
       </div>
-      <div class="title-actions">{actions}{avatar && <Avatar />}</div>
-    </header>
+      <header ref={ref} class={`large-title c-${color || 'violet'}`}>
+        <div>
+          {back && <button type="button" class="back-btn" onClick={() => pop()} aria-label={t('back')}><Icon name="chevronL" size={20} stroke={2.6} /></button>}
+          <div style={{ minWidth: 0 }}>
+            {eyebrow && <div class="eyebrow">{eyebrow}</div>}
+            <h1>{title}</h1>
+          </div>
+        </div>
+        <div class="title-actions">{actions}{avatar && <Avatar />}</div>
+      </header>
+    </>
   );
 }
 

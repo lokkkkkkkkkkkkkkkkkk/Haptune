@@ -16,7 +16,7 @@ let state = {
   ready: false,
   settings: {
     name: '', instrument: 'violin', voice: 'tenor', voiceRange: null, lang: detectLang(), theme: 'system', dailyGoal: 20, wifiOnly: true,
-    server: '', showRoles: true, chordView: 'guitar', syncMs: 0,
+    server: '', showRoles: true, chordView: 'guitar', syncMs: 0, haptics: true,
   },
   plus: false,          // a paid plan (Plus, Pro) or the developer, from the account on the server
   me: null,             // the Melovyn account (community, classes, plan), see account.js
@@ -72,6 +72,7 @@ export function updateSettings(patch) {
   local.set('settings', settings);
   setState({ settings });
   applyTheme(settings.theme);
+  globalThis.__melovynHaptics = settings.haptics !== false;
 }
 export function applyTheme(theme) {
   try {
@@ -98,6 +99,7 @@ export async function loadAll() {
   local.set('nameFixed', true);
   setLang(settings.lang);
   applyTheme(settings.theme);
+  globalThis.__melovynHaptics = settings.haptics !== false;
   const progress = { ...state.progress, ...local.get('progress', {}) };
   const me = local.get('me', null);
   const plus = ['plus', 'pro', 'dev'].includes(me?.tier);

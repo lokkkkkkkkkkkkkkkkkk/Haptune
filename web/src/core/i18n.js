@@ -2,6 +2,7 @@
 import { MORE } from './i18n-community.js';
 import { V2 } from './i18n-v2.js';
 import { V3 } from './i18n-v3.js';
+import { V4 } from './i18n-v4.js';
 export const LANGS = [
   { id: 'en', name: 'English' }, { id: 'ms', name: 'Bahasa Melayu' }, { id: 'zh-Hans', name: '简体中文' }, { id: 'zh-Hant', name: '繁體中文' },
 ];
@@ -427,7 +428,7 @@ const S = {
 };
 
 
-Object.assign(S, MORE, V2, V3);                // community, accounts, plans and help (i18n-community.js)
+Object.assign(S, MORE, V2, V3, V4);                // community, accounts, plans and help (i18n-community.js)
 
 const INSTR = {
   piano: ['Piano', 'Piano', '钢琴', '鋼琴'], keyboard: ['Keyboard', 'Papan kekunci', '电子琴', '電子琴'], violin: ['Violin', 'Biola', '小提琴', '小提琴'], viola: ['Viola', 'Viola', '中提琴', '中提琴'],

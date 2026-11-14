@@ -1,11 +1,16 @@
 // Shared building blocks: icons, cards, lists, controls, charts, staff, keyboard and chord diagrams.
 import { useState, useEffect, useRef } from 'preact/hooks';
+import { tick } from './native.js';
 import { GLYPHS } from './glyphs.js';
 import { STEPS, keyAlter, midiOf, nameOf } from '../core/pitch.js';
 import { fretShapes, TUNINGS, pianoVoicing, formatChord, chordPcs, rootPc } from '../core/chords.js';
 
 // ---------- icons (24×24, stroke) ----------
 const P = {
+  grid: 'M4.5 4.5h6v6h-6zM13.5 4.5h6v6h-6zM4.5 13.5h6v6h-6zM13.5 13.5h6v6h-6z',
+  wave: 'M3 12h2M7 8v8M11 5v14M15 9v6M19 7v10M21 12h0',
+  sliders: 'M5 4v16M12 4v16M19 4v16M3 15h4M10 8h4M17 13h4',
+  sparkle: 'M12 3l2 7 7 2-7 2-2 7-2-7-7-2 7-2z',
   summary: 'M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5zM7.5 12.5h2l1.2-3 2.2 6 1.4-3h2.2',
   library: 'M9 18V6l10-2v12M9 18a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zM19 16a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zM9 10l10-2',
   academy: 'M2.5 9 12 4.5 21.5 9 12 13.5zM6.5 11v4.5c1.6 1.6 3.4 2.4 5.5 2.4s3.9-.8 5.5-2.4V11M21.5 9v5',
@@ -139,7 +144,7 @@ export function Row({ icon, color, title, subtitle, detail, onClick, chevron, ri
 export function Toggle({ checked, onChange, label, id }) {
   return (
     <label class="toggle" for={id}>
-      <input id={id} type="checkbox" role="switch" checked={checked} onChange={(e) => onChange(e.currentTarget.checked)} aria-label={label} />
+      <input id={id} type="checkbox" role="switch" checked={checked} onChange={(e) => { tick(); onChange(e.currentTarget.checked); }} aria-label={label} />
       <span class="track"><span class="thumb" /></span>
     </label>
   );
@@ -149,7 +154,7 @@ export function Segmented({ value, options, onChange, small, id }) {
   return (
     <div class={`segmented${small ? ' small' : ''}`} role="tablist" id={id}>
       {options.map((o) => (
-        <button type="button" role="tab" aria-selected={o.value === value} class={o.value === value ? 'on' : ''} onClick={() => onChange(o.value)} key={o.value}>{o.label}</button>
+        <button type="button" role="tab" aria-selected={o.value === value} class={o.value === value ? 'on' : ''} onClick={() => { if (o.value !== value) tick(); onChange(o.value); }} key={o.value}>{o.label}</button>
       ))}
     </div>
   );
