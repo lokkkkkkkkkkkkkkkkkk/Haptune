@@ -161,7 +161,7 @@ struct LibraryView: View {
                 }
                 Button("Cancel", role: .cancel) { pendingRecording = nil }
             } message: {
-                Text("Haptune can write sheet music for one instrument, or split a band recording into a part for each instrument.")
+                Text("Melovyn can write sheet music for one instrument, or split a band recording into a part for each instrument.")
             }
             .alert("Rename Piece", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
                 TextField("Title", text: $newTitle)
@@ -457,7 +457,7 @@ struct LinkImportView: View {
                             Button { openURL(u) } label: { Label("Open in \(song.service)", systemImage: "arrow.up.forward.app") }
                         }
                     } footer: {
-                        Text("Streaming apps don't share their audio with other apps. Play the song on another speaker and Haptune will listen, then split it into parts and write the sheet music.")
+                        Text("Streaming apps don't share their audio with other apps. Play the song on another speaker and Melovyn will listen, then split it into parts and write the sheet music.")
                     }
                 }
                 if let error {

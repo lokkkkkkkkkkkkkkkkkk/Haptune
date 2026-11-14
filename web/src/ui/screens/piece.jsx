@@ -1309,7 +1309,7 @@ export function ExportSheet({ pieceId, semis, title, part = null, partLabel = ''
   const [onlyPart, setOnlyPart] = useState(!!part);
   const [d, setD] = useState(null);
   useEffect(() => { getPiece(pieceId).then(setD); }, [pieceId]);
-  const safe = (title || 'ETASheet').replace(/[\\/:*?"<>|]+/g, ' ').trim();
+  const safe = (title || 'Melovyn').replace(/[\\/:*?"<>|]+/g, ' ').trim();
   const suffix = onlyPart && part ? ` (${partLabel})` : '';
   const scoreNow = () => { let sc = transposeScore(d.score, semis); if (onlyPart && part) sc = extractPart(sc, part.pi, part.staff); return sc; };
   const textOf = () => {

@@ -360,7 +360,7 @@ final class Library: ObservableObject {
     func makeBackup() throws -> URL {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("Haptune Backup \(f.string(from: Date())).zip")
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("Melovyn Backup \(f.string(from: Date())).zip")
         try FolderArchive.zip(directory: root, to: url)
         return url
     }

@@ -122,7 +122,7 @@ struct SplitHomeView: View {
                 HStack(spacing: 6) {
                     PlusBadge()
                     Group {
-                        if PlusFeature.bandSplit.remaining > 0 { Text("Your first split is free.") } else { Text("Band Split is part of Haptune Plus.") }
+                        if PlusFeature.bandSplit.remaining > 0 { Text("Your first split is free.") } else { Text("Band Split is part of Melovyn Plus.") }
                     }
                     .font(.footnote).foregroundStyle(.secondary)
                 }
@@ -175,7 +175,7 @@ struct SplitHomeView: View {
     private func start(_ url: URL, instruments: [String], title: String) {
         pendingFile = nil
         guard let api = settings.api else {
-            error = String(localized: "Band Split uses Haptune's online service, which isn't available right now. Please try again later.")
+            error = String(localized: "Band Split uses Melovyn's online service, which isn't available right now. Please try again later.")
             return
         }
         router.gate(.bandSplit, store: store) {
@@ -270,10 +270,10 @@ struct WhoIsPlayingView: View {
                 } header: {
                     Text("Who's playing?")
                 } footer: {
-                    Text("Choose one melody instrument (like violin or flute). Haptune finds its line inside the band.")
+                    Text("Choose one melody instrument (like violin or flute). Melovyn finds its line inside the band.")
                 }
                 Section {
-                    Label("Your recording is uploaded to your Haptune server, split, and deleted after 24 hours.", systemImage: "lock.shield")
+                    Label("Your recording is uploaded to your Melovyn server, split, and deleted after 24 hours.", systemImage: "lock.shield")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
             }
@@ -360,7 +360,7 @@ struct RecordSheet: View {
                 }
                 .font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
                 if denied {
-                    Text("Haptune needs the microphone. Turn it on in Settings > Privacy & Security > Microphone.")
+                    Text("Melovyn needs the microphone. Turn it on in Settings > Privacy & Security > Microphone.")
                         .font(.footnote).foregroundStyle(.red).multilineTextAlignment(.center)
                 }
                 Spacer(minLength: 0)

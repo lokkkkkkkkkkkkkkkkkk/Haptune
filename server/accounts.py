@@ -75,7 +75,7 @@ ledger = Table("ledger", meta,
                Column("user_id", String(36), ForeignKey("users.id"), nullable=False, index=True),
                Column("delta", Integer, nullable=False),
                Column("reason", String(24), nullable=False),
-               Column("minted", Boolean, nullable=False, default=False),   # made by Haptune (not moved between people)
+               Column("minted", Boolean, nullable=False, default=False),   # made by Melovyn (not moved between people)
                Column("ref", String(40), nullable=False, default=""),
                Column("note", String(160), nullable=False, default=""),
                Column("created", Float, nullable=False, index=True))
@@ -366,7 +366,7 @@ def _token(authorization: str) -> str:
 def current(authorization: str = Header("")) -> Me:
     user = user_from_token(_token(authorization))
     if user is None:
-        raise HTTPException(401, "Please open ETASheet online once to make your account.")
+        raise HTTPException(401, "Please open Melovyn online once to make your account.")
     with engine().begin() as c:
         acc = ensure_account(c, user)
         if acc["role"] == "banned":
@@ -663,7 +663,7 @@ class GoogleIn(BaseModel):
 
 @router.post("/auth/google")
 def google_signin(body: GoogleIn, request: Request, authorization: str = Header("")):
-    """Sign in with Google. A Google account seen before signs in to its ETASheet account (on this device too);
+    """Sign in with Google. A Google account seen before signs in to its Melovyn account (on this device too);
     a new one is linked to the account this device already has (so nothing is lost), or gets a new account."""
     rate(request, "google", 30, 3600)
     info = verify_google(body.credential)
@@ -802,7 +802,7 @@ def charge_ai(request: Request, kind: str, amount: int = 1) -> Me | None:
     if limit == 0:
         need = NEEDS.get(kind, "plus")
         raise HTTPException(402, {"code": "plan_required", "feature": kind, "tier": tier, "need": need,
-                                  "message": f"{names.get(kind, kind)} is part of Haptune {need.capitalize()}."})
+                                  "message": f"{names.get(kind, kind)} is part of Melovyn {need.capitalize()}."})
     if me is None or limit is None:
         return me
     with engine().begin() as c:

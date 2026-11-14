@@ -1,0 +1,2 @@
+[console_scripts]
+haptune = haptune.cli:main

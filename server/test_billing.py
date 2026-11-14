@@ -95,7 +95,7 @@ def test_card_checkout_turns_the_plan_on_and_renewals_keep_it(fresh):
     assert r.status_code == 200 and r.json()["url"].startswith("https://checkout.stripe.com/")
     sent = fresh.calls[-1][2]
     assert sent["mode"] == "subscription" and sent["client_reference_id"] == me["id"]
-    assert sent["line_items"][0]["price_data"] == {"currency": "myr", "unit_amount": 2990, "product_data": {"name": "Haptune Pro (monthly)"},
+    assert sent["line_items"][0]["price_data"] == {"currency": "myr", "unit_amount": 2990, "product_data": {"name": "Melovyn Pro (monthly)"},
                                                     "recurring": {"interval": "month"}}
     assert "/app/?paid={CHECKOUT_SESSION_ID}" in sent["success_url"]
     sid = r.json()["id"]

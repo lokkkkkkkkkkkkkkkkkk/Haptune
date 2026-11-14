@@ -1,7 +1,7 @@
 /* Safe areas: Capacitor's Android WebView sets --safe-area-inset-*; browsers use env() */
 :root { --sa-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)); --sa-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
   --sa-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px)); --sa-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px)); }
-/* Haptune: Apple-style grouped layout with colourful category accents.
+/* Melovyn: Apple-style grouped layout with colourful category accents.
    Layout: tab bar on phones, sidebar on iPad/Mac (>= 900px); large titles; inset grouped lists. */
 :root {
   --bg: #F5F3FF; --card: rgba(255,255,255,.80); --card2: rgba(255,255,255,.62); --solid: #FFFFFF; --fill: rgba(110,100,160,.11); --fill2: rgba(110,100,160,.19);
@@ -378,7 +378,7 @@ input[type="range"] { width: 100%; accent-color: var(--c, var(--blue)); }
 .jam-next { text-align: center; color: var(--ink2); font-weight: 600; }
 
 /* ======================================================================================
-   Haptune 0.4 look: soft moving colour background, frosted cards, floating tab bar, Hapi.
+   Melovyn 0.4 look: soft moving colour background, frosted cards, floating tab bar, Hapi.
    ====================================================================================== */
 .aurora { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; background: var(--bg); }
 .aurora i { position: absolute; width: 78vmax; height: 78vmax; border-radius: 50%; color: var(--c1);

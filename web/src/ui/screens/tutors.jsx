@@ -1,6 +1,6 @@
 // Find a tutor. Students browse verified teachers for free, ask for a lesson (a time, every week, or
 // "whenever suits you"), the teacher accepts or suggests a time, and the student confirms. Online lessons get a
-// private video room. Afterwards the student gives stars. Teachers make a profile under Me > Teach on Haptune
+// private video room. Afterwards the student gives stars. Teachers make a profile under Me > Teach on Melovyn
 // and pay a small one-time fee; a person checks each profile before it is listed.
 import { useEffect, useState } from 'preact/hooks';
 import { useApp, push, openSheet, closeSheet, toast } from '../state.js';
@@ -59,7 +59,7 @@ export function TutorsView({ active }) {
               : <Empty icon="users" title={t('noTutorsYet')} sub={t('noTutorsYetSub')} />}
         <button type="button" class="sr-cta" onClick={() => push('tutorMe')} id="teach-cta">
           <span class="hm-art sm"><Icon name="academy" size={21} stroke={2.1} /></span>
-          <div><strong>{t('teachOnHaptune')}</strong><span>{t('teachOnHaptuneSub')}</span></div><Icon name="chevronR" size={16} stroke={2.4} />
+          <div><strong>{t('teachOnMelovyn')}</strong><span>{t('teachOnMelovynSub')}</span></div><Icon name="chevronR" size={16} stroke={2.4} />
         </button>
         <p class="note-text">{t('tutorHow')}</p>
       </div>
@@ -212,7 +212,7 @@ export function LessonRateSheet({ lesson, onDone }) {
   );
 }
 
-/** Teach on Haptune: the teacher's own profile, the verification fee, and where it stands. */
+/** Teach on Melovyn: the teacher's own profile, the verification fee, and where it stands. */
 export function TutorMeView({ active }) {
   const s = useApp();
   const [info, setInfo] = useState(null);
@@ -224,8 +224,8 @@ export function TutorMeView({ active }) {
       : { headline: '', bio: '', instruments: [s.settings.instrument].filter(Boolean), levels: ['beginner'], languages: '', city: '', online: true, in_person: false, rate: '', times: '' }));
   }).catch((e) => toast(e.message, 'err'));
   useEffect(() => { if (active && hasServer()) ensureAccount().then(load); }, [active]);
-  if (!hasServer()) return <div class="scroll"><NavBar title={t('teachOnHaptune')} /><Empty icon="globe" title={t('needOnline')} /></div>;
-  if (!info || !f) return <div class="scroll"><NavBar title={t('teachOnHaptune')} /><div class="loading"><div class="spinner" /></div></div>;
+  if (!hasServer()) return <div class="scroll"><NavBar title={t('teachOnMelovyn')} /><Empty icon="globe" title={t('needOnline')} /></div>;
+  if (!info || !f) return <div class="scroll"><NavBar title={t('teachOnMelovyn')} /><div class="loading"><div class="spinner" /></div></div>;
   const p = info.profile;
   const set = (patch) => setF((x) => ({ ...x, ...patch }));
   const tog = (key, v) => set({ [key]: f[key].includes(v) ? f[key].filter((x) => x !== v) : [...f[key], v] });
@@ -241,7 +241,7 @@ export function TutorMeView({ active }) {
   const fee = cur === 'myr' ? `RM ${info.fee.myr}` : `US$${info.fee.usd}`;
   return (
     <div class="scroll" id="tutor-me">
-      <NavBar title={t('teachOnHaptune')} backLabel={t('back')} actions={p?.status === 'verified' ? <button type="button" onClick={() => push('lessons')} aria-label={t('myLessons')}><Icon name="calendar" size={21} /></button> : null} />
+      <NavBar title={t('teachOnMelovyn')} backLabel={t('back')} actions={p?.status === 'verified' ? <button type="button" onClick={() => push('lessons')} aria-label={t('myLessons')}><Icon name="calendar" size={21} /></button> : null} />
       <div class="wrap" style={{ paddingTop: 10 }}>
         {!p && <div class="pro-gate"><h2>{t('teachTitle')}</h2><p>{t('teachSub', { fee })}</p></div>}
         {p && (

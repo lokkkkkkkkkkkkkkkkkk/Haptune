@@ -1,4 +1,4 @@
-// "Install Haptune" on computers and Android browsers: the browser offers it (beforeinstallprompt) and we
+// "Install Melovyn" on computers and Android browsers: the browser offers it (beforeinstallprompt) and we
 // keep the offer until the person asks for it. iPhone and iPad have no such offer; there the app explains
 // Share > Add to Home Screen instead.
 import { openSheet } from './state.js';

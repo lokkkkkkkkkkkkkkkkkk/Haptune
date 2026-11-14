@@ -20,7 +20,7 @@ export function AccountSheet() {
   const backup = async () => {
     const json = await makeBackup();
     try {
-      const ok = await saveFile(`ETASheet backup ${new Date().toISOString().slice(0, 10)}.json`, new TextEncoder().encode(json));
+      const ok = await saveFile(`Melovyn backup ${new Date().toISOString().slice(0, 10)}.json`, new TextEncoder().encode(json));
       if (ok) toast(t('backup') + ' ✓');
     } catch { toast(t('saveFailed'), 'err'); }
   };
@@ -123,7 +123,7 @@ export function AccountSheet() {
         </List>
       </Section>
       <Section title={t('about')}>
-        <List><Row title="ETASheet" detail={`${globalThis.HAPTUNE_CONFIG?.version || ''} (${platform()})`} onClick={() => openSheet('about')} /></List>
+        <List><Row title="Melovyn" detail={`${globalThis.HAPTUNE_CONFIG?.version || ''} (${platform()})`} onClick={() => openSheet('about')} /></List>
       </Section>
     </SheetFrame>
   );

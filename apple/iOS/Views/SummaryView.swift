@@ -164,7 +164,7 @@ struct SummaryView: View {
 
     private var watchCard: some View {
         SummaryCard(title: "Apple Watch", symbol: "applewatch", tint: .gray, showsChevron: false) {
-            Text("Install Haptune on your Apple Watch to feel a tap the moment a note is wrong, sharp, flat, rushed or dragged.")
+            Text("Install Melovyn on your Apple Watch to feel a tap the moment a note is wrong, sharp, flat, rushed or dragged.")
                 .font(.subheadline)
         }
     }
@@ -185,7 +185,7 @@ struct SummaryView: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Image(systemName: "sparkles")
-                    Text("Haptune Plus").font(.headline)
+                    Text("Melovyn Plus").font(.headline)
                     Spacer()
                     Image(systemName: "chevron.right").font(.footnote.weight(.semibold))
                 }
@@ -233,7 +233,7 @@ struct ProfileButton: View {
     }
 }
 
-/// First run: what Haptune does, in three steps.
+/// First run: what Melovyn does, in three steps.
 struct WelcomeCard: View {
     @EnvironmentObject var library: Library
     @EnvironmentObject var settings: AppSettings
@@ -241,7 +241,7 @@ struct WelcomeCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Welcome to Haptune").font(.title2.weight(.bold))
+            Text("Welcome to Melovyn").font(.title2.weight(.bold))
             step("music.note.list", .blue, "Add a piece", "MusicXML, MIDI, a PDF or photo of sheet music, jianpu, or a recording.")
             step("applewatch", .gray, "Wear your Apple Watch", "Your wrist taps you the moment a note is wrong, sharp, flat, rushed or dragged.")
             step("chart.bar.fill", .green, "See what to fix", "Every take shows the bars to loop and how to practise them.")

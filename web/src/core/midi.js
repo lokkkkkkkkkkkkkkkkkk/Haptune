@@ -196,7 +196,7 @@ export function readMIDI(buf, { title = '' } = {}) {
     }
     for (const [ch, notes] of byCh) groups.push({ name: tr.name, ch, program: tr.programs[ch] ?? null, notes, lyrics: tr.lyrics, ti });
   });
-  if (!groups.length) throw new Error(drumNotes ? 'This MIDI file only has drums, which Haptune cannot turn into sheet music yet.' : 'This MIDI file has no notes.');
+  if (!groups.length) throw new Error(drumNotes ? 'This MIDI file only has drums, which Melovyn cannot turn into sheet music yet.' : 'This MIDI file has no notes.');
   // choose the grid from the onsets: exact files sit on 1/4 or 1/3 beats
   const onsets = groups.flatMap((g) => g.notes.map((n) => n.on));
   const grids = [q(1, 4), q(1, 3), q(1, 8), q(1, 6), q(1, 12), q(1, 16), q(1, 24)];

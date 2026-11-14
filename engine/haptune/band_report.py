@@ -178,7 +178,7 @@ section h2 {{ font-size: 20px; margin: 0 0 10px; text-wrap: balance }}
 </style>
 <main>
   <header class="top">
-    <span class="eyebrow">Haptune · Band Split</span>
+    <span class="eyebrow">Melovyn · Band Split</span>
     <h1>{_esc(result["title"])}</h1>
     <div class="facts">
       <span class="fact">Parts <b>{len(parts)}</b></span>

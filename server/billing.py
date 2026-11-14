@@ -148,7 +148,7 @@ def checkout(body: CheckoutIn, request: Request, me: A.Me = Depends(A.current)):
     if not once and period not in PERIOD_DAYS:
         raise HTTPException(400, "Choose monthly or yearly.")
     amount = price_of(body.product, period, body.currency)
-    name = "Haptune teacher verification" if once else f"Haptune {body.product.capitalize()} ({period})"
+    name = "Melovyn teacher verification" if once else f"Melovyn {body.product.capitalize()} ({period})"
     env_price = os.environ.get(f"STRIPE_PRICE_{body.product}_{period}_{body.currency}".upper())
     item: dict = {"quantity": 1}
     if env_price:

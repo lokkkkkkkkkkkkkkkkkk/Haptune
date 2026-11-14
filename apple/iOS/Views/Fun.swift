@@ -42,7 +42,7 @@ struct HaptuneBackground: View {
     }
 }
 
-/// Hapi, Haptune's friendly music note. Drawn with shapes so it stays sharp at any size.
+/// Hapi, Melovyn's friendly music note. Drawn with shapes so it stays sharp at any size.
 struct HapiMascot: View {
     enum Mood { case happy, think, cheer }
 

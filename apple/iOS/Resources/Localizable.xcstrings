@@ -617,24 +617,24 @@
         }
       }
     },
-    "Allow notifications for Haptune in Settings to get reminders.": {
+    "Allow notifications for Melovyn in Settings to get reminders.": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "请在“设置”中允许 Haptune 发送通知以接收提醒。"
+            "value": "请在“设置”中允许 Melovyn 发送通知以接收提醒。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "請在「設定」中允許 Haptune 傳送通知以接收提醒。"
+            "value": "請在「設定」中允許 Melovyn 傳送通知以接收提醒。"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Benarkan pemberitahuan untuk Haptune dalam Tetapan untuk menerima peringatan."
+            "value": "Benarkan pemberitahuan untuk Melovyn dalam Tetapan untuk menerima peringatan."
           }
         }
       }
@@ -837,68 +837,68 @@
         }
       }
     },
-    "Band Split is part of Haptune Plus.": {
+    "Band Split is part of Melovyn Plus.": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "分轨功能属于 Haptune Plus。"
+            "value": "分轨功能属于 Melovyn Plus。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "分軌功能屬於 Haptune Plus。"
+            "value": "分軌功能屬於 Melovyn Plus。"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pisah Band ialah sebahagian daripada Haptune Plus."
+            "value": "Pisah Band ialah sebahagian daripada Melovyn Plus."
           }
         }
       }
     },
-    "Band Split runs on your Haptune server. Add its address in Settings > Analysis Server.": {
+    "Band Split runs on your Melovyn server. Add its address in Settings > Analysis Server.": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "分轨在你的 Haptune 服务器上运行。请在“设置”>“分析服务器”中填写地址。"
+            "value": "分轨在你的 Melovyn 服务器上运行。请在“设置”>“分析服务器”中填写地址。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "分軌在你的 Haptune 伺服器上執行。請在「設定」>「分析伺服器」中填寫位址。"
+            "value": "分軌在你的 Melovyn 伺服器上執行。請在「設定」>「分析伺服器」中填寫位址。"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pisah Band berjalan pada pelayan Haptune anda. Tambah alamatnya dalam Tetapan > Pelayan Analisis."
+            "value": "Pisah Band berjalan pada pelayan Melovyn anda. Tambah alamatnya dalam Tetapan > Pelayan Analisis."
           }
         }
       }
     },
-    "Band Split uses Haptune's online service, which isn't available right now. Please try again later.": {
+    "Band Split uses Melovyn's online service, which isn't available right now. Please try again later.": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "乐队分轨使用 Haptune 在线服务，但服务暂时不可用。请稍后再试。"
+            "value": "乐队分轨使用 Melovyn 在线服务，但服务暂时不可用。请稍后再试。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "樂隊分軌使用 Haptune 線上服務，但服務暫時無法使用。請稍後再試。"
+            "value": "樂隊分軌使用 Melovyn 線上服務，但服務暫時無法使用。請稍後再試。"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Band Split menggunakan perkhidmatan dalam talian Haptune, yang tidak tersedia sekarang. Sila cuba lagi nanti."
+            "value": "Band Split menggunakan perkhidmatan dalam talian Melovyn, yang tidak tersedia sekarang. Sila cuba lagi nanti."
           }
         }
       }
@@ -1299,24 +1299,24 @@
         }
       }
     },
-    "Choose one melody instrument (like violin or flute). Haptune finds its line inside the band.": {
+    "Choose one melody instrument (like violin or flute). Melovyn finds its line inside the band.": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "选择一种旋律乐器（例如小提琴或长笛），Haptune 会在乐队中找出它的声部。"
+            "value": "选择一种旋律乐器（例如小提琴或长笛），Melovyn 会在乐队中找出它的声部。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "選擇一種旋律樂器（例如小提琴或長笛），Haptune 會在樂團中找出它的聲部。"
+            "value": "選擇一種旋律樂器（例如小提琴或長笛），Melovyn 會在樂團中找出它的聲部。"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pilih satu alat melodi (seperti biola atau seruling). Haptune mencari barisnya dalam band."
+            "value": "Pilih satu alat melodi (seperti biola atau seruling). Melovyn mencari barisnya dalam band."
           }
         }
       }
@@ -1827,24 +1827,24 @@
         }
       }
     },
-    "English, Bahasa Melayu, 简体中文 and 繁體中文. Some system text switches the next time you open Haptune.": {
+    "English, Bahasa Melayu, 简体中文 and 繁體中文. Some system text switches the next time you open Melovyn.": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "支持 English、Bahasa Melayu、简体中文和繁體中文。部分系统文字会在下次打开 Haptune 时切换。"
+            "value": "支持 English、Bahasa Melayu、简体中文和繁體中文。部分系统文字会在下次打开 Melovyn 时切换。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "支援 English、Bahasa Melayu、简体中文和繁體中文。部分系統文字會在下次開啟 Haptune 時切換。"
+            "value": "支援 English、Bahasa Melayu、简体中文和繁體中文。部分系統文字會在下次開啟 Melovyn 時切換。"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "English, Bahasa Melayu, 简体中文 dan 繁體中文. Sesetengah teks sistem bertukar apabila anda membuka Haptune lain kali."
+            "value": "English, Bahasa Melayu, 简体中文 dan 繁體中文. Sesetengah teks sistem bertukar apabila anda membuka Melovyn lain kali."
           }
         }
       }
@@ -2355,134 +2355,134 @@
         }
       }
     },
-    "Haptune": {
+    "Melovyn": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune"
+            "value": "Melovyn"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune"
+            "value": "Melovyn"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune"
+            "value": "Melovyn"
           }
         }
       }
     },
-    "Haptune Plus": {
+    "Melovyn Plus": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune Plus"
+            "value": "Melovyn Plus"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune Plus"
+            "value": "Melovyn Plus"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune Plus"
+            "value": "Melovyn Plus"
           }
         }
       }
     },
-    "Haptune can write sheet music for one instrument, or split a band recording into a part for each instrument.": {
+    "Melovyn can write sheet music for one instrument, or split a band recording into a part for each instrument.": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune 可以为单一乐器写出乐谱，也可以把乐队录音按乐器分成各个声部。"
+            "value": "Melovyn 可以为单一乐器写出乐谱，也可以把乐队录音按乐器分成各个声部。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune 可以為單一樂器寫出樂譜，也可以把樂團錄音按樂器分成各個聲部。"
+            "value": "Melovyn 可以為單一樂器寫出樂譜，也可以把樂團錄音按樂器分成各個聲部。"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune boleh menulis skor untuk satu alat muzik, atau memisahkan rakaman band kepada bahagian bagi setiap alat."
+            "value": "Melovyn boleh menulis skor untuk satu alat muzik, atau memisahkan rakaman band kepada bahagian bagi setiap alat."
           }
         }
       }
     },
-    "Haptune can't open .%@ files yet.": {
+    "Melovyn can't open .%@ files yet.": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune 暂时无法打开 .%@ 文件。"
+            "value": "Melovyn 暂时无法打开 .%@ 文件。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune 暫時無法打開 .%@ 檔案。"
+            "value": "Melovyn 暫時無法打開 .%@ 檔案。"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune belum dapat membuka fail .%@."
+            "value": "Melovyn belum dapat membuka fail .%@."
           }
         }
       }
     },
-    "Haptune needs the microphone to hear you play. Turn it on in Settings > Privacy & Security > Microphone.": {
+    "Melovyn needs the microphone to hear you play. Turn it on in Settings > Privacy & Security > Microphone.": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune 需要麦克风来听你演奏。请在“设置”>“隐私与安全性”>“麦克风”中打开。"
+            "value": "Melovyn 需要麦克风来听你演奏。请在“设置”>“隐私与安全性”>“麦克风”中打开。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune 需要麥克風來聽你演奏。請在「設定」>「隱私權與安全性」>「麥克風」中開啟。"
+            "value": "Melovyn 需要麥克風來聽你演奏。請在「設定」>「隱私權與安全性」>「麥克風」中開啟。"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune memerlukan mikrofon untuk mendengar anda bermain. Hidupkan dalam Tetapan > Privasi & Keselamatan > Mikrofon."
+            "value": "Melovyn memerlukan mikrofon untuk mendengar anda bermain. Hidupkan dalam Tetapan > Privasi & Keselamatan > Mikrofon."
           }
         }
       }
     },
-    "Haptune needs the microphone. Turn it on in Settings > Privacy & Security > Microphone.": {
+    "Melovyn needs the microphone. Turn it on in Settings > Privacy & Security > Microphone.": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune 需要麦克风。请在“设置”>“隐私与安全性”>“麦克风”中打开。"
+            "value": "Melovyn 需要麦克风。请在“设置”>“隐私与安全性”>“麦克风”中打开。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune 需要麥克風。請在「設定」>「隱私權與安全性」>「麥克風」中開啟。"
+            "value": "Melovyn 需要麥克風。請在「設定」>「隱私權與安全性」>「麥克風」中開啟。"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune memerlukan mikrofon. Hidupkan dalam Tetapan > Privasi & Keselamatan > Mikrofon."
+            "value": "Melovyn memerlukan mikrofon. Hidupkan dalam Tetapan > Privasi & Keselamatan > Mikrofon."
           }
         }
       }
@@ -2707,24 +2707,24 @@
         }
       }
     },
-    "Install Haptune on your Apple Watch to feel a tap the moment a note is wrong, sharp, flat, rushed or dragged.": {
+    "Install Melovyn on your Apple Watch to feel a tap the moment a note is wrong, sharp, flat, rushed or dragged.": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在 Apple Watch 上安装 Haptune，音弹错、偏高、偏低、抢拍或拖拍时，手腕会立即轻触提醒你。"
+            "value": "在 Apple Watch 上安装 Melovyn，音弹错、偏高、偏低、抢拍或拖拍时，手腕会立即轻触提醒你。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "在 Apple Watch 上安裝 Haptune，音彈錯、偏高、偏低、搶拍或拖拍時，手腕會立即輕觸提醒你。"
+            "value": "在 Apple Watch 上安裝 Melovyn，音彈錯、偏高、偏低、搶拍或拖拍時，手腕會立即輕觸提醒你。"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pasang Haptune pada Apple Watch untuk rasa ketukan sebaik sahaja not salah, terlalu tinggi, terlalu rendah, tergesa-gesa atau terlambat."
+            "value": "Pasang Melovyn pada Apple Watch untuk rasa ketukan sebaik sahaja not salah, terlalu tinggi, terlalu rendah, tergesa-gesa atau terlambat."
           }
         }
       }
@@ -2773,24 +2773,24 @@
         }
       }
     },
-    "Keep Haptune open on your Watch while you practise. Tip: Watch Settings > General > Return to Clock > Haptune > Return to App.": {
+    "Keep Melovyn open on your Watch while you practise. Tip: Watch Settings > General > Return to Clock > Melovyn > Return to App.": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "练习时请在手表上保持 Haptune 打开。提示：手表“设置”>“通用”>“返回时钟”>“Haptune”>“返回应用”。"
+            "value": "练习时请在手表上保持 Melovyn 打开。提示：手表“设置”>“通用”>“返回时钟”>“Melovyn”>“返回应用”。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "練習時請在手錶上保持 Haptune 開啟。提示：手錶「設定」>「一般」>「返回時鐘」>「Haptune」>「返回 App」。"
+            "value": "練習時請在手錶上保持 Melovyn 開啟。提示：手錶「設定」>「一般」>「返回時鐘」>「Melovyn」>「返回 App」。"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Biarkan Haptune terbuka pada Jam semasa berlatih. Petua: Tetapan Jam > Umum > Kembali ke Jam > Haptune > Kembali ke Aplikasi."
+            "value": "Biarkan Melovyn terbuka pada Jam semasa berlatih. Petua: Tetapan Jam > Umum > Kembali ke Jam > Melovyn > Kembali ke Aplikasi."
           }
         }
       }
@@ -4335,24 +4335,24 @@
         }
       }
     },
-    "Reading PDFs and photos with AI, finding songs online, recordings to sheet music, Band Split, full reports and Academy classes use the Haptune server. There is nothing to set up. Practice, MusicXML, MIDI and jianpu work offline.": {
+    "Reading PDFs and photos with AI, finding songs online, recordings to sheet music, Band Split, full reports and Academy classes use the Melovyn server. There is nothing to set up. Practice, MusicXML, MIDI and jianpu work offline.": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "用 AI 读取 PDF 和照片、在线找歌、录音转乐谱、乐队分轨、完整报告和学院班级都使用 Haptune 服务器，无需任何设置。练习、MusicXML、MIDI 和简谱可离线使用。"
+            "value": "用 AI 读取 PDF 和照片、在线找歌、录音转乐谱、乐队分轨、完整报告和学院班级都使用 Melovyn 服务器，无需任何设置。练习、MusicXML、MIDI 和简谱可离线使用。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "用 AI 讀取 PDF 和照片、線上找歌、錄音轉樂譜、樂隊分軌、完整報告和學院班級都使用 Haptune 伺服器，無需任何設定。練習、MusicXML、MIDI 和簡譜可離線使用。"
+            "value": "用 AI 讀取 PDF 和照片、線上找歌、錄音轉樂譜、樂隊分軌、完整報告和學院班級都使用 Melovyn 伺服器，無需任何設定。練習、MusicXML、MIDI 和簡譜可離線使用。"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Membaca PDF dan foto dengan AI, mencari lagu dalam talian, rakaman ke skor muzik, Band Split, laporan penuh dan kelas Akademi menggunakan pelayan Haptune. Tiada apa yang perlu disediakan. Latihan, MusicXML, MIDI dan jianpu berfungsi tanpa talian."
+            "value": "Membaca PDF dan foto dengan AI, mencari lagu dalam talian, rakaman ke skor muzik, Band Split, laporan penuh dan kelas Akademi menggunakan pelayan Melovyn. Tiada apa yang perlu disediakan. Latihan, MusicXML, MIDI dan jianpu berfungsi tanpa talian."
           }
         }
       }
@@ -4643,24 +4643,24 @@
         }
       }
     },
-    "Requires Haptune Plus": {
+    "Requires Melovyn Plus": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "需要 Haptune Plus"
+            "value": "需要 Melovyn Plus"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "需要 Haptune Plus"
+            "value": "需要 Melovyn Plus"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Memerlukan Haptune Plus"
+            "value": "Memerlukan Melovyn Plus"
           }
         }
       }
@@ -5523,24 +5523,24 @@
         }
       }
     },
-    "Streaming apps don't share their audio with other apps. Play the song on another speaker and Haptune will listen, then split it into parts and write the sheet music.": {
+    "Streaming apps don't share their audio with other apps. Play the song on another speaker and Melovyn will listen, then split it into parts and write the sheet music.": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "流媒体应用不会把音频分享给其他应用。用另一个音箱播放这首歌，Haptune 会聆听，然后分轨并写出乐谱。"
+            "value": "流媒体应用不会把音频分享给其他应用。用另一个音箱播放这首歌，Melovyn 会聆听，然后分轨并写出乐谱。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "串流 App 不會把音訊分享給其他 App。用另一個喇叭播放這首歌，Haptune 會聆聽，然後分軌並寫出樂譜。"
+            "value": "串流 App 不會把音訊分享給其他 App。用另一個喇叭播放這首歌，Melovyn 會聆聽，然後分軌並寫出樂譜。"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aplikasi penstriman tidak berkongsi audio dengan aplikasi lain. Mainkan lagu pada pembesar suara lain dan Haptune akan mendengar, kemudian memisahkannya kepada bahagian dan menulis skor."
+            "value": "Aplikasi penstriman tidak berkongsi audio dengan aplikasi lain. Mainkan lagu pada pembesar suara lain dan Melovyn akan mendengar, kemudian memisahkannya kepada bahagian dan menulis skor."
           }
         }
       }
@@ -5831,24 +5831,24 @@
         }
       }
     },
-    "The full report uses Haptune's online service, which isn't available right now.": {
+    "The full report uses Melovyn's online service, which isn't available right now.": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "完整报告使用 Haptune 在线服务，但服务暂时不可用。"
+            "value": "完整报告使用 Melovyn 在线服务，但服务暂时不可用。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "完整報告使用 Haptune 線上服務，但服務暫時無法使用。"
+            "value": "完整報告使用 Melovyn 線上服務，但服務暫時無法使用。"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Laporan penuh menggunakan perkhidmatan dalam talian Haptune, yang tidak tersedia sekarang."
+            "value": "Laporan penuh menggunakan perkhidmatan dalam talian Melovyn, yang tidak tersedia sekarang."
           }
         }
       }
@@ -5919,24 +5919,24 @@
         }
       }
     },
-    "This file is read by Haptune's online service, which isn't available right now. Please try again later.": {
+    "This file is read by Melovyn's online service, which isn't available right now. Please try again later.": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "此文件由 Haptune 在线服务读取，但服务暂时不可用。请稍后再试。"
+            "value": "此文件由 Melovyn 在线服务读取，但服务暂时不可用。请稍后再试。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "此檔案由 Haptune 線上服務讀取，但服務暫時無法使用。請稍後再試。"
+            "value": "此檔案由 Melovyn 線上服務讀取，但服務暫時無法使用。請稍後再試。"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fail ini dibaca oleh perkhidmatan dalam talian Haptune, yang tidak tersedia sekarang. Sila cuba lagi nanti."
+            "value": "Fail ini dibaca oleh perkhidmatan dalam talian Melovyn, yang tidak tersedia sekarang. Sila cuba lagi nanti."
           }
         }
       }
@@ -5963,24 +5963,24 @@
         }
       }
     },
-    "This kind of file is read by the Haptune server. Add the server address in Settings > Analysis Server.": {
+    "This kind of file is read by the Melovyn server. Add the server address in Settings > Analysis Server.": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "这类文件由 Haptune 服务器读取。请在“设置”>“分析服务器”中填写服务器地址。"
+            "value": "这类文件由 Melovyn 服务器读取。请在“设置”>“分析服务器”中填写服务器地址。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "這類檔案由 Haptune 伺服器讀取。請在「設定」>「分析伺服器」中填寫伺服器位址。"
+            "value": "這類檔案由 Melovyn 伺服器讀取。請在「設定」>「分析伺服器」中填寫伺服器位址。"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fail jenis ini dibaca oleh pelayan Haptune. Tambah alamat pelayan dalam Tetapan > Pelayan Analisis."
+            "value": "Fail jenis ini dibaca oleh pelayan Melovyn. Tambah alamat pelayan dalam Tetapan > Pelayan Analisis."
           }
         }
       }
@@ -6139,24 +6139,24 @@
         }
       }
     },
-    "Try Haptune Plus Free": {
+    "Try Melovyn Plus Free": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "免费试用 Haptune Plus"
+            "value": "免费试用 Melovyn Plus"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "免費試用 Haptune Plus"
+            "value": "免費試用 Melovyn Plus"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cuba Haptune Plus Percuma"
+            "value": "Cuba Melovyn Plus Percuma"
           }
         }
       }
@@ -6777,24 +6777,24 @@
         }
       }
     },
-    "Welcome to Haptune": {
+    "Welcome to Melovyn": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "欢迎使用 Haptune"
+            "value": "欢迎使用 Melovyn"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "歡迎使用 Haptune"
+            "value": "歡迎使用 Melovyn"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Selamat datang ke Haptune"
+            "value": "Selamat datang ke Melovyn"
           }
         }
       }
@@ -7195,24 +7195,24 @@
         }
       }
     },
-    "Your recording is uploaded to your Haptune server, split, and deleted after 24 hours.": {
+    "Your recording is uploaded to your Melovyn server, split, and deleted after 24 hours.": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "你的录音会上传到你的 Haptune 服务器进行分轨，并在 24 小时后删除。"
+            "value": "你的录音会上传到你的 Melovyn 服务器进行分轨，并在 24 小时后删除。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "你的錄音會上傳到你的 Haptune 伺服器進行分軌，並在 24 小時後刪除。"
+            "value": "你的錄音會上傳到你的 Melovyn 伺服器進行分軌，並在 24 小時後刪除。"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rakaman anda dimuat naik ke pelayan Haptune anda, dipisahkan, dan dipadam selepas 24 jam."
+            "value": "Rakaman anda dimuat naik ke pelayan Melovyn anda, dipisahkan, dan dipadam selepas 24 jam."
           }
         }
       }
@@ -7239,24 +7239,24 @@
         }
       }
     },
-    "Your teacher plays it once; Haptune writes it down.": {
+    "Your teacher plays it once; Melovyn writes it down.": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "老师演奏一遍，Haptune 帮你写下来。"
+            "value": "老师演奏一遍，Melovyn 帮你写下来。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "老師演奏一遍，Haptune 幫你寫下來。"
+            "value": "老師演奏一遍，Melovyn 幫你寫下來。"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Guru anda memainkannya sekali; Haptune menulisnya."
+            "value": "Guru anda memainkannya sekali; Melovyn menulisnya."
           }
         }
       }

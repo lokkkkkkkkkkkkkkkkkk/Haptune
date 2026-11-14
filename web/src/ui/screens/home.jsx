@@ -143,7 +143,7 @@ export function HomeView({ active }) {
         <input ref={camRef} type="file" class="hidden-input" accept="image/*" capture="environment" multiple onChange={onPick} aria-label={t('wayCamera')} />
         <input ref={fileRef} type="file" class="hidden-input" accept={ACCEPT} onChange={onPick} id="home-file" aria-label={t('wayFile')} />
         <header class="hm-top">
-          <span class="logo ph-only"><Logo size={28} />ETASheet</span>
+          <span class="logo ph-only"><Logo size={28} />Melovyn</span>
           <span class="spacer pc-only" />
           {streak > 0 && <span class="hm-pill flame" title={t('streak')}><Icon name="flame" size={15} fill stroke={1.6} />{streak}</span>}
           {online && s.me && <button type="button" class="hm-pill nts" onClick={() => push('wallet', {}, 'me')} aria-label={t('rewards')}><Icon name="gift" size={15} stroke={2.2} />{s.me.credits ?? 0}</button>}

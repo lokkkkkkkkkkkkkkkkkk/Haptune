@@ -1,8 +1,8 @@
-"""The Haptune community: the reason to use Haptune instead of a plain score app.
+"""The Melovyn community: the reason to use Melovyn instead of a plain score app.
 
     Requests   "I need this song for violin, beginner" + a YouTube link or photos of a page. Others want it too
                (+1, and they can add credits to the reward). A helper claims it for 48 hours, makes the score
-               (in Haptune or any notation app) and submits MusicXML. The requester plays it in the app, then
+               (in Melovyn or any notation app) and submits MusicXML. The requester plays it in the app, then
                accepts it with a star rating or asks for changes. The reward is bigger when the help is fast,
                good and large (see REWARDS), with caps so nobody can farm credits. Other useful submissions and
                comments get a share too.
@@ -135,7 +135,7 @@ challenge_entries = Table("challenge_entries", meta,
 
 # --------------------------------------------------------------------------------------- the reward rules
 REWARDS = {
-    # A request's reward = what the requester and supporters put in (all of it) + Haptune's bonus:
+    # A request's reward = what the requester and supporters put in (all of it) + Melovyn's bonus:
     #   bonus = size x speed x quality, at most bonus_cap, and at most daily_help_cap a day for each helper.
     "size_min": 10, "size_max": 60, "size_notes_per_credit": 20,          # bigger scores earn more
     "speed": [[24, 1.5], [72, 1.25], [168, 1.0]], "speed_late": 0.8,      # hours after the request
@@ -170,7 +170,7 @@ _BAD_RE = re.compile(r"\b(" + "|".join(_BAD_LATIN) + r")\b", re.I)
 def clean_text(s: str | None, limit: int) -> str:
     s = re.sub(r"[ \t]+", " ", (s or "").replace("\r", "")).strip()[:limit]
     if _BAD_RE.search(s) or any(w in s for w in _BAD_CJK):
-        raise HTTPException(400, "Please keep Haptune friendly: that text has words we don't allow.")
+        raise HTTPException(400, "Please keep Melovyn friendly: that text has words we don't allow.")
     return s
 
 
@@ -722,7 +722,7 @@ def _minted_today(c, uid: str) -> int:
 
 
 def _pay_bonus(c, uid: str, amount: int, reason: str, pid: str, title: str) -> int:
-    """Haptune's bonus, within the helper's daily cap."""
+    """Melovyn's bonus, within the helper's daily cap."""
     room = max(0, REWARDS["daily_help_cap"] - _minted_today(c, uid))
     amount = max(0, min(amount, room))
     if amount:
@@ -1141,7 +1141,7 @@ class ReportIn(BaseModel):
 def report(body: ReportIn, me: A.Me = Depends(A.current)):
     """Anyone can report a post, reply or person. Three reports from different people hide it until the
     developer has looked (Google Play and the App Store require a way to report and block)."""
-    _limit_user(me, "report", 20, 86400, "Thanks for keeping Haptune friendly. That's enough reports for today.")
+    _limit_user(me, "report", 20, 86400, "Thanks for keeping Melovyn friendly. That's enough reports for today.")
     m = re.fullmatch(r"([pru]):([\w.]{3,40})", body.target)
     if not m:
         raise HTTPException(400, "Unknown target.")

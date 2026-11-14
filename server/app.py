@@ -57,7 +57,7 @@ MAX_UPLOAD = 40 * 1024 * 1024
 MAX_RECORDING = 300 * 1024 * 1024        # band recordings may arrive as videos
 JOBS_DIR = os.environ.get("HAPTUNE_JOBS", os.path.join(tempfile.gettempdir(), "haptune-jobs"))
 JOB_TTL = 24 * 3600
-app = FastAPI(title="Haptune engine", version=__version__)
+app = FastAPI(title="Melovyn engine", version=__version__)
 # The web app (GitHub Pages, the Claude preview, local dev) calls the server from the browser. No cookies
 # are used, so allowing these origins only lets those pages call the rate-limited endpoints.
 DEFAULT_ORIGINS = (r"https?://(localhost|127\.0\.0\.1)(:\d+)?|https://[\w-]+\.github\.io|capacitor://localhost"
@@ -111,13 +111,13 @@ def home():
     """This address is the engine behind the apps. Someone opening it in a browser is sent on to the website."""
     return (
         "<!doctype html><html lang='en'><head><meta charset='utf-8'>"
-        "<meta name='viewport' content='width=device-width,initial-scale=1'><title>Haptune server</title>"
+        "<meta name='viewport' content='width=device-width,initial-scale=1'><title>Melovyn server</title>"
         "<style>body{font-family:system-ui,sans-serif;max-width:32rem;margin:15vh auto;padding:0 16px;"
         "line-height:1.5;color:#222;background:#fff}a{color:#6d4aff}"
         "@media(prefers-color-scheme:dark){body{color:#eee;background:#111}a{color:#a996ff}}</style></head>"
-        f"<body><h1>Haptune server is running</h1><p>This address is the engine the Haptune apps talk to "
+        f"<body><h1>Melovyn server is running</h1><p>This address is the engine the Melovyn apps talk to "
         f"(version {__version__}). There is nothing to see here in a browser.</p>"
-        f"<p><a href='{WEB_APP_URL}'>Open Haptune &rarr;</a></p>"
+        f"<p><a href='{WEB_APP_URL}'>Open Melovyn &rarr;</a></p>"
         "<p><small><a href='/health'>health</a></small></p></body></html>"
     )
 
@@ -285,7 +285,7 @@ def _limit(request: Request, kind: str, per_day: int) -> None:
         raise HTTPException(429, "You've used today's free AI reads. Please try again tomorrow.")
     cap = ALL_PER_DAY.get(kind)
     if cap and not _limiter.allow(f"{kind}:all", cap, DAY):
-        raise HTTPException(429, "Haptune's AI is fully booked for today. Please try again tomorrow.")
+        raise HTTPException(429, "Melovyn's AI is fully booked for today. Please try again tomorrow.")
 
 
 def _job(jid: str) -> dict:
@@ -546,7 +546,7 @@ def _find_cache_put(key: str, result: dict) -> None:
 TUTOR_PER_DAY = int(os.environ.get("HAPTUNE_TUTOR_PER_DAY", "60"))
 LANG_NAMES = {"en": "English", "ms": "Bahasa Melayu", "zh-Hans": "Simplified Chinese", "zh-Hant": "Traditional Chinese"}
 TUTOR_SYSTEM = (
-    "You are Hapi, the friendly music tutor inside Haptune, a practice app for students of every age. "
+    "You are Hapi, the friendly music tutor inside Melovyn, a practice app for students of every age. "
     "Answer warmly and clearly in under 170 words. Use note names (C, D, E...) rather than jargon where you can, "
     "and give one concrete exercise when it helps. The app shows your answer as plain text, so write plain "
     "sentences and short paragraphs: no Markdown (no **bold**, headings, tables or bullet lists). "

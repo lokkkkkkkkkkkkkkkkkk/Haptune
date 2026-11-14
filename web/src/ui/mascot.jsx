@@ -1,4 +1,4 @@
-// Hapi, Haptune's mascot: a round eighth note with a face. Pure SVG + CSS animation (no images), so it is
+// Hapi, Melovyn's mascot: a round eighth note with a face. Pure SVG + CSS animation (no images), so it is
 // tiny, sharp at any size and follows reduced-motion settings.
 //   mood: happy | cheer | think | listen | sleep | wave | sad
 let uid = 0;

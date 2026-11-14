@@ -1,6 +1,6 @@
 // The installed app (Capacitor: Android now, iOS later). In a browser every function here does nothing.
 //   * the Android back button closes a sheet, goes back a screen, then to Home, then leaves the app
-//   * in-app purchases go through RevenueCat, which tells the Haptune server what was bought
+//   * in-app purchases go through RevenueCat, which tells the Melovyn server what was bought
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 import { App } from '@capacitor/app';
@@ -64,7 +64,7 @@ export function openExternal(url) {
 
 /** A short buzz you can feel while playing: 'wrong' (a wrong note), 'bar' (first beat), 'beat'.
  *  The installed app uses the phone's haptics; Android browsers vibrate; iPhone browsers have no vibration
- *  (the ETASheet app for iPhone taps the Apple Watch instead). */
+ *  (the Melovyn app for iPhone taps the Apple Watch instead). */
 export function buzz(kind = 'wrong') {
   try {
     if (isNative()) {

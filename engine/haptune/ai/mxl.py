@@ -247,7 +247,7 @@ def write_musicxml(doc: ReadDoc) -> str:
     for role, name in (("composer", doc.composer), ("arranger", doc.arranger), ("lyricist", doc.lyricist)):
         if name:
             ident.append(f'<creator type="{role}">{escape(name)}</creator>')
-    ident.append("<encoding><software>Haptune AI reader</software></encoding>")
+    ident.append("<encoding><software>Melovyn AI reader</software></encoding>")
     out.append("<identification>" + "".join(ident) + "</identification>")
     if doc.title:
         out.append(f'<credit page="1"><credit-type>title</credit-type><credit-words justify="center" valign="top" font-size="22">{escape(doc.title)}</credit-words></credit>')

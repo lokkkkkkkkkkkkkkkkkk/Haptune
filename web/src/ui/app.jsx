@@ -191,7 +191,7 @@ function App() {
   return (
     <div class={`app v3 sec-${sec}${immersive ? ' immersive' : ''}`}>
       <aside class="side" aria-label="Sections">
-        <button type="button" class="brand" onClick={() => { popToRoot('summary'); go('summary'); }}><Logo /><span>ETASheet</span></button>
+        <button type="button" class="brand" onClick={() => { popToRoot('summary'); go('summary'); }}><Logo /><span>Melovyn</span></button>
         <button type="button" class="side-create" onClick={() => openSheet('newSong')} id="side-create"><Icon name="plus" size={18} stroke={2.6} />{t('newSongT')}</button>
         <nav>{TABS.filter((x) => x.side !== false).map((tab) => tabBtn(tab, 'side'))}</nav>
         <div class="side-foot">

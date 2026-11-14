@@ -1,6 +1,6 @@
-# Haptune Web
+# Melovyn Web
 
-The installable web version of Haptune: the same practice coach as the Apple app, running in Safari on iPhone, iPad and Mac with no App Store account needed.
+The installable web version of Melovyn: the same practice coach as the Apple app, running in Safari on iPhone, iPad and Mac with no App Store account needed.
 
 ## What it does
 
@@ -9,7 +9,7 @@ The installable web version of Haptune: the same practice coach as the Apple app
 - **Library and exact imports.** Reads MusicXML (`.musicxml`, `.xml`, `.mxl`), MIDI (`.mid`), ABC, ChordPro and chord-over-lyrics text, and PDF chord sheets. Everything is read on the device, so imports use no data. A typical song imports in a fraction of a second, and even a 17,000-note string quartet movement takes about 2 seconds. Timing is kept as exact fractions, never rounded decimals.
 - **Up Key / Down Key.** Moves a piece up or down by semitones. Notes, key signature and chord symbols are re-spelled in the simplest key. *Find My Key* suggests keys that fit your voice range.
 - **AI Improvise.** *Vary a song*: decorates a song's own melody (light touch, balanced or free) while its main notes stay, so it still sounds like the song; compare original and variation at the same beat and save it as a new version. *New solo*: writes a solo over any chord progression in eight styles and plays it with a backing band, with a *Jam* mode.
-- **Academy.** Classes with a teacher (join with a code; assignments with due dates; hand in Play Along results; stickers, comments and bars to work on; activity feed and weekly leaderboard), six courses with generated quizzes, XP, badges, a daily challenge, challenge codes for friends, and Hapi the AI tutor (needs the Haptune server).
+- **Academy.** Classes with a teacher (join with a code; assignments with due dates; hand in Play Along results; stickers, comments and bars to work on; activity feed and weekly leaderboard), six courses with generated quizzes, XP, badges, a daily challenge, challenge codes for friends, and Hapi the AI tutor (needs the Melovyn server).
 - **Tools.** Tuner, metronome, chord finder (guitar, ukulele and piano shapes), key changer for pasted chord sheets, scale builder and drone.
 - **Languages.** English, Bahasa Melayu, 简体中文 and 繁體中文.
 

@@ -1,4 +1,4 @@
-// The person's Haptune account (shared by the community, Academy classes and plans) and the community API.
+// The person's Melovyn account (shared by the community, Academy classes and plans) and the community API.
 // A device gets an account the first time it goes online; nobody fills in a form to start.
 import { call, hasServer, accountToken, ApiError } from './api.js';
 import { local } from './storage.js';

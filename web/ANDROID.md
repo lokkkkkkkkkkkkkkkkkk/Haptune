@@ -1,16 +1,16 @@
-# ETASheet for Android: test it, then launch it on Google Play
+# Melovyn for Android: test it, then launch it on Google Play
 
 The Android app is the web app (`web/`) packaged with [Capacitor](https://capacitorjs.com). App ID:
-`com.sloky.etasheet` (it can never change once the app is on Google Play). Nothing here needs a Mac or Android Studio:
+`com.sloky.melovyn` (it can never change once the app is on Google Play). Nothing here needs a Mac or Android Studio:
 GitHub Actions builds everything (`.github/workflows/android.yml`).
 
 ## 1. Install the test app on your phone (free, today)
 
 Every push that changes `web/` builds a new test APK and publishes it as the release **android-test**:
 
-**https://github.com/lokkkkkkkkkkkkkkkkkk/Haptune/releases/download/android-test/ETASheet.apk**
+**https://github.com/lokkkkkkkkkkkkkkkkkk/Melovyn/releases/download/android-test/Melovyn.apk**
 
-1. Open that link on your Android phone and download `ETASheet.apk`.
+1. Open that link on your Android phone and download `Melovyn.apk`.
 2. Open the file. Android asks to allow installing apps from your browser (or Files): allow it once.
 3. Install. Later builds install over it and keep your library (they are all signed with the same test key).
 
@@ -41,11 +41,11 @@ Actions → Variables). Purchases stay switched off until step 4.
    ```
 4. In GitHub → Settings → Secrets and variables → Actions → **Secrets**, add:
    `HAPTUNE_KEYSTORE_BASE64` (the contents of haptune-upload.txt), `HAPTUNE_KEYSTORE_PASSWORD`, `HAPTUNE_KEY_ALIAS`
-   (`upload`), `HAPTUNE_KEY_PASSWORD`. The next build also makes **ETASheet.aab** (Actions → the run → Artifacts →
-   ETASheet-android).
-5. In the Play Console: **Create app** → name ETASheet, app, free (with in-app purchases). Turn on **Play App Signing**
+   (`upload`), `HAPTUNE_KEY_PASSWORD`. The next build also makes **Melovyn.aab** (Actions → the run → Artifacts →
+   Melovyn-android).
+5. In the Play Console: **Create app** → name Melovyn, app, free (with in-app purchases). Turn on **Play App Signing**
    (Google keeps the real signing key; your upload key can be reset if lost).
-6. **Testing → Closed testing → Create track**, upload `ETASheet.aab`, add your 12+ testers' Gmail addresses (friends,
+6. **Testing → Closed testing → Create track**, upload `Melovyn.aab`, add your 12+ testers' Gmail addresses (friends,
    family, students), and send them the opt-in link. They install from Google Play and keep it for 14 days.
 7. Fill in the **App content** pages (answers below), the store listing (section 6), then **Production → Create
    release** when Google allows it.
@@ -66,7 +66,7 @@ App content answers:
 
 ## 4. Subscriptions (Plus and Pro) with RevenueCat
 
-RevenueCat (free until US$2,500 a month in revenue) handles Google Play billing and tells the ETASheet server which plan
+RevenueCat (free until US$2,500 a month in revenue) handles Google Play billing and tells the Melovyn server which plan
 each account has. Only one plan check exists, on the server, so a plan bought on the phone also works when the same
 account signs in on a PC.
 
@@ -78,7 +78,7 @@ account signs in on a PC.
    | `pro` | `monthly`, `yearly` | RM 29.90 / US$7.99 a month; RM 229.90 / US$59.99 a year |
 
    A 7-day free trial on the yearly base plans helps people decide.
-2. https://app.revenuecat.com → new project → **Google Play app** (`com.sloky.haptune`) and connect it with a Google
+2. https://app.revenuecat.com → new project → **Google Play app** (`com.sloky.melovyn`) and connect it with a Google
    service account (RevenueCat shows each click).
 3. **Entitlements:** `plus` and `pro`. Attach the `plus` products to `plus` and the `pro` products to both `plus` and
    `pro`.
@@ -111,13 +111,13 @@ answers a month). The app reads the plans from the server.
 
 ## 6. Store listing (copy, then adjust)
 
-**Title:** ETASheet: Practise, Learn & Write Music
+**Title:** Melovyn: Practise, Learn & Write Music
 
 **Short description (80 characters):** Play along with feedback, learn with your teacher, write and share sheet music.
 
 **Full description:**
 
-> ETASheet listens while you play and shows exactly which notes and bars to fix.
+> Melovyn listens while you play and shows exactly which notes and bars to fix.
 >
 > • Play Along: the app hears your instrument through the microphone, waits for each note or keeps the beat, buzzes on
 >   a wrong note, and gives you a report: your score, the notes to fix, and the bars to loop. Every take is recorded.
@@ -129,7 +129,7 @@ answers a month). The app reads the plans from the server.
 > • 4,900 free pieces, staff notation and 簡譜, piano, violin, guitar, voice, erhu, guzheng and 20+ instruments.
 > • In English, Bahasa Melayu, 简体中文 and 繁體中文.
 >
-> Free: practice, classes, writing and the whole community, with no ads. ETASheet Plus and Pro add AI help: reading
+> Free: practice, classes, writing and the whole community, with no ads. Melovyn Plus and Pro add AI help: reading
 > music from photos and PDFs, finding songs online and the AI tutor.
 
 **Bahasa Melayu (short):** Main bersama dengan maklum balas, belajar bersama guru, tulis dan kongsi skor muzik.
@@ -144,7 +144,7 @@ phone: Community home, a request with a score, Play Along, the score cursor, Pla
 ## 7. Updating the app later
 
 Change `version` in `web/package.json` (e.g. 0.4.0 → 0.5.0) when you release. Each build's version code is the GitHub
-run number, so it always goes up. Upload the new `ETASheet.aab` to the same track.
+run number, so it always goes up. Upload the new `Melovyn.aab` to the same track.
 
 ## Building on your own computer (optional)
 

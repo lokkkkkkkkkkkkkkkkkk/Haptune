@@ -1,6 +1,6 @@
 // 簡譜 (jianpu, numbered notation): typed in as text, and drawn for any score.
 //
-// Text format (the same one the Haptune engine and the iPhone app read):
+// Text format (the same one the Melovyn engine and the iPhone app read):
 //     title: 茉莉花
 //     key: 1=F          the note that "1" sounds: C D E F G A B with # or b (1=bB, 1=F#)
 //     time: 2/4

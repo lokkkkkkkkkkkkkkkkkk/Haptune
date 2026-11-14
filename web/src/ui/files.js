@@ -51,7 +51,7 @@ export async function saveFile(name, data) {
 
   if (Capacitor.isNativePlatform()) {
     try {
-      const safe = name.replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'ETASheet';
+      const safe = name.replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'Melovyn';
       const { uri } = await Filesystem.writeFile({ path: `export/${safe}`, data: base64(bytes), directory: Directory.Cache, recursive: true });
       await Share.share({ title: safe, files: [uri], dialogTitle: safe });
       return true;

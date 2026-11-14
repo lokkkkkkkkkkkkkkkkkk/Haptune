@@ -1,4 +1,4 @@
-// Exact rational numbers for musical time (quarter notes). Every onset and duration in Haptune is a Q,
+// Exact rational numbers for musical time (quarter notes). Every onset and duration in Melovyn is a Q,
 // so triplets, quintuplets and pickups never drift and conversions are exact.
 
 export function gcd(a, b) {

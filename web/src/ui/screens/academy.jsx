@@ -127,7 +127,7 @@ function Tutor() {
       return;
     }
     const langName = { en: 'English', ms: 'Bahasa Melayu', 'zh-Hans': 'Simplified Chinese', 'zh-Hant': 'Traditional Chinese' }[lang];
-    const prompt = `You are the music tutor inside ETASheet, a practice app. The student plays ${instrumentName(s.settings.instrument)} and is at Academy level ${levelFor(s.progress.xp).level}. Answer in ${langName}, warmly and clearly, in under 170 words. Use note names (C, D, E...), give one concrete exercise when it helps, and do not use Markdown headings.\n\nQuestion: ${qtext.trim()}`;
+    const prompt = `You are the music tutor inside Melovyn, a practice app. The student plays ${instrumentName(s.settings.instrument)} and is at Academy level ${levelFor(s.progress.xp).level}. Answer in ${langName}, warmly and clearly, in under 170 words. Use note names (C, D, E...), give one concrete exercise when it helps, and do not use Markdown headings.\n\nQuestion: ${qtext.trim()}`;
     try {
       await sample(prompt, { signal: ctl.current.signal, onText: ({ text }) => setAnswer(text) });
       addXP(5);

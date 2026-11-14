@@ -1,4 +1,4 @@
-// Talks to the ETASheet server. The address is built into the app (HAPTUNE_CONFIG.server, set once by the
+// Talks to the Melovyn server. The address is built into the app (HAPTUNE_CONFIG.server, set once by the
 // developer), and each device gets an anonymous id, so people never type a server address or a key.
 import { local } from './storage.js';
 
@@ -47,7 +47,7 @@ export async function call(path, { method = 'GET', json, form, token, raw = fals
   try {
     res = await fetch(base + path, { method, headers, body, signal: ctl.signal });
   } catch (e) {
-    throw new ApiError(e.name === 'AbortError' ? 'The server took too long. Please try again.' : 'Could not reach ETASheet online. Check your connection.', 0);
+    throw new ApiError(e.name === 'AbortError' ? 'The server took too long. Please try again.' : 'Could not reach Melovyn online. Check your connection.', 0);
   } finally { clearTimeout(timer); }
   if (!res.ok) {
     let msg = `${res.status}`, detail = null;

@@ -36,7 +36,7 @@ targets:
     info:
       path: iOS/Info.plist
       properties:
-        CFBundleDisplayName: Haptune
+        CFBundleDisplayName: Melovyn
         HaptuneServerURL: $(HAPTUNE_SERVER_URL)
         CFBundleDevelopmentRegion: en
         CFBundleLocalizations: [en, zh-Hans, zh-Hant, ms]
@@ -45,9 +45,9 @@ targets:
         UILaunchScreen: {}
         UIBackgroundModes: [audio]
         UIApplicationSupportsIndirectInputEvents: true
-        NSMicrophoneUsageDescription: Haptune listens while you play so it can follow the score and tap your Apple Watch when a note is wrong, out of tune or out of time. Audio stays on your device unless you ask for a full analysis or a band split.
-        NSCameraUsageDescription: Haptune uses the camera to scan printed sheet music.
-        NSLocalNetworkUsageDescription: Haptune connects to the Haptune server on your computer over Wi-Fi for heavy jobs such as reading PDF sheet music.
+        NSMicrophoneUsageDescription: Melovyn listens while you play so it can follow the score and tap your Apple Watch when a note is wrong, out of tune or out of time. Audio stays on your device unless you ask for a full analysis or a band split.
+        NSCameraUsageDescription: Melovyn uses the camera to scan printed sheet music.
+        NSLocalNetworkUsageDescription: Melovyn connects to the Melovyn server on your computer over Wi-Fi for heavy jobs such as reading PDF sheet music.
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
@@ -91,7 +91,7 @@ targets:
     info:
       path: Watch/Info.plist
       properties:
-        CFBundleDisplayName: Haptune
+        CFBundleDisplayName: Melovyn
         CFBundleDevelopmentRegion: en
         CFBundleLocalizations: [en, zh-Hans, zh-Hant, ms]
         WKApplication: true

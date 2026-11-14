@@ -294,7 +294,7 @@ function pat0(events, ev) { return events.find((x) => x.bar === ev.bar)?.slot; }
 
 function buildScore(events, { key, time, bars, spans, tempo, instrument, title, styleName }) {
   const barLen = measureLength(time);
-  const score = { title: title || 'Improvisation', composer: 'Haptune AI', lyricist: '', measures: [], parts: [], meta: { source: 'improv', style: styleName } };
+  const score = { title: title || 'Improvisation', composer: 'Melovyn AI', lyricist: '', measures: [], parts: [], meta: { source: 'improv', style: styleName } };
   const part = { id: 'P1', name: instrumentLabel(instrument), abbr: '', instrument, program: null, transpose: null, staves: 1, measures: [] };
   const clef = (RANGES[instrument] || [55])[0] < 50 ? { staff: 1, sign: 'F', line: 4, oct: 0, off: ZERO } : { staff: 1, sign: 'G', line: 2, oct: 0, off: ZERO };
   for (let b = 0; b < bars; b++) {

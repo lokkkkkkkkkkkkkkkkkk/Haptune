@@ -36,7 +36,7 @@ struct HaptuneApp: App {
         #endif
     }
 
-    /// "Open in Haptune" from Files, Mail, Safari, WhatsApp, Voice Memos...
+    /// "Open in Melovyn" from Files, Mail, Safari, WhatsApp, Voice Memos...
     private func open(_ url: URL) {
         switch Importer.kind(of: url) {
         case .recording:

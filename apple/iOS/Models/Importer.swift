@@ -115,9 +115,9 @@ enum ImportError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .needsServer:
-            return String(localized: "This file is read by Haptune's online service, which isn't available right now. Please try again later.")
+            return String(localized: "This file is read by Melovyn's online service, which isn't available right now. Please try again later.")
         case .unsupported(let ext):
-            return String(localized: "Haptune can't open .\(ext) files yet.")
+            return String(localized: "Melovyn can't open .\(ext) files yet.")
         case .noSound:
             return String(localized: "The recording is silent.")
         }

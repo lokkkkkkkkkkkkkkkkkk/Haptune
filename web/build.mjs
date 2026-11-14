@@ -23,7 +23,7 @@ const result = await build({
   loader: { '.css': 'text' },
 });
 const js = result.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
-// styles.css: layout and every component; theme.css: the Haptune 2 look on top of it
+// styles.css: layout and every component; theme.css: the Melovyn 2 look on top of it
 const css = ['styles.css', 'theme.css', 'v3.css'].map((f) => fs.readFileSync(path.join(root, 'src/ui', f), 'utf8')).join('\n');
 const VERSION = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version;
 // The server address is built in (GitHub variable HAPTUNE_SERVER_URL -> HAPTUNE_SERVER), so people never type it.
@@ -39,7 +39,7 @@ const GOOGLE = (process.env.HAPTUNE_GOOGLE_CLIENT_ID || '').trim();
 const CONFIG = (extra) => JSON.stringify({ version: VERSION, build: BUILD, server: SERVER, site: SITE, play: PLAY, google: GOOGLE, ...extra });
 
 // ---- artifact page (the publish skeleton adds doctype/head/body) ----
-const artifact = `<title>ETASheet</title>
+const artifact = `<title>Melovyn</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Music practice coach: exact imports, key change, chords, AI improviser and a teaching academy.">
 <style>${css}</style>
@@ -55,15 +55,15 @@ const page = (config, { pwa }) => `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ETASheet: practise, learn and write sheet music</title>
-<meta name="description" content="ETASheet listens while you play and marks every wrong note. Teachers run classes and hear their students' practice. Write and scan sheet music, and share it on Stage.">
+<title>Melovyn: practise, learn and write sheet music</title>
+<meta name="description" content="Melovyn listens while you play and marks every wrong note. Teachers run classes and hear their students' practice. Write and scan sheet music, and share it on Stage.">
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#F5F5FA" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0E0D15" media="(prefers-color-scheme: dark)">
 ${pwa ? `<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="ETASheet">
+<meta name="apple-mobile-web-app-title" content="Melovyn">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 ` : ''}<link rel="icon" href="icons/icon-48.png" sizes="48x48"><link rel="icon" href="icons/icon-192.png" sizes="192x192">
@@ -102,13 +102,13 @@ if (fs.existsSync(path.join(root, 'assets/catalog'))) fs.cpSync(path.join(root, 
 // how to pay by DuitNow QR (the picture is optional: without it the app shows the bank account only)
 if (fs.existsSync(path.join(root, 'assets/pay'))) fs.cpSync(path.join(root, 'assets/pay'), app('pay'), { recursive: true });
 fs.writeFileSync(app('manifest.webmanifest'), JSON.stringify({
-  name: 'ETASheet', short_name: 'ETASheet', description: 'Practise with a microphone that listens, learn in classes, write and share sheet music', start_url: './', scope: './', display: 'standalone',
+  name: 'Melovyn', short_name: 'Melovyn', description: 'Practise with a microphone that listens, learn in classes, write and share sheet music', start_url: './', scope: './', display: 'standalone',
   background_color: '#F5F5FA', theme_color: '#6246FF', orientation: 'any', categories: ['music', 'education'],
   icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }, { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' }, { src: 'icons/icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }],
 }, null, 2));
 const cacheList = ['./', 'index.html', `app.js?v=${BUILD}`, 'manifest.webmanifest', 'fonts/jakarta-latin.woff2', 'vendor/verovio-toolkit-wasm.js', 'vendor/pdf.min.js', 'vendor/pdf.worker.min.js', 'icons/apple-touch-icon.png', 'icons/icon-192.png'];
-fs.writeFileSync(app('sw.js'), `// Offline cache for ETASheet (cache-first for the app shell, network-first for index.html)
-const CACHE = 'etasheet-app-${BUILD}';
+fs.writeFileSync(app('sw.js'), `// Offline cache for Melovyn (cache-first for the app shell, network-first for index.html)
+const CACHE = 'melovyn-app-${BUILD}';
 const FILES = ${JSON.stringify(cacheList)};
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });

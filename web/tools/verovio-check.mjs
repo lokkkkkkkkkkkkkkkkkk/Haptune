@@ -1,5 +1,5 @@
-// Checks that Haptune's MusicXML writer never makes a score harder for Verovio to draw: loads each file as
-// it was and as Haptune writes it, and lists files whose rewrite produces more Verovio import errors.
+// Checks that Melovyn's MusicXML writer never makes a score harder for Verovio to draw: loads each file as
+// it was and as Melovyn writes it, and lists files whose rewrite produces more Verovio import errors.
 // Usage: node tools/verovio-check.mjs file1.mxl file2.musicxml ...
 import { readFileSync } from 'node:fs';
 import { inflateRawSync } from 'node:zlib';

@@ -193,7 +193,7 @@ function ShareBox({ p, run }) {
     <Card>
       <div class="report-line"><Icon name="staff" size={22} /><p class="sub">{t('shareInfo', { bars: p.data?.bars || '?', notes: p.data?.notes || '?' })}</p></div>
       <div class="btn-row">
-        <Button color="green" icon="download" disabled={busy || !p.file_id} onClick={open}>{t('openInHaptune')}</Button>
+        <Button color="green" icon="download" disabled={busy || !p.file_id} onClick={open}>{t('openInMelovyn')}</Button>
         <Button kind="secondary" icon="star" onClick={() => run(() => C.react(`p:${p.id}`, 'save'))}>{p.me.saved ? t('saved') : t('save')}</Button>
       </div>
       {p.visibility === 'unlisted' && <p class="note-text"><Icon name="info" size={13} /> {t('unlistedNote')}</p>}
@@ -232,7 +232,7 @@ function Reply({ r, p, run, onAccepted }) {
         <div class="r-score">
           <Icon name="staff" size={22} />
           <span><strong>{t('scoreSubmitted')}</strong><span>{t('barsNotes', { bars: r.file?.bars || 0, notes: r.file?.notes || 0 })}</span></span>
-          {r.file?.id ? <Button small color="green" icon="play" disabled={busy} onClick={openIt}>{t('openInHaptune')}</Button> : <span class="pill gray"><Icon name="eye" size={12} /> {t('privateScore')}</span>}
+          {r.file?.id ? <Button small color="green" icon="play" disabled={busy} onClick={openIt}>{t('openInMelovyn')}</Button> : <span class="pill gray"><Icon name="eye" size={12} /> {t('privateScore')}</span>}
         </div>
       )}
       {r.body && <p class="r-body">{r.body}</p>}
@@ -306,7 +306,7 @@ export function AddCreditsSheet({ post }) {
   );
 }
 
-/** Send a score for a request: pick a piece from your library (made in Haptune or imported from MuseScore etc.). */
+/** Send a score for a request: pick a piece from your library (made in Melovyn or imported from MuseScore etc.). */
 export function SubmitScoreSheet({ post }) {
   const s = useApp();
   const [sel, setSel] = useState(null);

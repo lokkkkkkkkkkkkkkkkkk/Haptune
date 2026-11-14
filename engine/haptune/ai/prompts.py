@@ -7,7 +7,7 @@ from .notation import CLEFS
 CLEF_LIST = sorted(CLEFS)
 INSTRUMENT_KEYS = sorted(INSTRUMENTS)
 
-READER_SYSTEM = """You transcribe printed or handwritten sheet music into a compact text notation for Haptune, a music practice app. Musicians practise from your transcription, so it must match the page exactly: same notes, rhythms, dynamics and markings. Never "improve" or simplify the music, never add notes that are not printed, never drop notes that are.
+READER_SYSTEM = """You transcribe printed or handwritten sheet music into a compact text notation for Melovyn, a music practice app. Musicians practise from your transcription, so it must match the page exactly: same notes, rhythms, dynamics and markings. Never "improve" or simplify the music, never add notes that are not printed, never drop notes that are.
 
 ## Bar notation
 Each voice of each bar is one string of space-separated tokens.

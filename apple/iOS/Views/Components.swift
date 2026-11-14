@@ -145,7 +145,7 @@ struct SectionTitle: View {
     }
 }
 
-/// Small "PLUS" capsule shown next to features that need Haptune Plus.
+/// Small "PLUS" capsule shown next to features that need Melovyn Plus.
 struct PlusBadge: View {
     var body: some View {
         Text("PLUS")
@@ -154,7 +154,7 @@ struct PlusBadge: View {
             .padding(.vertical, 2)
             .foregroundStyle(.white)
             .background(LinearGradient(colors: [.purple, .pink], startPoint: .leading, endPoint: .trailing), in: Capsule())
-            .accessibilityLabel(Text("Requires Haptune Plus"))
+            .accessibilityLabel(Text("Requires Melovyn Plus"))
     }
 }
 

@@ -1,4 +1,4 @@
-// Interface text added with ETASheet (the 2026 redesign: new layout, teaching hub, Write studio, sign-in,
+// Interface text added with Melovyn (the 2026 redesign: new layout, teaching hub, Write studio, sign-in,
 // practice reports): [English, Bahasa Melayu, 简体中文, 繁體中文]. Merged into the main table by i18n.js.
 export const V3 = {
   // the places
@@ -121,12 +121,12 @@ export const V3 = {
   pairTitle: ['Sign in the app', 'Log masuk aplikasi', '登录应用', '登入應用程式'],
   pairApp: ['Your browser opens: sign in there with Google and approve this code. The app signs in by itself.', 'Pelayar akan dibuka: log masuk dengan Google dan luluskan kod ini. Aplikasi akan log masuk sendiri.', '浏览器会打开：用 Google 登录并确认这个代码，应用会自动登录。', '瀏覽器會打開：用 Google 登入並確認這個代碼，應用程式會自動登入。'],
   pairWaiting: ['Waiting for the browser… (the code works for 10 minutes)', 'Menunggu pelayar… (kod sah 10 minit)', '正在等待浏览器……（代码 10 分钟内有效）', '正在等待瀏覽器……（代碼 10 分鐘內有效）'],
-  pairEnter: ['Approve the code shown in the ETASheet app to sign it in to this account.', 'Luluskan kod dalam aplikasi ETASheet untuk log masuk ke akaun ini.', '确认 ETASheet 应用里显示的代码，让它登录这个账号。', '確認 ETASheet 應用程式裡顯示的代碼，讓它登入這個帳號。'],
+  pairEnter: ['Approve the code shown in the Melovyn app to sign it in to this account.', 'Luluskan kod dalam aplikasi Melovyn untuk log masuk ke akaun ini.', '确认 Melovyn 应用里显示的代码，让它登录这个账号。', '確認 Melovyn 應用程式裡顯示的代碼，讓它登入這個帳號。'],
   pairApproveBtn: ['Approve a code from the app', 'Luluskan kod daripada aplikasi', '确认应用里的代码', '確認應用程式裡的代碼'],
   pairApproved: ['Done. The app is signed in now.', 'Selesai. Aplikasi sudah log masuk.', '完成。应用已登录。', '完成。應用程式已登入。'],
   pairExpired: ['That code expired. Try again.', 'Kod tamat tempoh. Cuba lagi.', '代码已过期，请重试。', '代碼已過期，請重試。'],
   inviteHow: ['Students scan the QR code with their phone camera, open the link, or type the code in Learn → Join a class. ({name})', 'Pelajar mengimbas kod QR dengan kamera telefon, membuka pautan, atau menaip kod di Belajar → Sertai kelas. ({name})', '学生用手机相机扫二维码、打开链接，或在 学习 → 加入班级 输入班级码。（{name}）', '學生用手機相機掃 QR 碼、打開連結，或在 學習 → 加入班級 輸入班級碼。（{name}）'],
-  inviteText: ['Join my class "{name}" on ETASheet: {link} (code {code})', 'Sertai kelas saya "{name}" di ETASheet: {link} (kod {code})', '加入我在 ETASheet 的班级「{name}」：{link}（班级码 {code}）', '加入我在 ETASheet 的班級「{name}」：{link}（班級碼 {code}）'],
+  inviteText: ['Join my class "{name}" on Melovyn: {link} (code {code})', 'Sertai kelas saya "{name}" di Melovyn: {link} (kod {code})', '加入我在 Melovyn 的班级「{name}」：{link}（班级码 {code}）', '加入我在 Melovyn 的班級「{name}」：{link}（班級碼 {code}）'],
   inviteOpen: ['This class is open: it is also listed for anyone to find.', 'Kelas ini terbuka: ia juga disenaraikan untuk sesiapa sahaja.', '这个班是公开的：任何人都能在列表中找到。', '這個班是公開的：任何人都能在列表中找到。'],
   invitePrivate: ['This class is private: only people with this link or code can join.', 'Kelas ini peribadi: hanya mereka yang ada pautan atau kod ini boleh sertai.', '这个班是私密的：只有拿到链接或班级码的人才能加入。', '這個班是私密的：只有拿到連結或班級碼的人才能加入。'],
 

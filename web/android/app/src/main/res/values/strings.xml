@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">ETASheet</string>
-    <string name="title_activity_main">ETASheet</string>
-    <string name="package_name">com.sloky.etasheet</string>
-    <string name="custom_url_scheme">com.sloky.etasheet</string>
+    <string name="app_name">Melovyn</string>
+    <string name="title_activity_main">Melovyn</string>
+    <string name="package_name">com.sloky.melovyn</string>
+    <string name="custom_url_scheme">com.sloky.melovyn</string>
 </resources>

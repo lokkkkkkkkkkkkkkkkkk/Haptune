@@ -1,4 +1,4 @@
-# Haptune for iPhone, iPad, Mac and Apple Watch
+# Melovyn for iPhone, iPad, Mac and Apple Watch
 
 ```
 apple/
@@ -53,7 +53,7 @@ They are test builds: every Plus feature is unlocked.
    Apple ID password and the 6-digit code when asked. (You can use a second Apple ID if you prefer.)
 4. On the iPhone: *Settings → Privacy & Security → Developer Mode* → on → restart → **Turn On**.
    Then *Settings → General → VPN & Device Management* → your Apple ID → **Trust**.
-5. Open Haptune. The iPad is the same, with the iPad plugged in.
+5. Open Melovyn. The iPad is the same, with the iPad plugged in.
 
 A free Apple ID keeps the app working for **7 days**; plug in and press Start again (your pieces stay).
 Sideloadly's *automatic refresh* option does this for you while the PC is on. Free Apple IDs allow
@@ -67,7 +67,7 @@ brew install xcodegen
 cd apple && xcodegen generate && open Haptune.xcodeproj
 ```
 
-1. *Haptune* target → *Signing & Capabilities* → choose your team (a free Apple ID works for your own
+1. *Melovyn* target → *Signing & Capabilities* → choose your team (a free Apple ID works for your own
    devices; apps expire after 7 days). Change `com.haptune.app` in `project.yml` to your own prefix if
    Xcode says the identifier is taken.
 2. **iPhone + Watch:** plug in the iPhone (paired with the Watch) and press Run; the Watch app installs with it.
@@ -78,7 +78,7 @@ cd apple && xcodegen generate && open Haptune.xcodeproj
 
 * **iCloud sync:** *Signing & Capabilities → + Capability → iCloud*, tick *iCloud Documents*, add a container
   (`iCloud.<your bundle id>`). The app finds it automatically; without it, the library stays on the device.
-* **Subscriptions:** in App Store Connect create a subscription group *Haptune Plus* with
+* **Subscriptions:** in App Store Connect create a subscription group *Melovyn Plus* with
   `<prefix>.plus.yearly` (1-week free trial) and `<prefix>.plus.monthly`, and a non-consumable
   `<prefix>.plus.lifetime`. Update the ids in `iOS/Services/Store.swift` and `Haptune.storekit`.
   Until then, Xcode's *Run* uses `Haptune.storekit`, so you can test the whole purchase flow in the simulator.
@@ -94,7 +94,7 @@ cd apple && xcodegen generate && open Haptune.xcodeproj
   It is needed for the AI reader (scans, photos, PDFs), Find a Song, recording → sheet music, Band Split and
   full reports. A developer can point one device at another server under Advanced. Practice, MusicXML, MIDI,
   jianpu, scales and the tuner work offline.
-* **Watch screen:** on the Watch set *Settings → General → Return to Clock → Haptune → Return to App*.
+* **Watch screen:** on the Watch set *Settings → General → Return to Clock → Melovyn → Return to App*.
 * **Microphone:** the app uses the *measurement* audio mode (no automatic gain). Practising with the band
   playing works best with headphones.
-* **Language:** iOS also offers a per-app language in *Settings → Haptune → Language*.
+* **Language:** iOS also offers a per-app language in *Settings → Melovyn → Language*.

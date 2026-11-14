@@ -44,7 +44,7 @@ export function scaleScore({ tonic = { step: 'C', alter: 0 }, type = 'major', oc
     measures.push({ number: String(b + 1), implicit: false, start: ZERO, dur: q(4), left: {}, right: lastBar ? { style: 'light-heavy' } : {}, jumps: {}, ...(b === 0 ? { time, tempo: 80 } : {}) });
     part.measures.push({ key: b === 0 ? key : null, clefs: b === 0 ? [clef] : [], harmonies: [], notes, directions: [], extraAttrs: [] });
   }
-  const score = { title: `${nameOf(tonic)} ${type}`, composer: 'Haptune', lyricist: '', measures, parts: [part], meta: { source: 'exercise' } };
+  const score = { title: `${nameOf(tonic)} ${type}`, composer: 'Melovyn', lyricist: '', measures, parts: [part], meta: { source: 'exercise' } };
   recomputeStarts(score);
   return score;
 }

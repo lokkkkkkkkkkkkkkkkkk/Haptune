@@ -62,7 +62,7 @@ export const dateLabel = (lang) => {
   try { return new Date().toLocaleDateString(lang, { weekday: 'long', day: 'numeric', month: 'long' }); } catch { return ''; }
 };
 
-/** The ETASheet mark: a note head on a staff line, in the brand gradient. */
+/** The Melovyn mark: a note head on a staff line, in the brand gradient. */
 let logoSeq = 0;
 export function Logo({ size = 30 }) {
   // each mark has its own gradient id: a gradient inside a hidden copy (the sidebar on phones) would paint nothing

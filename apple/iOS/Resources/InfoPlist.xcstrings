@@ -7,25 +7,25 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune"
+            "value": "Melovyn"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "触乐"
+            "value": "Melovyn"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "觸樂"
+            "value": "Melovyn"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune"
+            "value": "Melovyn"
           }
         }
       }
@@ -36,25 +36,25 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune listens while you play so it can follow the score and tap your Apple Watch when a note is wrong, out of tune or out of time. Audio stays on your device unless you ask for a full analysis or a band split."
+            "value": "Melovyn listens while you play so it can follow the score and tap your Apple Watch when a note is wrong, out of tune or out of time. Audio stays on your device unless you ask for a full analysis or a band split."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune 会在你演奏时聆听，以便跟随乐谱，并在音弹错、音不准或节奏不对时轻触你的 Apple Watch。除非你要求完整分析或分轨，否则音频只保留在你的设备上。"
+            "value": "Melovyn 会在你演奏时聆听，以便跟随乐谱，并在音弹错、音不准或节奏不对时轻触你的 Apple Watch。除非你要求完整分析或分轨，否则音频只保留在你的设备上。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune 會在你演奏時聆聽，以便跟隨樂譜，並在音彈錯、音不準或節奏不對時輕觸你的 Apple Watch。除非你要求完整分析或分軌，否則音訊只保留在你的裝置上。"
+            "value": "Melovyn 會在你演奏時聆聽，以便跟隨樂譜，並在音彈錯、音不準或節奏不對時輕觸你的 Apple Watch。除非你要求完整分析或分軌，否則音訊只保留在你的裝置上。"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune mendengar semasa anda bermain supaya dapat mengikut skor dan mengetuk Apple Watch anda apabila not salah, sumbang atau lari rentak. Audio kekal pada peranti anda melainkan anda meminta analisis penuh atau pisah band."
+            "value": "Melovyn mendengar semasa anda bermain supaya dapat mengikut skor dan mengetuk Apple Watch anda apabila not salah, sumbang atau lari rentak. Audio kekal pada peranti anda melainkan anda meminta analisis penuh atau pisah band."
           }
         }
       }
@@ -65,25 +65,25 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune uses the camera to scan printed sheet music."
+            "value": "Melovyn uses the camera to scan printed sheet music."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune 使用相机扫描印刷乐谱。"
+            "value": "Melovyn 使用相机扫描印刷乐谱。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune 使用相機掃描印刷樂譜。"
+            "value": "Melovyn 使用相機掃描印刷樂譜。"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune menggunakan kamera untuk mengimbas skor muzik bercetak."
+            "value": "Melovyn menggunakan kamera untuk mengimbas skor muzik bercetak."
           }
         }
       }
@@ -94,25 +94,25 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune connects to the Haptune server on your computer over Wi-Fi for heavy jobs such as reading PDF sheet music."
+            "value": "Melovyn connects to the Melovyn server on your computer over Wi-Fi for heavy jobs such as reading PDF sheet music."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune 会通过 Wi-Fi 连接你电脑上的 Haptune 服务器，处理读取 PDF 乐谱等较重的工作。"
+            "value": "Melovyn 会通过 Wi-Fi 连接你电脑上的 Melovyn 服务器，处理读取 PDF 乐谱等较重的工作。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune 會透過 Wi-Fi 連線到你電腦上的 Haptune 伺服器，處理讀取 PDF 樂譜等較重的工作。"
+            "value": "Melovyn 會透過 Wi-Fi 連線到你電腦上的 Melovyn 伺服器，處理讀取 PDF 樂譜等較重的工作。"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haptune bersambung ke pelayan Haptune pada komputer anda melalui Wi-Fi untuk kerja berat seperti membaca skor muzik PDF."
+            "value": "Melovyn bersambung ke pelayan Melovyn pada komputer anda melalui Wi-Fi untuk kerja berat seperti membaca skor muzik PDF."
           }
         }
       }

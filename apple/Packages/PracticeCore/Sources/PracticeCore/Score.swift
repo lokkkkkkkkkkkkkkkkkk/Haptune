@@ -257,7 +257,7 @@ public enum ScoreError: Error, LocalizedError {
     case badSchema(String), unreadable(String), unsupported(String)
     public var errorDescription: String? {
         switch self {
-        case .badSchema(let s): return "Not a Haptune score (\(s))"
+        case .badSchema(let s): return "Not a Melovyn score (\(s))"
         case .unreadable(let s): return "Could not read the score: \(s)"
         case .unsupported(let s): return "Unsupported file: \(s)"
         }
