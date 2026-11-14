@@ -597,7 +597,8 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
   return (
     <div class={`scroll${showPlayer ? ' has-player' : ''}`}>
       <NavBar title={meta.title} backLabel={assignment ? t('back') : t('library')} actions={<>
-        {score && <button type="button" id="edit-notes" onClick={() => { stop(true); push('editor', { id: meta.id, bar: curMi, onSaved: reload }); }} aria-label={t('editNotes')}><Icon name="pencil" size={21} /></button>}
+        {meta.chordSong && <button type="button" id="edit-chords" onClick={() => { stop(true); push('chordEditor', { id: meta.id }); }} aria-label={t('ceEditChords')}><Icon name="chords" size={21} /></button>}
+        {score && !meta.chordSong && <button type="button" id="edit-notes" onClick={() => { stop(true); push('editor', { id: meta.id, bar: curMi, onSaved: reload }); }} aria-label={t('editNotes')}><Icon name="pencil" size={21} /></button>}
         <button type="button" onClick={() => updatePiece(meta.id, { favorite: !meta.favorite })} aria-label={t('favourite')} class={meta.favorite ? 't-yellow' : ''}><Icon name="star" size={22} fill={meta.favorite} /></button>
         <button type="button" onClick={() => openSheet('export', { pieceId: meta.id, semis, title: meta.title, part: sel.pi !== null ? sel : null, partLabel: sel.pi !== null ? handLabel(sel) : '' })} aria-label={t('export')}><Icon name="share" size={22} /></button>
       </>} />

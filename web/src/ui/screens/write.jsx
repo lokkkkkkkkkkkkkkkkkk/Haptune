@@ -1,4 +1,5 @@
-// Write: make sheet music and share it. Start a new song (instrument, key, time, speed), scan a printed page or a
+// Create (was Write): any original music. A new-song wizard (lead sheet, melody + chords, full notation, improvisation,
+// chord/rhythm song, a Sound, an exercise), lyrics → chords, and your songs. Make sheet music and share it. Start a new song (instrument, key, time, speed), scan a printed page or a
 // photo, type chords, or open one of your scores to fix it. The studio writes notes with a tap on the piano keys
 // (or a computer keyboard, or a MIDI keyboard), shows the bars large, plays them back, and saves as you go. A
 // finished song can go to Stage for others, to a class as an assignment, or out as PDF, MusicXML or MIDI.
@@ -21,6 +22,7 @@ import { q, ZERO } from '../../core/q.js';
 import { openFiles } from '../intake.js';
 import { hasServer } from '../api.js';
 import { hasPlan } from '../account.js';
+import { RHYTHM_IDS } from '../../core/rhythm.js';
 
 const INSTRUMENTS = ['piano', 'violin', 'guitar', 'voice', 'flute', 'cello', 'ukulele', 'clarinet', 'sax', 'trumpet', 'erhu', 'guzheng'];
 const KEYS = [-4, -3, -2, -1, 0, 1, 2, 3, 4, 5];
@@ -38,18 +40,26 @@ export function WriteView() {
       <div class="wrap">
         <input ref={pageRef} type="file" class="hidden-input" accept=".pdf,application/pdf,image/*" multiple onChange={onPick} id="write-scan-in" aria-label={t('wayScan')} />
         <input ref={fileRef} type="file" class="hidden-input" accept=".musicxml,.xml,.mxl,.mid,.midi,.abc,.cho,.chordpro,.txt" onChange={onPick} aria-label={t('wayFile')} />
-        <LargeTitle title={t('write')} eyebrow={t('writeEyebrow')} actions={<span class="ph-only"><Avatar /></span>} />
+        <LargeTitle title={t('createT2')} eyebrow={t('createEyebrow')} color="teal" actions={<span class="ph-only"><Avatar /></span>} />
         <section class="hero3 hero-write fade-up">
-          <h1>{t('writeHero')}</h1>
+          <h1>{t('createWhat')}</h1>
           <p>{t('writeHeroSub')}</p>
           <div class="row-gap"><button type="button" class="btn white" onClick={() => openSheet('newSong')} id="write-new"><Icon name="plus" size={18} stroke={2.6} />{t('newSongT')}</button></div>
           <span class="pc-only"><Mascot mood="happy" size={120} /></span>
         </section>
-        <div class="acts stagger">
-          <button type="button" class="act c-teal big" onClick={() => openSheet('newSong')} id="write-new-act"><span class="ic"><Icon name="pencil" size={22} stroke={2.2} /></span><strong>{t('newSongT')}</strong><span>{t('newSongSub')}</span></button>
-          <button type="button" class="act c-violet" onClick={() => pageRef.current?.click()} id="write-scan"><span class="ic"><Icon name="camera" size={22} stroke={2.2} /></span>{!hasPlan('pro') && <span class="lock"><Icon name="lock" size={11} stroke={2.6} />PRO</span>}<strong>{t('wayScan')}</strong><span>{t('writeScanSub')}</span></button>
-          <button type="button" class="act c-orange" onClick={() => openSheet('paste')}><span class="ic"><Icon name="chords" size={22} stroke={2.2} /></span><strong>{t('pasteChords')}</strong><span>{t('pasteChordsSub')}</span></button>
-          <button type="button" class="act c-blue" onClick={() => fileRef.current?.click()}><span class="ic"><Icon name="upload" size={22} stroke={2.2} /></span><strong>{t('wayFile')}</strong><span>{t('wayFileSub')}</span></button>
+        <div class="list inset">
+          <button type="button" class="row" id="write-lyrics" onClick={() => openSheet('newSong', { kind: 'lead' })}>
+            <span class="badge c-orange solid" style={{ width: 30, height: 30, borderRadius: 8 }}><Icon name="chords" size={18} stroke={2.1} /></span>
+            <span class="row-main"><span class="row-title">{t('ceFromLyrics')}</span><span class="row-sub">{t('ceFromLyricsSub')}</span></span><Icon name="chevronR" size={15} stroke={2.4} style={{ opacity: 0.35 }} />
+          </button>
+          <button type="button" class="row" id="write-scan" onClick={() => pageRef.current?.click()}>
+            <span class="badge c-violet solid" style={{ width: 30, height: 30, borderRadius: 8 }}><Icon name="camera" size={18} stroke={2.1} /></span>
+            <span class="row-main"><span class="row-title">{t('wayScan')}{!hasPlan('pro') && <span class="pro-tag">PRO</span>}</span><span class="row-sub">{t('writeScanSub')}</span></span><Icon name="chevronR" size={15} stroke={2.4} style={{ opacity: 0.35 }} />
+          </button>
+          <button type="button" class="row" onClick={() => fileRef.current?.click()}>
+            <span class="badge c-blue solid" style={{ width: 30, height: 30, borderRadius: 8 }}><Icon name="upload" size={18} stroke={2.1} /></span>
+            <span class="row-main"><span class="row-title">{t('wayFile')}</span><span class="row-sub">{t('wayFileSub')}</span></span><Icon name="chevronR" size={15} stroke={2.4} style={{ opacity: 0.35 }} />
+          </button>
         </div>
         <section class="sec3">
           <div class="section-head"><h2>{t('mySongs')}</h2></div>
@@ -72,7 +82,7 @@ export function WriteView() {
 function SongTile({ p, fix = false }) {
   return (
     <div class="song-tile">
-      <button type="button" class="st-main" onClick={() => push('studio', { id: p.id })}>
+      <button type="button" class="st-main" onClick={() => (p.chordSong ? push('chordEditor', { id: p.id }) : push('studio', { id: p.id }))}>
         <span class="st-ic"><Icon name={fix ? 'pencil' : 'note1'} size={20} stroke={2.2} /></span>
         <span class="st-txt"><strong>{p.title}</strong><span class="tiny">{[p.keyText, p.measures ? t('barsN', { n: p.measures }) : '', p.instrument ? instrumentName(p.instrument) : ''].filter(Boolean).join(' · ')}</span></span>
       </button>
@@ -81,38 +91,90 @@ function SongTile({ p, fix = false }) {
   );
 }
 
-export function NewSongSheet() {
+const WIZ = [
+  { id: 'lead', icon: 'chords', color: 'orange' }, { id: 'melody', icon: 'note1', color: 'teal' }, { id: 'full', icon: 'staff', color: 'blue' },
+  { id: 'improv', icon: 'sparkles', color: 'pink' }, { id: 'rhythm', icon: 'metronome', color: 'violet' }, { id: 'exercise', icon: 'stairs', color: 'green' },
+];
+const WIZ_LABEL = { lead: 'wizLead', melody: 'wizMelody', full: 'wizFull', improv: 'wizImprov', rhythm: 'wizRhythm', sound: 'wizSound', exercise: 'wizExercise' };
+
+/** New song: first what kind (lead sheet, melody + chords, full notation, improvisation, chord/rhythm song,
+ *  a Sound, an exercise), then just the few settings that kind needs. */
+export function NewSongSheet({ kind: kind0 = null }) {
   const s = useApp();
+  const [kind, setKind] = useState(kind0);
   const [title, setTitle] = useState('');
   const [instrument, setInstrument] = useState(INSTRUMENTS.includes(s.settings.instrument) ? s.settings.instrument : 'piano');
   const [key, setKey] = useState(0);
   const [time, setTime] = useState([4, 4]);
   const [tempo, setTempo] = useState(90);
+  const [style, setStyle] = useState('pop');
+  const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
+  const kinds = WIZ;
+  const choose = (k) => {
+    if (k === 'improv') { closeSheet(); push('improvise', {}, 'write'); return; }
+    if (k === 'exercise') { closeSheet(); setTimeout(() => openSheet('scale'), 0); return; }
+    if (k === 'sound') { closeSheet(); push('sound', {}, 'write'); return; }
+    setKind(k);
+  };
   const make = async () => {
     setBusy(true);
     try {
-      const score = blankScore({ title: title.trim() || t('untitledSong'), composer: (s.me?.name && s.me.name !== 'Musician' ? s.me.name : s.settings.name) || '', instrument, key, time, tempo, bars: 4 });
-      const rec = await addScore(score, { source: 'written', title: score.title, extra: { edited: Date.now() } });
+      if (kind === 'lead' || kind === 'rhythm') {
+        closeSheet();
+        push('chordEditor', { text: kind === 'lead' ? text : '', title: title.trim(), fresh: true, init: { key: { fifths: key, mode: 'major' }, time: { beats: time[0], beatType: time[1] }, tempo, style, keyGiven: !text.trim() } }, 'write');
+        return;
+      }
+      const inst = kind === 'full' ? instrument : (instrument === 'piano' ? 'voice' : instrument);
+      const score = blankScore({ title: title.trim() || t('untitledSong'), composer: (s.me?.name && s.me.name !== 'Musician' ? s.me.name : s.settings.name) || '', instrument: inst, key, time, tempo, bars: 4 });
+      const rec = await addScore(score, { source: 'written', title: score.title, extra: { edited: Date.now(), writeKind: kind } });
       closeSheet();
       push('studio', { id: rec.id, fresh: true }, 'write');
     } catch (e) { toast(e.message || String(e), 'err'); setBusy(false); }
   };
+  if (!kind) {
+    return (
+      <SheetFrame title={t('createWhat')}>
+        <div class="list inset" id="wiz-kinds">
+          {kinds.map((k) => (
+            <button type="button" class="row" key={k.id} id={`wiz-${k.id}`} onClick={() => choose(k.id)}>
+              <span class={`badge c-${k.color} solid`} style={{ width: 34, height: 34, borderRadius: 9 }}><Icon name={k.icon} size={20} stroke={2.1} /></span>
+              <span class="row-main"><span class="row-title">{t(WIZ_LABEL[k.id])}</span><span class="row-sub">{t(`${WIZ_LABEL[k.id]}Sub`)}</span></span>
+              <Icon name="chevronR" size={15} stroke={2.4} style={{ opacity: 0.35 }} />
+            </button>
+          ))}
+        </div>
+      </SheetFrame>
+    );
+  }
+  const chordKind = kind === 'lead' || kind === 'rhythm';
   return (
-    <SheetFrame title={t('newSongT')} right={t('createT')} onRight={make} rightDisabled={busy}>
+    <SheetFrame title={t(WIZ_LABEL[kind])} left={kind0 ? undefined : t('back')} onLeft={kind0 ? undefined : () => setKind(null)} right={t('createT')} onRight={make} rightDisabled={busy}>
       <label class="field3"><span>{t('songTitle')}</span><input id="new-song-title" value={title} onInput={(e) => setTitle(e.currentTarget.value)} placeholder={t('untitledSong')} maxLength={120} /></label>
-      <span class="tiny">{t('instrument')}</span>
-      <div class="chips wrap">{INSTRUMENTS.map((k) => <Chip key={k} on={instrument === k} onClick={() => setInstrument(k)}>{instrumentName(k)}</Chip>)}</div>
-      <span class="tiny">{t('key')}</span>
-      <div class="chips wrap">{KEYS.map((f) => <Chip key={f} on={key === f} onClick={() => setKey(f)}>{keyLabel(f)}</Chip>)}</div>
+      {kind === 'lead' && (
+        <label class="field3"><span>{t('wizPaste')}</span>
+          <textarea id="new-song-lyrics" class="field" rows={6} value={text} onInput={(e) => setText(e.currentTarget.value)} placeholder={t('wizPastePh')} />
+        </label>
+      )}
+      {!chordKind && <>
+        <span class="tiny">{t('instrument')}</span>
+        <div class="chips wrap">{INSTRUMENTS.map((k) => <Chip key={k} on={instrument === k} onClick={() => setInstrument(k)}>{instrumentName(k)}</Chip>)}</div>
+      </>}
+      {(!chordKind || !text.trim()) && <>
+        <span class="tiny">{t('key')}</span>
+        <div class="chips wrap">{KEYS.map((f) => <Chip key={f} on={key === f} onClick={() => setKey(f)}>{keyLabel(f)}</Chip>)}</div>
+      </>}
       <span class="tiny">{t('time')}</span>
-      <div class="chips wrap">{TIMES.map((x) => <Chip key={x.join('/')} on={time.join('/') === x.join('/')} onClick={() => setTime(x)}>{x.join('/')}</Chip>)}</div>
+      <div class="chips wrap">{TIMES.map((x) => <Chip key={x.join('/')} on={time.join('/') === x.join('/')} onClick={() => { setTime(x); if (chordKind) setStyle(x[0] === 3 ? 'waltz' : x[1] === 8 ? 'six8' : style === 'waltz' || style === 'six8' ? 'pop' : style); }}>{x.join('/')}</Chip>)}</div>
+      {chordKind && <>
+        <span class="tiny">{t('styleT')}</span>
+        <div class="chips wrap" id="new-song-styles">{RHYTHM_IDS.map((r) => <Chip key={r} on={style === r} onClick={() => setStyle(r)}>{t(`rh_${r}`)}</Chip>)}</div>
+      </>}
       <label class="field3"><span>{t('tempoT')} ♩ = {tempo}</span><input type="range" min="40" max="200" step="2" value={tempo} onInput={(e) => setTempo(Number(e.currentTarget.value))} /></label>
-      <Button full icon="pencil" onClick={make} disabled={busy} id="new-song-make">{t('startWriting')}</Button>
+      <Button full icon={chordKind ? 'chords' : 'pencil'} onClick={make} disabled={busy} id="new-song-make">{t('startWriting')}</Button>
     </SheetFrame>
   );
 }
-
 // ---------------------------------------------------------------- the studio
 export function StudioView({ id, active, fresh = false }) {
   const s = useApp();

@@ -195,7 +195,8 @@ async function run(mode, base, browser) {
   });
   await step('write a song', async () => {
     await tab('write'); await p.waitForTimeout(300); await shot('06-write'); await overflow('Create'); await primaries('Create');
-    await p.locator('#write-new').click(); await p.waitForSelector('#new-song-make');
+    await p.locator('#write-new').click(); await p.waitForSelector('#wiz-kinds'); await primaries('new-song wizard');
+    await p.locator('#wiz-full').click(); await p.waitForSelector('#new-song-make');
     await p.fill('#new-song-title', 'My first song'); await p.locator('#new-song-make').click();
     await p.waitForSelector('.st-score svg', { timeout: 60000 }); await p.waitForTimeout(400);
     const before = await p.locator('.st-score g.note').count();
@@ -205,6 +206,27 @@ async function run(mode, base, browser) {
     await shot('06b-studio'); await overflow('studio');
     await back(); await p.waitForTimeout(300);
     if (!(await p.locator('#write .song-tile').filter({ hasText: 'My first song' }).count())) throw new Error('the new song is not in My songs');
+  });
+  await step('lyrics -> edited chords -> Play Along', async () => {
+    await tab('write'); await p.waitForTimeout(300);
+    await p.locator('#write-lyrics').click(); await p.waitForSelector('#new-song-lyrics');
+    await p.fill('#new-song-title', 'Grace'); await p.fill('#new-song-lyrics', 'Verse 1\nAmazing grace how sweet the sound\nThat saved a wretch like me');
+    await p.locator('#new-song-make').click(); await p.waitForSelector('#ce-beat-0', { timeout: 20000 });
+    await shot('06c-chords'); await overflow('chord editor'); await primaries('chord editor');
+    const before = await p.locator('#ce-beat-0 .ce-chord').innerText();
+    await p.locator('#ce-beat-0').click(); await p.waitForSelector('#cp-diatonic');
+    await p.locator('#cp-diatonic .chip').filter({ hasText: /^Am/ }).first().click(); await p.waitForTimeout(250);
+    const after = await p.locator('#ce-beat-0 .ce-chord').innerText();
+    if (before === after || !/^Am/.test(after)) throw new Error(`the chord did not change (${before} -> ${after})`);
+    await p.locator('#ce-beat-2').click(); await p.locator('#cp-text').fill('D/F#'); await p.keyboard.press('Enter'); await p.waitForTimeout(250);
+    if ((await p.locator('#ce-beat-2 .ce-chord').innerText()) !== 'D/F#') throw new Error('a typed chord was not placed on beat 3');
+    await p.locator('#ce-undo').click(); await p.waitForTimeout(200);
+    if (await p.locator('#ce-beat-2 .ce-chord').count()) throw new Error('undo did not remove the chord');
+    await p.locator('#ce-playalong').click(); await p.waitForSelector('.sheet', { timeout: 30000 });
+    await p.waitForTimeout(300); await p.keyboard.press('Escape');
+    await p.waitForSelector('.vrv-page svg', { timeout: 60000 });
+    if (!/Grace/.test(await p.locator('.piece-head h1').innerText())) throw new Error('Play Along did not open the chord song');
+    await back(); await back();
   });
   await step('Stage, Learn, Me, plans', async () => {
     await tab('stage'); await p.waitForTimeout(300); await shot('07-stage'); await overflow('Stage'); await primaries('Stage');

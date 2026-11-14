@@ -499,3 +499,37 @@ button.card, .card[role="button"], .lift { transition: transform .22s var(--spri
 .tour-card { display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; max-width: 440px; }
 .tour-card .tour-ic { width: 92px; height: 92px; border-radius: 26px; display: grid; place-items: center; color: #fff; background: var(--c); box-shadow: 0 16px 40px color-mix(in srgb, var(--c) 40%, transparent); }
 .tour-pair { display: flex; gap: 14px; }
+
+/* ---------------- chord-sheet editor (Create) ---------------- */
+.ce-title { font: 800 26px/1.15 var(--display); border: 0; background: transparent; color: var(--ink); padding: 4px 2px; width: 100%; outline: 0; }
+.ce-meta .chip { font-weight: 650; }
+.ce-sec { display: flex; flex-direction: column; gap: 8px; }
+.ce-sec-head { display: flex; align-items: center; justify-content: space-between; }
+.ce-sec-name { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 10px; background: var(--fill); }
+.ce-sec-name span { color: var(--ink2); font-size: 13px; }
+.ce-sec.k-chorus .ce-sec-name { background: color-mix(in srgb, var(--s-pink) 14%, transparent); }
+.ce-sec.k-bridge .ce-sec-name { background: color-mix(in srgb, var(--s-blue) 14%, transparent); }
+.ce-bars { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--card); }
+@media (min-width: 620px) { .ce-bars { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.ce-bar { border-right: 1.5px solid var(--ink3); border-bottom: 1px solid var(--line); padding: 6px 4px 4px; display: flex; flex-direction: column; gap: 3px; min-width: 0; transition: background .2s; }
+.ce-bar.sel { background: color-mix(in srgb, var(--s-teal) 9%, transparent); }
+.ce-bar.now { background: color-mix(in srgb, var(--s-violet) 14%, transparent); }
+.ce-beats { display: grid; gap: 2px; }
+.ce-beat { min-height: 46px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; touch-action: none; user-select: none; -webkit-user-select: none; }
+.ce-beat:hover { background: var(--fill); }
+.ce-beat.on { outline: 2px solid var(--s-teal); }
+.ce-beat .ce-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--ink3); opacity: .6; }
+.ce-beat.has { background: color-mix(in srgb, var(--s-teal) 12%, transparent); cursor: grab; }
+.ce-beat.auto .ce-chord { color: var(--ink2); }
+.ce-chord { font-weight: 800; font-size: 15px; line-height: 1.1; white-space: nowrap; color: var(--ink); }
+.ce-rn { font-style: normal; font-size: 10.5px; color: var(--s-teal); font-weight: 700; }
+.ce-lyr { border: 0; background: transparent; font: inherit; font-size: 13px; color: var(--ink2); padding: 2px 4px; min-width: 0; outline: 0; border-radius: 6px; }
+.ce-lyr:focus { background: var(--fill); color: var(--ink); }
+.ce-tools { display: flex; flex-wrap: wrap; gap: 6px; }
+.ce-preview { white-space: pre-wrap; font: 14px/1.5 ui-monospace, Menlo, Consolas, monospace; background: var(--card); border-radius: 14px; padding: 14px; border: 1px solid var(--line); overflow-x: auto; }
+.ce-bottom { position: sticky; bottom: calc(var(--sa-bottom) + 10px); display: flex; gap: 10px; padding: 10px 0; z-index: 5; }
+.ce-bottom .btn { flex: 1; }
+body.ce-dragging, body.ce-dragging * { cursor: grabbing !important; }
+.cp-row { display: flex; flex-direction: column; gap: 6px; }
+.cp-rn { font-size: 10.5px; margin-left: 5px; color: var(--ink3); font-weight: 700; }
+.cp-shapes { display: flex; flex-direction: column; gap: 8px; }
