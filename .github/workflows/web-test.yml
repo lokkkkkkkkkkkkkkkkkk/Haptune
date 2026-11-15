@@ -30,7 +30,7 @@ jobs:
           python-version: "3.12"
       - name: Server for the Classroom walk-through
         run: |
-          sudo apt-get update && sudo apt-get install -y --no-install-recommends libsndfile1
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends libsndfile1 ffmpeg   # ffmpeg: Sounds are stored as AAC, as on the server
           pip install fastapi "uvicorn[standard]" python-multipart numpy scipy soundfile music21 mido verovio pymupdf pillow anthropic sqlalchemy httpx cryptography
       - run: npm run e2e:classroom
       - uses: actions/upload-artifact@v4

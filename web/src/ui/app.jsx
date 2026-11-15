@@ -163,11 +163,6 @@ function Stack({ tab, active }) {
 
 function SheetHost({ sheet }) {
   const S = SHEETS[sheet.type];
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') closeSheet(); };
-    addEventListener('keydown', onKey);
-    return () => removeEventListener('keydown', onKey);
-  }, []);
   if (!S) return null;
   return (
     <div class="sheet-bg" onClick={(e) => { if (e.target === e.currentTarget && !S.modal) closeSheet(); }}>
@@ -178,6 +173,13 @@ function SheetHost({ sheet }) {
 
 function App() {
   const s = useApp();
+  useEffect(() => {
+    // Escape closes the open sheet. One listener for the app's lifetime: a listener added by each sheet only
+    // started after the sheet had been drawn, so a quick Escape right after it opened was missed.
+    const onKey = (e) => { if (e.key === 'Escape' && getState().sheet) closeSheet(); };
+    addEventListener('keydown', onKey);
+    return () => removeEventListener('keydown', onKey);
+  }, []);
   useEffect(() => {
     captureErrors();
     hooks.practice = reportPractice;
