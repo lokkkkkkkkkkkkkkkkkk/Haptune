@@ -83,7 +83,9 @@ async function person(browser, base, api, { name, role, handle }) {
     T = await person(browser, base, api, { name: 'Ms Tan', role: 'teacher', handle: 'ms_tan' });
     S = await person(browser, base, api, { name: 'Ben', role: 'student', handle: 'ben_violin' });
     const t = T.p, s = S.p;
-    const tab = (pg, id) => pg.locator(`#tab-${id}:visible`).click();
+    // Escape, then wait until the sheet is really gone (on a slow machine a click right after can hit its backdrop)
+    const esc = async (pg) => { for (let i = 0; i < 3 && await pg.locator('.sheet-bg').count(); i++) { await pg.keyboard.press('Escape'); await pg.waitForSelector('.sheet-bg', { state: 'detached', timeout: 3000 }).catch(() => {}); } };
+    const tab = async (pg, id) => { await esc(pg); await pg.locator(`#tab-${id}:visible`).click(); };
     await step('teacher makes a class', async () => {
       await tab(t, 'hub'); await t.waitForSelector('#hub-new-class');
       await t.locator('#hub-new-class').click(); await t.fill('#new-class-name', 'Violin 1'); await t.fill('#new-class-teacher', 'Ms Tan');
@@ -175,13 +177,13 @@ async function person(browser, base, api, { name, role, handle }) {
       await s.locator('.sheet .sheet-head .r').click();                              // tap 2
       await s.waitForSelector('.rq-steps', { timeout: 20000 });                      // the new request, with where it stands
       await s.screenshot({ path: path.join(SHOTS, 'stage-request-posted.png') });
-      if (await s.locator('.sheet').count()) await s.keyboard.press('Escape');
+      await esc(s);
       await tab(s, 'stage'); await tab(s, 'stage'); await s.waitForSelector('#stage-purpose');
       await s.locator('#stage-how-ok').click({ timeout: 3000 }).catch(() => {});
       await s.locator('#community-seg .chip').nth(2).click(); await s.waitForSelector('.rq-steps', { timeout: 20000 });
       await s.locator('#stage-plus').click(); await s.waitForSelector('#stage-new');
       if (await s.locator('#stage-new .row').count() < 4) throw new Error('the + sheet should offer the post types');
-      await s.keyboard.press('Escape');
+      await esc(s);
       await s.screenshot({ path: path.join(SHOTS, 'stage-requests.png') });
     });
     await step('Hapi: ask from the sparkle button, get an answer with buttons, tap one', async () => {
@@ -231,7 +233,7 @@ async function person(browser, base, api, { name, role, handle }) {
       // 60 seconds: 32 bars of 4/4 at 128
       await s.locator('#sd-settings').click(); await s.waitForSelector('.sheet input[type=range]');
       await s.locator('.sheet input[type=range]').first().evaluate((el) => { el.value = '128'; el.dispatchEvent(new Event('change', { bubbles: true })); });
-      await s.locator('.sheet .chip').filter({ hasText: /^32$/ }).click(); await s.keyboard.press('Escape');
+      await s.locator('.sheet .chip').filter({ hasText: /^32$/ }).click(); await esc(s);
       await s.locator('#sd-rec').click(); await s.waitForTimeout(3500); await s.locator('#sd-rec').click();      // record with the microphone
       await s.waitForSelector('.sd-track', { timeout: 15000 });
       for (let i = 0; i < 2; i++) { await s.locator('#sd-add').click(); await s.locator('#sd-add-backing').click(); await s.locator('#sd-add-quick').click(); await s.waitForTimeout(300); }
@@ -247,7 +249,7 @@ async function person(browser, base, api, { name, role, handle }) {
       console.log(`  mixdown: ${secs.toFixed(1)} s of audio, 4 tracks, rendered in ${ms} ms`);
       if (secs < 59) throw new Error(`the mixdown is ${secs} s`);
       if (ms > 10000) throw new Error(`the mixdown took ${ms} ms (target under 10 s)`);
-      if (await s.locator('.sheet').count()) await s.keyboard.press('Escape');
+      await esc(s);
       await s.locator('#sd-keys-done').click(); await s.locator('#sd-post').click(); await s.waitForSelector('#sd-rights');
       await s.fill('#sd-post-title', 'Morning riff'); await s.locator('#sd-rights .chip').first().click();
       await s.locator('#sd-post-send').click(); await s.waitForSelector('#stage-purpose', { timeout: 60000 });
