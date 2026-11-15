@@ -209,6 +209,21 @@ async function person(browser, base, api, { name, role, handle }) {
       await s.locator('#crash-__crash .btn.secondary').click(); await s.waitForSelector('#crash-__crash', { state: 'detached' });
       await tab(s, 'stage'); await s.waitForSelector('#stage-plus');
     });
+    await step('Free library: a Mutopia guitar piece (MIDI) and an OpenScore quartet open and draw', async () => {
+      for (const q of ['Andantino No. 2 Sor', 'Quartettsatz']) {
+        if (await s.locator('#tab-library:visible').count()) await tab(s, 'library');
+        await s.evaluate(() => globalThis.__haptune.push('catalog', {}, 'library'));
+        await s.waitForSelector('#cat-search:visible'); await s.fill('#cat-search:visible', q);
+        await s.locator('.row:visible').filter({ hasText: q.split(' ')[0] }).first().click();
+        await s.waitForSelector('.vrv-page svg', { timeout: 60000 });
+        if (q.startsWith('Andantino')) await s.screenshot({ path: path.join(SHOTS, 'library-mutopia.png') });
+        await s.locator('.navbar .back:visible').first().click();        // the piece hides the tab bar
+        await s.waitForSelector('.vrv-page svg', { state: 'hidden' });
+      }
+      await tab(s, 'library'); await s.evaluate(() => globalThis.__haptune.push('catalog', {}, 'library'));
+      await s.locator('#cat-sources:visible summary').click();
+      if ((await s.locator('#cat-sources:visible li').count()) < 5) throw new Error('the list of collections is short');
+    });
     let soundId = '';
     await step('Sounds: record, add backing, mix, export WAV (60 s, 4 tracks), post to Stage', async () => {
       await tab(s, 'stage'); await tab(s, 'stage'); await s.locator('#stage-plus').click(); await s.locator('#stn-sound').click();
