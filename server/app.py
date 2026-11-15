@@ -87,6 +87,8 @@ import classroom  # noqa: E402  (stream, classwork topics and rubrics, people, g
 app.include_router(classroom.router)
 import sounds  # noqa: E402  (Sounds on Stage: multitrack ideas, layers, takedowns)
 app.include_router(sounds.router)
+import aichat  # noqa: E402  (Hapi everywhere: the app-wide AI chat with tools)
+app.include_router(aichat.router)
 _jobs: dict[str, dict] = {}
 _lock = threading.Lock()
 _pool = ThreadPoolExecutor(max_workers=int(os.environ.get("HAPTUNE_WORKERS", "1")))
@@ -275,7 +277,8 @@ DAY = 24 * 3600
 # Measured: a page read costs about $0.17-0.65, a song search $0.30-1.00, a tutor answer about $0.01.
 ALL_PER_DAY = {"read": int(os.environ.get("HAPTUNE_READS_ALL_PER_DAY", "60")),
                "find": int(os.environ.get("HAPTUNE_FINDS_ALL_PER_DAY", "40")),
-               "tutor": int(os.environ.get("HAPTUNE_TUTOR_ALL_PER_DAY", "300"))}
+               "tutor": int(os.environ.get("HAPTUNE_TUTOR_ALL_PER_DAY", "300")),
+               "chat": int(os.environ.get("HAPTUNE_CHAT_ALL_PER_DAY", "600"))}
 
 
 def _client_ip(request: Request) -> str:
@@ -379,7 +382,7 @@ MAX_READ_PAGES = int(os.environ.get("HAPTUNE_MAX_READ_PAGES", "20"))
 def ai_status():
     from haptune.ai.claude import DEFAULT_MODEL, ai_configured
     return {"ai": ai_configured(), "model": _model("read"), "models": {k: _model(k) for k in ("read", "find", "tutor")},
-            "reads_per_day": READS_PER_DAY, "finds_per_day": FINDS_PER_DAY, "max_pages": MAX_READ_PAGES, "tutor": True}
+            "reads_per_day": READS_PER_DAY, "finds_per_day": FINDS_PER_DAY, "max_pages": MAX_READ_PAGES, "tutor": True, "chat": True}
 
 
 def _pages_arg(s: str) -> list[int] | None:

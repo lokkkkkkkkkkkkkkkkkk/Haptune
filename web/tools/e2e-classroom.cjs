@@ -184,6 +184,25 @@ async function person(browser, base, api, { name, role, handle }) {
       await s.keyboard.press('Escape');
       await s.screenshot({ path: path.join(SHOTS, 'stage-requests.png') });
     });
+    await step('Hapi: ask from the sparkle button, get an answer with buttons, tap one', async () => {
+      // the model is mocked here (no API key in tests); the server side is tested in server/test_aichat.py
+      let sent = null;
+      await s.route('**/ai/chat', async (route) => {
+        sent = JSON.parse(route.request().postData());
+        await route.fulfill({ json: { text: 'Check your microphone first, then play it slowly.', actions: [{ type: 'open_screen', label: 'Sound check', screen: 'soundCheck' }, { type: 'open_screen', label: 'Stage', screen: 'stage' }] } });
+      });
+      await tab(s, 'practice'); await s.waitForSelector('#ai-fab');
+      await s.locator('#ai-fab').click();
+      await s.waitForSelector('#ai-chat .chip'); await s.locator('#ai-chat .chip').first().click();
+      await s.waitForSelector('#ai-act-0');
+      await s.screenshot({ path: path.join(SHOTS, 'ai-chat.png') });
+      if (!sent || sent.messages.at(-1).role !== 'user' || !Array.isArray(sent.context.library) || !sent.lang) throw new Error('bad request: ' + JSON.stringify(sent));
+      await s.locator('#ai-act-0').click(); await s.waitForSelector('#ai-act-0', { state: 'detached' });
+      await s.waitForSelector('#sound-check #sc-run', { timeout: 10000 });
+      await s.unroute('**/ai/chat');
+      await tab(s, 'stage'); await s.waitForSelector('#stage-plus');                         // the tab bar still works after
+      if (await s.evaluate(() => innerWidth) > 400) throw new Error('the page got wider than the phone');
+    });
     let soundId = '';
     await step('Sounds: record, add backing, mix, export WAV (60 s, 4 tracks), post to Stage', async () => {
       await tab(s, 'stage'); await tab(s, 'stage'); await s.locator('#stage-plus').click(); await s.locator('#stn-sound').click();

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'preact/hooks';
-import { useApp, getPiece, updatePiece, deletePiece, markOpened, pop, push, openSheet, closeSheet, toast, logMinutes, recordTake, go, awardBadge, getState, setState, addXP, addScore } from '../state.js';
+import { useApp, getPiece, updatePiece, deletePiece, markOpened, pop, push, openSheet, closeSheet, toast, logMinutes, recordTake, go, awardBadge, getState, setState, addXP, addScore, hooks } from '../state.js';
 import { t, getLang, instrumentName, INSTRUMENTS } from '../../core/i18n.js';
 import { Icon, Card, Section, List, Row, Segmented, Stepper, Button, Chip, Stars, FretDiagram, PianoChord, Keyboard, Badge, Toggle } from '../components.jsx';
 import { NavBar, SheetFrame } from './common.jsx';
@@ -142,6 +142,14 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
   const [player, setPlayer] = useState({ playing: false, q: 0, mi: 0, mode: null });
   const [cursorQ, setCursorQ] = useState(0);
   const [speed, setSpeed] = useState(assignment?.tempo_pct ? assignment.tempo_pct / 100 : 1);
+  // Hapi's buttons ("a tone lower", "practise at 70 %") act on the piece that is open
+  const semisNow = useRef(semis); semisNow.current = semis;
+  useEffect(() => {
+    if (!active) return undefined;
+    const h = { transpose: (n) => setSemis(Math.max(-12, Math.min(12, semisNow.current + n))), setSpeed: (x) => setSpeed(Math.max(0.3, Math.min(1.5, x))) };
+    hooks.piece = h;
+    return () => { if (hooks.piece === h) hooks.piece = null; };
+  }, [active]);
   const [metro, setMetro] = useState(false);
   const [countIn, setCountIn] = useState(true);
   const [loop, setLoop] = useState(assignment?.bars_from ? { from: Math.max(0, assignment.bars_from - 1), to: Math.min(lastMi, (assignment.bars_to || assignment.bars_from) - 1) } : null);
