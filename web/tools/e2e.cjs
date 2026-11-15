@@ -32,7 +32,7 @@ function serve() {
 }
 
 async function run(mode, base, browser) {
-  const ctx = await browser.newContext({ ...SIZES[mode], acceptDownloads: true });
+  const ctx = await browser.newContext({ ...SIZES[mode], acceptDownloads: true, permissions: ['microphone'] });
   // lets the test freeze one AudioContext's clock, the way iOS does after an interruption
   await ctx.addInitScript(() => {
     const frozen = new WeakMap();
@@ -48,10 +48,10 @@ async function run(mode, base, browser) {
   const errors = [];
   p.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push('console: ' + m.text()); });
   p.on('pageerror', (e) => errors.push('page: ' + e.message));
-  const shot = (n) => p.screenshot({ path: path.join(SHOTS, `${mode}-${n}.png`) });
+  const shot = async (n) => { await p.waitForTimeout(450); await p.screenshot({ path: path.join(SHOTS, `${mode}-${n}.png`) }); };
   const step = async (name, fn) => { try { await fn(); } catch (e) { errors.push(`${name}: ${e.message.split('\n')[0]}`); } };
   // the places: a sidebar on wide screens, a tab bar on phones; Me is the sidebar's account button or the picture
-  const LABEL = { home: 'practice', learn: 'hub', stage: 'stage', library: 'library', write: 'write' };
+  const LABEL = { home: 'practice', learn: 'hub', stage: 'stage', library: 'library', write: 'create' };
   const tab = async (id) => {
     const wide = await p.evaluate(() => innerWidth >= 900);
     if (id === 'me') return wide ? p.locator('#top-me').click() : p.locator('.avatar:visible').first().click();
@@ -81,9 +81,19 @@ async function run(mode, base, browser) {
     await p.fill('#try-q', 'ode to joy'); await p.keyboard.press('Enter');
     await p.waitForSelector('.welcome', { timeout: 20000 });
   });
-  await step('first-run guide', async () => {
-    for (let i = 0; i < 3; i++) { await p.locator('.welcome .btn.brand:visible').click(); await p.waitForTimeout(250); }
-    await p.locator('.welcome .btn.brand:visible').click(); await p.waitForTimeout(500);
+  // "No screen shows more than 6 primary actions above the fold": big buttons (tiles, big play buttons, tool
+  // buttons, brand buttons) fully inside the first screenful.
+  const primaries = (where) => p.evaluate(() => {
+    const sel = '.home-tile, .act, .ftile, .tile, .tile3, .hm-way, .big-play, .tool-btn, .btn.brand, .stage-plus, .wiz-opt';
+    return [...document.querySelectorAll(sel)].filter((el) => {
+      if (!el.closest('.tab-pane:not([hidden]) .view:not([hidden]), .sheet')) return false;
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && r.height > 0 && r.top >= 0 && r.bottom <= innerHeight;
+    }).length;
+  }).then((n) => { if (n > 6) errors.push(`${where} shows ${n} primary actions above the fold (max 6)`); return n; });
+  await step('first-run tour (3 cards)', async () => {
+    for (let i = 0; i < 2; i++) { await p.locator('.welcome .btn.brand:visible').click(); await p.waitForTimeout(250); }
+    await p.locator('#tour-start').click(); await p.waitForTimeout(500);
     if ((await p.inputValue('#home-search')) !== 'ode to joy') throw new Error('the song typed on the website did not arrive in the app');
     await shot('01-search'); await overflow('search');
   });
@@ -108,9 +118,10 @@ async function run(mode, base, browser) {
     await p.locator('#piece-views button').filter({ hasText: '簡譜' }).click(); await p.waitForSelector('.jp-svg .jn');
     await shot('03-jianpu'); await overflow('簡譜');
     await p.locator('#piece-views button').first().click();
-    await p.locator('#tool-inst').click(); await p.locator('.sheet .chip').filter({ hasText: 'Clarinet' }).click();
+    await primaries('song');
+    await p.locator('#tool-more').click(); await p.locator('#tool-inst').click(); await p.locator('.sheet .chip').filter({ hasText: 'Clarinet' }).click();
     await p.waitForSelector('#arr-note'); await p.waitForTimeout(600);
-    await p.locator('#tool-inst').click(); await p.locator('#inst-as-written').click();
+    await p.locator('#tool-more').click(); await p.locator('#tool-inst').click(); await p.locator('#inst-as-written').click();
   });
   await step('key change', async () => {
     await p.locator('#tool-key').click(); await p.waitForSelector('.keybar');
@@ -143,16 +154,67 @@ async function run(mode, base, browser) {
       }
     });
   }
+  if (mode === 'desktop') {
+    await step('Play Along take -> report -> details -> export', async () => {
+      await p.locator('#play-along').click(); await p.waitForSelector('.mode-cards');
+      await p.locator('.mode-card').nth(1).click();                       // keep the beat: ends with the music
+      await p.locator('.sheet .btn.brand').filter({ hasText: /Start/ }).click();
+      await p.waitForSelector('#take-report', { timeout: 120000 });
+      await shot('11-take'); 
+      await p.locator('#view-details').click(); await p.waitForSelector('#report');
+      await p.waitForSelector('#rep-next');
+      await shot('12-report'); await overflow('report');
+      const [dl] = await Promise.all([p.waitForEvent('download', { timeout: 30000 }), p.locator('#rep-png').click()]);
+      const file = path.join(SHOTS, 'export-report.png'); await dl.saveAs(file);
+      if (fs.readFileSync(file).subarray(1, 4).toString() !== 'PNG') throw new Error('the report picture is not a PNG');
+      await back();
+    });
+  }
   await step('library and the free library', async () => {
     await back(); await tab('library'); await p.waitForTimeout(300);
-    await shot('05-library'); await overflow('library');
+    await shot('05-library'); await overflow('library'); await primaries('library');
     await p.locator('#lib-free').click(); await p.waitForSelector('#cat-search');
     await p.fill('#cat-search', 'washerwoman'); await p.waitForTimeout(500);
     await p.locator('.list .row:visible').first().click(); await p.waitForSelector('.vrv-page svg', { timeout: 60000 });
     await back(); await back();
   });
+  await step('Home: three tiles, a playable sheet in two taps, More tools remembered', async () => {
+    await tab('home'); await p.fill('#home-search', ''); await p.waitForTimeout(200);
+    if (await p.locator('.home-tile:visible').count() !== 3) throw new Error('Home should show exactly three tiles');
+    await shot('01-home'); await overflow('home'); await primaries('home');
+    // tap 1: Practice, tap 2: a suggested piece -> the song screen with Play Along
+    await p.locator('#tile-practice').click(); await p.waitForSelector('#practice-suggest');
+    await shot('01b-practice'); await overflow('practice'); await primaries('practice');
+    await p.locator('#practice-suggest').click(); await p.waitForSelector('#play-along', { timeout: 60000 });
+    await p.waitForSelector('.vrv-page svg', { timeout: 60000 });
+    await back(); await back();
+    if (await p.locator('#more-tools.open').count()) await p.locator('#more-tools-toggle').click();
+    await p.locator('#more-tools-toggle').click(); await p.waitForSelector('#mt-jianpu');
+  });
+  if (mode === 'phone') {
+    await step('reload: tour shown once, More tools stays open', async () => {
+      await p.reload({ waitUntil: 'networkidle' }); await p.waitForSelector('#home-tiles');
+      if (await p.locator('.welcome').count()) throw new Error('the tour came back after it was finished');
+      if (!(await p.locator('#more-tools.open').count())) throw new Error('More tools forgot that it was open');
+    });
+  }
+  if (mode === 'phone') {
+    await step('Sound check: the microphone is analysed, the speaker tone is measured, nothing reaches the output', async () => {
+      await tab('home');
+      if (!(await p.locator('#more-tools.open').count())) await p.locator('#more-tools-toggle').click();
+      await p.locator('#mt-soundcheck').click(); await p.waitForSelector('#sc-run');
+      await p.locator('#sc-run').click();
+      await p.waitForSelector('#sound-check .list .row', { timeout: 20000 });
+      await shot('10-soundcheck'); await overflow('sound check');
+      const r = await p.evaluate(() => JSON.parse(localStorage.getItem('haptune.soundCheck') || 'null'));
+      if (!r || !r.playbackRate || r.roomDb === undefined) throw new Error('no sound check result: ' + JSON.stringify(r));
+      await back();
+    });
+  }
   await step('type 簡譜', async () => {
-    await tab('home'); await p.fill('#home-search', ''); await p.locator('#way-type').click();
+    await tab('home'); await p.fill('#home-search', '');
+    if (!(await p.locator('#more-tools.open').count())) await p.locator('#more-tools-toggle').click();
+    await p.locator('#mt-jianpu').click();
     await p.locator('.sheet .chip').filter({ hasText: '簡譜' }).click(); await p.waitForTimeout(250);
     await p.locator('.sheet .btn.full').click(); await p.waitForTimeout(500);
     await p.locator('.sheet .btn').filter({ hasText: /Continue|Open/ }).first().click();
@@ -161,8 +223,9 @@ async function run(mode, base, browser) {
     await back();
   });
   await step('write a song', async () => {
-    await tab('write'); await p.waitForTimeout(300); await shot('06-write'); await overflow('Write');
-    await p.locator('#write-new').click(); await p.waitForSelector('#new-song-make');
+    await tab('write'); await p.waitForTimeout(300); await shot('06-write'); await overflow('Create'); await primaries('Create');
+    await p.locator('#write-new').click(); await p.waitForSelector('#wiz-kinds'); await primaries('new-song wizard');
+    await p.locator('#wiz-full').click(); await p.waitForSelector('#new-song-make');
     await p.fill('#new-song-title', 'My first song'); await p.locator('#new-song-make').click();
     await p.waitForSelector('.st-score svg', { timeout: 60000 }); await p.waitForTimeout(400);
     const before = await p.locator('.st-score g.note').count();
@@ -173,10 +236,31 @@ async function run(mode, base, browser) {
     await back(); await p.waitForTimeout(300);
     if (!(await p.locator('#write .song-tile').filter({ hasText: 'My first song' }).count())) throw new Error('the new song is not in My songs');
   });
+  await step('lyrics -> edited chords -> Play Along', async () => {
+    await tab('write'); await p.waitForTimeout(300);
+    await p.locator('#write-lyrics').click(); await p.waitForSelector('#new-song-lyrics');
+    await p.fill('#new-song-title', 'Grace'); await p.fill('#new-song-lyrics', 'Verse 1\nAmazing grace how sweet the sound\nThat saved a wretch like me');
+    await p.locator('#new-song-make').click(); await p.waitForSelector('#ce-beat-0', { timeout: 20000 });
+    await shot('06c-chords'); await overflow('chord editor'); await primaries('chord editor');
+    const before = await p.locator('#ce-beat-0 .ce-chord').innerText();
+    await p.locator('#ce-beat-0').click(); await p.waitForSelector('#cp-diatonic');
+    await p.locator('#cp-diatonic .chip').filter({ hasText: /^Am/ }).first().click(); await p.waitForTimeout(250);
+    const after = await p.locator('#ce-beat-0 .ce-chord').innerText();
+    if (before === after || !/^Am/.test(after)) throw new Error(`the chord did not change (${before} -> ${after})`);
+    await p.locator('#ce-beat-2').click(); await p.locator('#cp-text').fill('D/F#'); await p.keyboard.press('Enter'); await p.waitForTimeout(250);
+    if ((await p.locator('#ce-beat-2 .ce-chord').innerText()) !== 'D/F#') throw new Error('a typed chord was not placed on beat 3');
+    await p.locator('#ce-undo').click(); await p.waitForTimeout(200);
+    if (await p.locator('#ce-beat-2 .ce-chord').count()) throw new Error('undo did not remove the chord');
+    await p.locator('#ce-playalong').click(); await p.waitForSelector('.sheet', { timeout: 30000 });
+    await p.waitForTimeout(300); await p.keyboard.press('Escape');
+    await p.waitForSelector('.vrv-page svg', { timeout: 60000 });
+    if (!/Grace/.test(await p.locator('.piece-head h1').innerText())) throw new Error('Play Along did not open the chord song');
+    await back(); await back();
+  });
   await step('Stage, Learn, Me, plans', async () => {
-    await tab('stage'); await p.waitForTimeout(300); await shot('07-stage'); await overflow('Stage');
-    await tab('learn'); await p.waitForTimeout(300); await shot('07b-learn'); await overflow('Learn');
-    await tab('home'); await p.locator('#act-tools').click(); await p.waitForTimeout(300); await overflow('tools'); await back();
+    await tab('stage'); await p.waitForTimeout(300); await shot('07-stage'); await overflow('Stage'); await primaries('Stage');
+    await tab('learn'); await p.waitForTimeout(300); await shot('07b-learn'); await overflow('Learn'); await primaries('Learn');
+    await tab('home'); await p.locator('#mt-tuner').click(); await p.waitForTimeout(300); await overflow('tools'); await back();
     await tab('me'); await p.waitForTimeout(300); await shot('08-me'); await overflow('Me');
     await p.locator('#me-upsell').click(); await p.waitForSelector('#plan-pro'); await shot('09-plans'); await overflow('plans');
     await p.keyboard.press('Escape');
@@ -191,7 +275,7 @@ async function run(mode, base, browser) {
   fs.mkdirSync(SHOTS, { recursive: true });
   const server = await serve();
   const base = `http://127.0.0.1:${server.address().port}`;
-  const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
+  const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required', '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
   let failed = 0;
   for (const mode of process.argv[2] ? [process.argv[2]] : Object.keys(SIZES)) {
     const errors = await run(mode, base, browser);

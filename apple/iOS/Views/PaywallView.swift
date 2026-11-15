@@ -1,7 +1,7 @@
 import StoreKit
 import SwiftUI
 
-/// Haptune Plus: what it unlocks, three plans, and Apple's own payment sheet.
+/// Melovyn Plus: what it unlocks, three plans, and Apple's own payment sheet.
 struct PaywallView: View {
     var highlight: PlusFeature?
     @EnvironmentObject var store: Store
@@ -44,7 +44,7 @@ struct PaywallView: View {
                         feature(.scan, "doc.viewfinder", .blue, "Scan Sheet Music",
                                 "Photograph or scan printed music and practise it with your Watch.")
                         feature(.transcribe, "waveform.badge.magnifyingglass", .orange, "Recording to Sheet Music",
-                                "Your teacher plays it once; Haptune writes it down.")
+                                "Your teacher plays it once; Melovyn writes it down.")
                         feature(.fullReport, "chart.bar.doc.horizontal", .green, "Full Analysis",
                                 "Coloured score, tempo and intonation charts and a practice plan after every take.")
                     }
@@ -99,7 +99,7 @@ struct PaywallView: View {
                 .frame(width: 84, height: 84)
                 .background(LinearGradient(colors: [.purple, .pink], startPoint: .topLeading, endPoint: .bottomTrailing),
                             in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            Text("Haptune Plus").font(.largeTitle.weight(.bold))
+            Text("Melovyn Plus").font(.largeTitle.weight(.bold))
             Text("Learn a piece from any recording, not just play it.")
                 .font(.title3).foregroundStyle(.secondary).multilineTextAlignment(.center)
         }

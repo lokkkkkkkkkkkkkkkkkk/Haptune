@@ -87,3 +87,23 @@ test('a bowed repeated note counts again after the sound dips and rises', () => 
   for (let i = 0; i < 4; i++) r = f.push({ midi: 69, rms: 0.07 }) || r;
   assert.deepEqual(r, { type: 'ok', index: 1 });
 });
+
+test('tolerant window: a missed note does not derail the take, confident frames count sooner', async () => {
+  const { Follower } = await import('../src/core/follow.js');
+  const exp = [60, 62, 64, 65].map((m, i) => ({ midis: [m], top: m, mi: 0, ids: [`n${i}`] }));
+  const f = new Follower(exp);
+  for (let i = 0; i < 3; i++) f.push({ midi: 60, rms: 0.1 });
+  assert.equal(f.k, 1);
+  f.push(null, 0);
+  // the player's D was lost (noise); they are already on E: after a few frames, E counts and D is a miss
+  let r = null;
+  for (let i = 0; i < 6 && !r?.skipped; i++) r = f.push({ midi: 64, rms: 0.1 }) || r;
+  assert.equal(r.type, 'ok'); assert.equal(r.index, 2); assert.equal(r.skipped, 1);
+  assert.equal(f.k, 3);
+  assert.equal(f.firstTry[1], false);
+  f.push(null, 0);
+  // a confident F needs only two frames
+  assert.equal(f.push({ midi: 65, rms: 0.1, conf: 0.95 }), null);
+  assert.equal(f.push({ midi: 65, rms: 0.1, conf: 0.95 }).index, 3);
+  assert.ok(f.done);
+});

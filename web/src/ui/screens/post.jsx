@@ -10,7 +10,7 @@ import { parseMusicXML, writeMusicXML } from '../../core/musicxml.js';
 import { C, attempt, ensureAccount } from '../account.js';
 import { youtubeId } from '../api.js';
 import { openExternal } from '../native.js';
-import { Reactions, TYPE, PersonLine, Person, Coins, StatusPill, InstrumentChips, StarsInput, timeAgo, timeLeft, openReport } from './social.jsx';
+import { Reactions, TYPE, PersonLine, Person, Coins, StatusPill, RequestSteps, InstrumentChips, StarsInput, timeAgo, timeLeft, openReport } from './social.jsx';
 
 const live = { reload: null };            // the open post refreshes itself after a sheet changes it
 export const reloadPost = () => live.reload?.();
@@ -58,7 +58,8 @@ export function PostView({ id, active }) {
       <NavBar title={t(ty.label)} backLabel={t('community')} color={ty.color} actions={<button type="button" class="nav-btn" onClick={more} aria-label={t('more')}><Icon name="more" size={22} /></button>} />
       <div class="wrap post-view">
         <div class="pv-head">
-          <div class="pc-top"><span class={`pill ${ty.color}`}><Icon name={ty.icon} size={13} stroke={2.6} />{t(ty.label)}</span><StatusPill p={p} />
+          <div class="pc-top"><span class={`pill ${ty.color}`}><Icon name={ty.icon} size={13} stroke={2.6} />{t(ty.label)}</span><StatusPill p={p} /></div>
+          <div><RequestSteps p={p} />
             {p.spotlight && <span class="pill yellow"><Icon name="star" size={12} stroke={2.6} />{t('spotlight')}</span>}
             {p.type === 'share' && p.licence && <span class="pill gray">{t(`lic_${p.licence}`)}</span>}</div>
           <h1>{p.title}</h1>
@@ -193,7 +194,7 @@ function ShareBox({ p, run }) {
     <Card>
       <div class="report-line"><Icon name="staff" size={22} /><p class="sub">{t('shareInfo', { bars: p.data?.bars || '?', notes: p.data?.notes || '?' })}</p></div>
       <div class="btn-row">
-        <Button color="green" icon="download" disabled={busy || !p.file_id} onClick={open}>{t('openInHaptune')}</Button>
+        <Button color="green" icon="download" disabled={busy || !p.file_id} onClick={open}>{t('openInMelovyn')}</Button>
         <Button kind="secondary" icon="star" onClick={() => run(() => C.react(`p:${p.id}`, 'save'))}>{p.me.saved ? t('saved') : t('save')}</Button>
       </div>
       {p.visibility === 'unlisted' && <p class="note-text"><Icon name="info" size={13} /> {t('unlistedNote')}</p>}
@@ -232,7 +233,7 @@ function Reply({ r, p, run, onAccepted }) {
         <div class="r-score">
           <Icon name="staff" size={22} />
           <span><strong>{t('scoreSubmitted')}</strong><span>{t('barsNotes', { bars: r.file?.bars || 0, notes: r.file?.notes || 0 })}</span></span>
-          {r.file?.id ? <Button small color="green" icon="play" disabled={busy} onClick={openIt}>{t('openInHaptune')}</Button> : <span class="pill gray"><Icon name="eye" size={12} /> {t('privateScore')}</span>}
+          {r.file?.id ? <Button small color="green" icon="play" disabled={busy} onClick={openIt}>{t('openInMelovyn')}</Button> : <span class="pill gray"><Icon name="eye" size={12} /> {t('privateScore')}</span>}
         </div>
       )}
       {r.body && <p class="r-body">{r.body}</p>}
@@ -306,7 +307,7 @@ export function AddCreditsSheet({ post }) {
   );
 }
 
-/** Send a score for a request: pick a piece from your library (made in Haptune or imported from MuseScore etc.). */
+/** Send a score for a request: pick a piece from your library (made in Melovyn or imported from MuseScore etc.). */
 export function SubmitScoreSheet({ post }) {
   const s = useApp();
   const [sel, setSel] = useState(null);

@@ -14,10 +14,17 @@ import { addScore, addSongbookSong, getState } from './state.js';
 import { getLang } from '../core/i18n.js';
 
 const CFG = () => globalThis.HAPTUNE_CONFIG || {};
+// the installed app carries the index only; the pieces are fetched from the website when opened
+const pieceURL = (file) => (CFG().native && CFG().site ? `${CFG().site}/app/catalog/${file}` : `catalog/${file}`);
 let rows = null, loading = null;
 const packs = new Map();
 
-export const GENRES = ['classical', 'piano', 'folk', 'song', 'hymn', 'kids', 'christmas', 'jazz', 'chinese', 'celtic', 'choral', 'dance', 'chamber'];
+import { GENRE_IDS } from '../core/genres.js';
+
+export const GENRES = GENRE_IDS;
+let sources = [];
+/** The open collections in the catalogue, with links and counts (index.json "sources"), for About. */
+export const catalogSources = () => sources;
 
 function builtIn() {
   const lang = getLang();
@@ -39,7 +46,8 @@ export function loadCatalog() {
       const res = await fetch('catalog/index.json', { cache: 'no-cache' });
       if (!res.ok) throw new Error('no catalogue');
       const data = await res.json();
-      const more = (data.items || []).map(([id, title, composer, genre, instrument, file, licence, level]) => ({ id, title, composer, genre, instrument, file, licence, level: level || 0 }));
+      const more = (data.items || []).map(([id, title, composer, genre, instrument, file, licence, level, source]) => ({ id, title, composer, genre, instrument, file, licence, level: level || 0, source: source || '' }));
+      sources = data.sources || [];
       rows = [...base, ...more];
     } catch { rows = base; }
     for (const r of rows) r.key = norm(`${r.title} ${r.alt || ''} ${r.composer}`);
@@ -79,15 +87,15 @@ export async function addCatalogPiece(entry) {
   let score;
   if (at !== undefined) {
     // tune books are kept as packs of 120 tunes: one small download, then every tune in it opens at once
-    if (!packs.has(file)) packs.set(file, fetch(`catalog/${file}`).then((r) => { if (!r.ok) throw new Error('offline'); return r.json(); }).catch((e) => { packs.delete(file); throw e; }));
+    if (!packs.has(file)) packs.set(file, fetch(pieceURL(file)).then((r) => { if (!r.ok) throw new Error('offline'); return r.json(); }).catch((e) => { packs.delete(file); throw e; }));
     let pack;
     try { pack = await packs.get(file); } catch { throw new Error('This piece could not be downloaded. Check your connection.'); }
     score = parseABC(pack[Number(at)], { instrument: entry.instrument || 'violin' });
     score.title = entry.title;
     if (entry.composer && !score.composer) score.composer = entry.composer;
-    return addScore(score, { source: 'catalog', fmt: 'abc', title: entry.title, extra: { catalogId: entry.id, license: entry.licence, tags: [entry.genre], level: entry.level || undefined } });
+    return addScore(score, { source: 'catalog', fmt: 'abc', title: entry.title, extra: { catalogId: entry.id, license: entry.licence, sourceUrl: entry.source || undefined, tags: [entry.genre], level: entry.level || undefined } });
   }
-  const res = await fetch(`catalog/${file}`);
+  const res = await fetch(pieceURL(file));
   if (!res.ok) throw new Error('This piece could not be downloaded. Check your connection.');
   const bytes = await res.arrayBuffer();
   if (f.endsWith('.mxl')) score = parseMusicXML(await mxlToXml(bytes));
@@ -96,5 +104,5 @@ export async function addCatalogPiece(entry) {
   else score = parseMusicXML(decodeText(bytes));
   score.title = entry.title;
   if (entry.composer && !score.composer) score.composer = entry.composer;
-  return addScore(score, { source: 'catalog', fmt: f.split('.').pop(), title: entry.title, extra: { catalogId: entry.id, license: entry.licence, tags: [entry.genre], level: entry.level || undefined } });
+  return addScore(score, { source: 'catalog', fmt: f.split('.').pop(), title: entry.title, extra: { catalogId: entry.id, license: entry.licence, sourceUrl: entry.source || undefined, tags: [entry.genre], level: entry.level || undefined } });
 }

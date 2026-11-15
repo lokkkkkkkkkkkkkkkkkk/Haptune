@@ -164,6 +164,40 @@ class Claude:
         return None
 
 
+    def converse(self, system: list | str, messages: list, tools: list, run_tool, *, effort: str = "low",
+                 max_tokens: int = 2500, max_rounds: int = 5) -> str:
+        """A chat turn with tools the server runs itself (`run_tool(name, input) -> str`). The model may call
+        tools for a few rounds; the reply is its last text. Tool errors go back to the model as error results."""
+        messages = list(messages)
+        text = ""
+        for _ in range(max_rounds):
+            try:
+                msg = self.client.beta.messages.create(
+                    model=self.model, max_tokens=max_tokens, system=system, messages=messages, tools=tools,
+                    output_config={"effort": effort}, **fallback_args(self.model),
+                )
+            except Exception as e:
+                raise _translate(e) from e
+            self.usage.add(getattr(msg, "usage", None))
+            if msg.stop_reason == "refusal":
+                raise AIError("Hapi can't help with that one.")
+            text = "".join(getattr(b, "text", "") for b in msg.content if getattr(b, "type", "") == "text").strip() or text
+            uses = [b for b in msg.content if getattr(b, "type", "") == "tool_use"]
+            if msg.stop_reason != "tool_use" or not uses:
+                break
+            results = []
+            for b in uses:
+                try:
+                    out, err = run_tool(b.name, _as_dict(b.input)), False
+                except Exception as e:                           # a bad call: tell the model, let it recover
+                    out, err = f"Error: {e}", True
+                results.append({"type": "tool_result", "tool_use_id": b.id, "content": str(out)[:8000], "is_error": err})
+            messages = messages + [{"role": "assistant", "content": msg.content}, {"role": "user", "content": results}]
+        if not text:
+            raise AIError("Hapi had no answer. Please try again.")
+        return text
+
+
 def _as_dict(x) -> dict:
     if isinstance(x, dict):
         return x

@@ -13,6 +13,7 @@ onnxruntime>=1.17   # band split: MDX-Net separation models (downloaded once, ~1
 homr>=0.7           # fallback optical music recognition when no AI key is set (~150 MB of ONNX models)
 anthropic>=2.0      # AI sheet-music reader and song finder (needs ANTHROPIC_API_KEY on the server)
 sqlalchemy>=2.0     # Academy classes (SQLite by default, Postgres via DATABASE_URL)
+cryptography>=42    # encrypts the Google refresh tokens kept for Calendar and Drive (google_link.py)
 psycopg[binary]>=3.1
 # Optional, better 6-stem separation (vocals, drums, bass, guitar, piano, other) - needs PyTorch:
 # demucs>=4.0

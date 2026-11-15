@@ -507,7 +507,7 @@ function jumpSoundXml(j) {
 }
 
 /** Writes a Score as MusicXML 4.0 (partwise). Accidentals and missing beams are generated. */
-export function writeMusicXML(score, { software = 'Haptune' } = {}) {
+export function writeMusicXML(score, { software = 'Melovyn' } = {}) {
   const parts = score.parts;
   let out = '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n';
   out += '<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">\n';

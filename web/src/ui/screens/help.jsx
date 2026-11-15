@@ -1,6 +1,7 @@
 // Help: questions and answers, sending feedback or a problem report (with optional technical details), the
 // community guidelines, and About (credits for the music engine, sounds and fonts).
 import { useState } from 'preact/hooks';
+import { deviceAudioLog } from '../audio.js';
 import { useApp, closeSheet, openSheet, toast, getState, push } from '../state.js';
 import { t } from '../../core/i18n.js';
 import { Icon, Button, Section, Card, Chip, Toggle, List, Row } from '../components.jsx';
@@ -65,8 +66,9 @@ export function HelpView({ topic = '' }) {
 
 // the last few errors, so a problem report can say what went wrong
 const errors = [];
+export const keepError = (m) => { errors.push(`${new Date().toISOString().slice(11, 19)} ${String(m).slice(0, 300)}`); if (errors.length > 12) errors.shift(); };
 export function captureErrors() {
-  const keep = (m) => { errors.push(`${new Date().toISOString().slice(11, 19)} ${String(m).slice(0, 300)}`); if (errors.length > 12) errors.shift(); };
+  const keep = keepError;
   addEventListener('error', (e) => keep(e.message || e.error));
   addEventListener('unhandledrejection', (e) => keep(e.reason?.message || e.reason));
 }
@@ -78,7 +80,7 @@ function diagnostics() {
   return {
     app: `${cfg.version || '?'} (${cfg.build || '?'})`, platform: platform(), ua: navigator.userAgent.slice(0, 200),
     screen: `${innerWidth}x${innerHeight}@${devicePixelRatio}`, lang: s.settings.lang, tab: s.tab, view: top?.view || 'root',
-    pieces: s.pieces.length, audio: globalThis.__haptuneAudio?.() || null, errors: [...errors],
+    pieces: s.pieces.length, audio: globalThis.__haptuneAudio?.() || null, sound: deviceAudioLog(), errors: [...errors],
   };
 }
 
@@ -136,7 +138,7 @@ export function AboutSheet() {
   const cfg = globalThis.HAPTUNE_CONFIG || {};
   return (
     <SheetFrame title={t('about')} right={t('done')} onRight={closeSheet}>
-      <div class="empty"><Mascot mood="wave" size={90} /><h3>ETASheet</h3><p>{t('version')} {cfg.version} ({cfg.build}) · {t('madeBy')} sloky</p></div>
+      <div class="empty"><Mascot mood="wave" size={90} /><h3>Melovyn</h3><p>{t('version')} {cfg.version} ({cfg.build}) · {t('madeBy')} sloky</p></div>
       <Section title={t('creditsThanks')}>
         <List>
           <Row title="Salamander Grand Piano V3" subtitle="Alexander Holm · CC BY 3.0" />

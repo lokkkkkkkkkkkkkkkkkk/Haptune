@@ -6,7 +6,7 @@ import WatchKit
 /// Watch side: receives decisions from the iPhone and turns them into taps on the wrist.
 @MainActor
 final class WatchCoach: NSObject, ObservableObject {
-    @Published var title = "Haptune"
+    @Published var title = "Melovyn"
     @Published var running = false
     @Published var bar = "–"
     @Published var expected = ""

@@ -75,7 +75,7 @@ ledger = Table("ledger", meta,
                Column("user_id", String(36), ForeignKey("users.id"), nullable=False, index=True),
                Column("delta", Integer, nullable=False),
                Column("reason", String(24), nullable=False),
-               Column("minted", Boolean, nullable=False, default=False),   # made by Haptune (not moved between people)
+               Column("minted", Boolean, nullable=False, default=False),   # made by Melovyn (not moved between people)
                Column("ref", String(40), nullable=False, default=""),
                Column("note", String(160), nullable=False, default=""),
                Column("created", Float, nullable=False, index=True))
@@ -366,7 +366,7 @@ def _token(authorization: str) -> str:
 def current(authorization: str = Header("")) -> Me:
     user = user_from_token(_token(authorization))
     if user is None:
-        raise HTTPException(401, "Please open ETASheet online once to make your account.")
+        raise HTTPException(401, "Please open Melovyn online once to make your account.")
     with engine().begin() as c:
         acc = ensure_account(c, user)
         if acc["role"] == "banned":
@@ -451,7 +451,9 @@ def me_json(me: Me) -> dict:
         unread = c.execute(select(func.count()).select_from(notifications).where(notifications.c.user_id == me.id, notifications.c.read.is_(False))).scalar()
         u = usage_of(c, me.id, me.tier, acc)
         n_sessions = c.execute(select(func.count()).select_from(sessions).where(sessions.c.user_id == me.id)).scalar()
-    return {**public_user(me.user, acc), "bio": acc["bio"], "lang": acc["lang"], "role": acc["role"], "is_admin": me.is_admin,
+        import teachers
+        verified_teacher = teachers.is_verified(me.id, c)
+    return {**public_user(me.user, acc), "verified_teacher": verified_teacher, "bio": acc["bio"], "lang": acc["lang"], "role": acc["role"], "is_admin": me.is_admin,
             "tier": me.tier, "tier_until": _iso(acc["tier_until"]) if me.tier not in ("free", "dev") else None,
             "tier_source": acc["tier_source"], "credits": acc["credits"], "streak": acc["streak"], "usage": u,
             "limits": plan_limits(me.tier, acc), "unread": unread, "guidelines": acc["guidelines"], "has_password": bool(acc["pw_hash"]),
@@ -663,7 +665,7 @@ class GoogleIn(BaseModel):
 
 @router.post("/auth/google")
 def google_signin(body: GoogleIn, request: Request, authorization: str = Header("")):
-    """Sign in with Google. A Google account seen before signs in to its ETASheet account (on this device too);
+    """Sign in with Google. A Google account seen before signs in to its Melovyn account (on this device too);
     a new one is linked to the account this device already has (so nothing is lost), or gets a new account."""
     rate(request, "google", 30, 3600)
     info = verify_google(body.credential)
@@ -802,7 +804,7 @@ def charge_ai(request: Request, kind: str, amount: int = 1) -> Me | None:
     if limit == 0:
         need = NEEDS.get(kind, "plus")
         raise HTTPException(402, {"code": "plan_required", "feature": kind, "tier": tier, "need": need,
-                                  "message": f"{names.get(kind, kind)} is part of Haptune {need.capitalize()}."})
+                                  "message": f"{names.get(kind, kind)} is part of Melovyn {need.capitalize()}."})
     if me is None or limit is None:
         return me
     with engine().begin() as c:

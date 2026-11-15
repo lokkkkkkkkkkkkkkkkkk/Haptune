@@ -52,7 +52,7 @@ export const COURSES = [
     lessons: [
       {
         id: 'rhythm1', title: ['Feel the beat', 'Rasai rentak', '感受节拍', '感受節拍'],
-        cards: [['Listen to four clicks, then tap the big button on every click. Haptune measures how close you are in milliseconds.', 'Dengar empat ketukan, kemudian tekan butang besar pada setiap ketukan. Haptune mengukur ketepatan anda dalam milisaat.', '先听四下，然后每拍点一次大按钮。Haptune 会以毫秒计算你的准确度。', '先聽四下，然後每拍點一次大按鈕。Haptune 會以毫秒計算你的準確度。']],
+        cards: [['Listen to four clicks, then tap the big button on every click. Melovyn measures how close you are in milliseconds.', 'Dengar empat ketukan, kemudian tekan butang besar pada setiap ketukan. Melovyn mengukur ketepatan anda dalam milisaat.', '先听四下，然后每拍点一次大按钮。Melovyn 会以毫秒计算你的准确度。', '先聽四下，然後每拍點一次大按鈕。Melovyn 會以毫秒計算你的準確度。']],
         activity: { type: 'tap', pattern: 'q q q q q q q q', tempo: 80 },
       },
       {

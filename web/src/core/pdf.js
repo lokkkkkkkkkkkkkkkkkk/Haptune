@@ -48,7 +48,7 @@ export function writePdf(pages, { title = '', size = [595.28, 841.89], margin = 
   const pageObj = (i) => 4 + i * 3, imgObj = (i) => 5 + i * 3, conObj = (i) => 6 + i * 3;
   obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
   obj(2, `<< /Type /Pages /Count ${n} /Kids [${pages.map((_, i) => `${pageObj(i)} 0 R`).join(' ')}] >>`);
-  obj(3, `<< /Title ${pdfText(title)} /Creator ${pdfText('Haptune')} /Producer ${pdfText('Haptune')} >>`);
+  obj(3, `<< /Title ${pdfText(title)} /Creator ${pdfText('Melovyn')} /Producer ${pdfText('Melovyn')} >>`);
   const [W, H] = size;
   pages.forEach((pg, i) => {
     const dim = pg.w && pg.h ? { w: pg.w, h: pg.h, comps: 3 } : jpegSize(pg.jpeg);

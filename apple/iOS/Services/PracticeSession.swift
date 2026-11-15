@@ -93,7 +93,7 @@ final class PracticeSession: ObservableObject {
                loop: ClosedRange<Int>?, takeURL: URL, band: BandBacking? = nil) async {
         guard !running else { return }
         guard await MicrophoneStream.requestPermission() else {
-            errorMessage = String(localized: "Haptune needs the microphone to hear you play. Turn it on in Settings > Privacy & Security > Microphone.")
+            errorMessage = String(localized: "Melovyn needs the microphone to hear you play. Turn it on in Settings > Privacy & Security > Microphone.")
             return
         }
         let mode: ScoreFollower.Mode = band == nil ? requested : .tempo          // the band never waits

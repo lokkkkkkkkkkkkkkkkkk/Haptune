@@ -1,5 +1,5 @@
 import { render } from 'preact';
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, loadAll, go, pop, popToRoot, push, closeSheet, openSheet, getState, setState, hooks, toast } from './state.js';
 import { t } from '../core/i18n.js';
 import { Icon } from './components.jsx';
@@ -15,6 +15,19 @@ import { LearnView } from './screens/hub.jsx';
 import { LibraryView, SongbookView, PasteSheet, FindSongSheet, ScaleSheet, ImportReportSheet, CatalogView, InstallHelpSheet } from './screens/library.jsx';
 import { AddSheet, ImportWizardSheet, FinderSheet } from './screens/addmusic.jsx';
 import { WelcomeSheet } from './screens/welcome.jsx';
+import { PracticeView } from './screens/practice.jsx';
+import { SoundCheckView } from './screens/soundcheck.jsx';
+import { ReportView } from './screens/report.jsx';
+import { AIChatSheet, AIFab } from './screens/aichat.jsx';
+import { Boundary } from './boundary.jsx';
+import { SoundView, SoundAddSheet, SoundTrackSheet, SoundSettingsSheet, SoundExportSheet, SoundPostSheet } from './screens/sound.jsx';
+import { VaryView } from './screens/moretools.jsx';
+import { LearnView as LearnMoreView } from './screens/learn.jsx';
+import { PieceMoreSheet } from './screens/piecemore.jsx';
+import { ConnectionsSheet, TeacherVerifySheet } from './screens/connections.jsx';
+import { AsgMetaSheet, SessionSheet, InviteSheet, GradeSheet } from './screens/classroom.jsx';
+import { ChordEditorView, ChordPickSheet, ChordSongSheet, ChordSectionSheet, ChordExportSheet } from './screens/chordeditor.jsx';
+import { tick } from './native.js';
 import { local } from './storage.js';
 import { PieceView, ChordSheet, FindKeySheet, ExportSheet, PlayAlongSheet, KeySheet, DetailsSheet, MixerSheet, InstrumentPickSheet } from './screens/piece.jsx';
 import { EditorView } from './screens/editor.jsx';
@@ -24,7 +37,7 @@ import { AcademyView, CourseView, LessonSheet, ChallengeSheet } from './screens/
 import { ClassView, AssignmentView, JoinClassSheet, NewClassSheet, NewAssignmentSheet, ReviewSheet } from './screens/classes.jsx';
 import { ToolsView, ToolView } from './screens/tools.jsx';
 import { AccountSheet, PaywallSheet, SetPasswordSheet, SignInSheet, DeleteAccountSheet, DevCodeSheet } from './screens/account.jsx';
-import { CommunityView, DailyView, StageGuideSheet } from './screens/community.jsx';
+import { CommunityView, DailyView, StageGuideSheet, StageNewSheet } from './screens/community.jsx';
 import { PostView, AcceptSheet, ChangesSheet, AddCreditsSheet, SubmitScoreSheet, ImageSheet } from './screens/post.jsx';
 import { ComposeSheet } from './screens/compose.jsx';
 import { ProfileView, LeaderboardView, NotificationsView, WalletView, ChallengeView, EditProfileView } from './screens/people.jsx';
@@ -45,7 +58,7 @@ import { setSyncOffset, onAudioProblem } from './audio.js';
 export const TABS = [
   { id: 'summary', icon: 'home', color: 'violet', label: 'practice' },
   { id: 'academy', icon: 'academy', color: 'orange', label: 'hub' },
-  { id: 'write', icon: 'pencil', color: 'teal', label: 'write', center: true },
+  { id: 'write', icon: 'pencil', color: 'teal', label: 'create', center: true },
   { id: 'community', icon: 'stage', color: 'pink', label: 'stage' },
   { id: 'library', icon: 'library', color: 'blue', label: 'library' },
   { id: 'me', icon: 'person', color: 'gray', label: 'me', side: false },
@@ -56,6 +69,8 @@ const VIEWS = {
   piece: PieceView, editor: EditorView, studio: StudioView, student: StudentView, tutors: TutorsView, tutor: TutorView, tutorMe: TutorMeView, lessons: LessonsView, songbook: SongbookView, catalog: CatalogView, course: CourseView, tool: ToolView, history: HistoryView, classView: ClassView, assignment: AssignmentView,
   post: PostView, daily: DailyView, profile: ProfileView, leaderboard: LeaderboardView, notifications: NotificationsView, wallet: WalletView, challenge: ChallengeView,
   editProfile: EditProfileView, help: HelpView, admin: AdminView,
+  __crash: () => { throw new Error('test crash'); },           // the click-through test checks the error boundary with it
+  practice: PracticeView, soundCheck: SoundCheckView, report: ReportView, sound: SoundView, vary: VaryView, chordEditor: ChordEditorView, learnMore: (p) => <LearnMoreView {...p} pushed />,
 };
 const SHEETS = {
   add: AddSheet, paste: PasteSheet, findSong: FindSongSheet, scale: ScaleSheet, report: ImportReportSheet, chord: ChordSheet, findKey: FindKeySheet,
@@ -66,6 +81,8 @@ const SHEETS = {
   image: ImageSheet, reportPost: ReportSheet, more: MoreSheet, feedback: FeedbackSheet, guidelines: GuidelinesSheet, about: AboutSheet, installHelp: InstallHelpSheet, stageGuide: StageGuideSheet, mixer: MixerSheet, instrumentPick: InstrumentPickSheet, lessonAsk: LessonAskSheet, lessonRate: LessonRateSheet,
   newSong: NewSongSheet, hubRole: HubRoleSheet, classQR: ClassQRSheet, pair: PairSheet, take: TakeSheet, joinLink: JoinLinkSheet, moment: MomentSheet,
   setPassword: SetPasswordSheet, signIn: SignInSheet, deleteAccount: DeleteAccountSheet, devCode: DevCodeSheet,
+  pieceMore: PieceMoreSheet, chordPick: ChordPickSheet, ceSong: ChordSongSheet, ceSection: ChordSectionSheet, ceExport: ChordExportSheet,
+  aiChat: AIChatSheet, stageNew: StageNewSheet, soundAdd: SoundAddSheet, soundTrack: SoundTrackSheet, soundSettings: SoundSettingsSheet, soundExport: SoundExportSheet, soundPost: SoundPostSheet, connections: ConnectionsSheet, teacherVerify: TeacherVerifySheet, asgMeta: AsgMetaSheet, session: SessionSheet, invite: InviteSheet, grade: GradeSheet,
 };
 
 /** Android back button: close a sheet, go back a screen, go Home, then leave the app. */
@@ -128,12 +145,17 @@ function Stack({ tab, active }) {
   const s = useApp();
   const stack = s.stacks[tab];
   const Root = ROOTS[tab];
+  // a screen that comes back into view after a pop slides in from the left, like iOS
+  const prev = useRef(stack.length);
+  const popped = stack.length < prev.current;
+  useEffect(() => { prev.current = stack.length; });
   return (
     <>
-      <div class="view" hidden={stack.length > 0}><Root active={active && stack.length === 0} /></div>
+      <div class={`view${popped && stack.length === 0 ? ' popped' : ''}`} hidden={stack.length > 0}><Boundary name={tab}><Root active={active && stack.length === 0} /></Boundary></div>
       {stack.map((v, i) => {
         const V = VIEWS[v.view];
-        return <div class="view pushed" hidden={i !== stack.length - 1} key={v.key}><V {...v.props} active={active && i === stack.length - 1} /></div>;
+        const top = i === stack.length - 1;
+        return <div class={`view pushed${popped && top ? ' popped' : ''}`} hidden={!top} key={v.key}><Boundary name={v.view}>{V ? <V {...v.props} active={active && top} /> : null}</Boundary></div>;
       })}
     </>
   );
@@ -149,7 +171,7 @@ function SheetHost({ sheet }) {
   if (!S) return null;
   return (
     <div class="sheet-bg" onClick={(e) => { if (e.target === e.currentTarget && !S.modal) closeSheet(); }}>
-      <S {...sheet.props} />
+      <Boundary sheet name={sheet.type}><S {...sheet.props} /></Boundary>
     </div>
   );
 }
@@ -175,6 +197,7 @@ function App() {
   if (!s.ready) return <div class="splash"><div class="spinner" /></div>;
   const tabBtn = (tab, cls) => (
     <button type="button" key={tab.id} id={`${cls === 'bar' ? 'tab' : 'side'}-${tab.label}`} class={`c-${tab.color}${s.tab === tab.id ? ' on' : ''}${tab.center && cls === 'bar' ? ' center' : ''}`} onClick={() => {
+      if (s.tab !== tab.id) tick();
       if (s.tab === tab.id && s.stacks[tab.id].length) popToRoot(tab.id);
       go(tab.id);
     }} aria-current={s.tab === tab.id ? 'page' : undefined}>
@@ -185,14 +208,14 @@ function App() {
   );
   const tier = s.me?.tier || 'free';
   const top = s.stacks[s.tab]?.[s.stacks[s.tab].length - 1]?.view;
-  const immersive = top === 'piece' || top === 'editor' || top === 'studio';
+  const immersive = top === 'piece' || top === 'editor' || top === 'studio' || top === 'chordEditor' || top === 'sound';
   const name = (s.me?.name && s.me.name !== 'Musician' ? s.me.name : s.settings.name || '').trim();
   const sec = TABS.find((x) => x.id === s.tab)?.color || 'violet';
   return (
     <div class={`app v3 sec-${sec}${immersive ? ' immersive' : ''}`}>
       <aside class="side" aria-label="Sections">
-        <button type="button" class="brand" onClick={() => { popToRoot('summary'); go('summary'); }}><Logo /><span>ETASheet</span></button>
-        <button type="button" class="side-create" onClick={() => openSheet('newSong')} id="side-create"><Icon name="plus" size={18} stroke={2.6} />{t('newSongT')}</button>
+        <button type="button" class="brand" onClick={() => { popToRoot('summary'); go('summary'); }}><Logo /><span>Melovyn</span></button>
+        <button type="button" class="side-create" onClick={() => openSheet('newSong')} id="side-newsong"><Icon name="plus" size={18} stroke={2.6} />{t('newSongT')}</button>
         <nav>{TABS.filter((x) => x.side !== false).map((tab) => tabBtn(tab, 'side'))}</nav>
         <div class="side-foot">
           {(tier === 'free' || tier === 'plus') && (
@@ -211,6 +234,7 @@ function App() {
         {TABS.map((tab) => <div class="tab-pane" hidden={s.tab !== tab.id} key={tab.id}><Stack tab={tab.id} active={s.tab === tab.id} /></div>)}
       </main>
       <nav class="tabbar" aria-label="Sections">{TABS.filter((x) => x.side !== false).map((tab) => tabBtn(tab, 'bar'))}</nav>
+      {!immersive && !s.sheet && hasServer() && <AIFab />}
       {s.sheet && <SheetHost sheet={s.sheet} />}
       {soundTap && <button type="button" class="sound-pill" id="sound-pill"><Icon name="speaker" size={18} stroke={2.3} />{t('tapForSound')}</button>}
       {s.toast && <div class={`toast${s.toast.kind === 'err' ? ' err' : ''}`} role="status"><Icon name={s.toast.kind === 'err' ? 'info' : 'check'} size={18} stroke={2.4} />{s.toast.text}</div>}
@@ -223,5 +247,5 @@ export function mount() {
   if (!root) { root = document.createElement('div'); root.id = 'haptune'; document.body.appendChild(root); }
   root.style.height = '100%';
   render(<App />, root);
-  globalThis.__haptune = { getState };
+  globalThis.__haptune = { getState, push };
 }

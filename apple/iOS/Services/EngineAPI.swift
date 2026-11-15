@@ -1,7 +1,7 @@
 import Foundation
 import PracticeCore
 
-/// Client for the Haptune analysis server (server/app.py). Used for PDF/photo import (OMR),
+/// Client for the Melovyn analysis server (server/app.py). Used for PDF/photo import (OMR),
 /// recording -> score, band split, ABC/MEI import and the full post-take report.
 struct EngineAPI {
     var baseURL: URL
@@ -200,7 +200,7 @@ struct EngineAPI {
             let pages: Int?
             let verified: Bool?
             var id: String { (fileURL ?? "") + "|" + pageURL }
-            /// A file Haptune can download and open (not just a web page about it).
+            /// A file Melovyn can download and open (not just a web page about it).
             var canImport: Bool { fileURL != nil && format != "page" }
             enum CodingKeys: String, CodingKey {
                 case title, arrangement, instrument, level, format, source, license, pages, verified

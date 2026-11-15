@@ -22,7 +22,7 @@ from .claude import Claude
 
 FORMAT_ORDER = {"musicxml": 0, "mxl": 0, "midi": 1, "abc": 2, "pdf": 3, "page": 4}
 
-FINDER_SYSTEM = """You find sheet music for Haptune, a music practice app, and report it with the report_sheet_music tool.
+FINDER_SYSTEM = """You find sheet music for Melovyn, a music practice app, and report it with the report_sheet_music tool.
 
 Rules:
 - Only free and legitimate sources: public-domain libraries (IMSLP, Mutopia Project, CPDL, Wikimedia Commons, OpenScore, Musopen, the Petrucci library mirrors), free arrangements shared by their arrangers (for example on MuseScore.com or arrangers' own sites), and composers' or publishers' own free downloads. Never suggest copies of copyrighted sheet music that the uploader had no right to share, paywalled previews, or download/converter sites.
@@ -90,7 +90,7 @@ def youtube_id(url: str) -> str | None:
 
 def _get_json(url: str, timeout: float = 8.0) -> dict | None:
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Haptune/1.0 (music practice app)"})
+        req = urllib.request.Request(url, headers={"User-Agent": "Melovyn/1.0 (music practice app)"})
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return json.loads(r.read(400_000).decode("utf-8", "replace"))
     except Exception:
@@ -173,7 +173,7 @@ def safe_fetch(url: str, max_bytes: int = 30 * 1024 * 1024, timeout: float = 25.
     """Downloads a public web file. Returns (bytes, content type, final url)."""
     check_url(url)
     opener = urllib.request.build_opener(_CheckedRedirect)
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; Haptune/1.0; music practice app)",
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; Melovyn/1.0; music practice app)",
                                                "Accept": "*/*"})
     try:
         with opener.open(req, timeout=timeout) as r:
@@ -216,7 +216,7 @@ def _verify(c: dict) -> dict:
     try:
         check_url(url)
         opener = urllib.request.build_opener(_CheckedRedirect)
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; Haptune/1.0)", "Range": "bytes=0-4095"})
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; Melovyn/1.0)", "Range": "bytes=0-4095"})
         with opener.open(req, timeout=8) as r:
             head = r.read(4096)
         fmt = sniff_format(head, url)

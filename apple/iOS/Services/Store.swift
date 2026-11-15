@@ -2,7 +2,7 @@ import Foundation
 import StoreKit
 import SwiftUI
 
-/// Haptune Plus: subscription (monthly / yearly with a free week) or a one-time lifetime unlock.
+/// Melovyn Plus: subscription (monthly / yearly with a free week) or a one-time lifetime unlock.
 /// Prices and the payment sheet come from the App Store (StoreKit 2). `Haptune.storekit` lets you
 /// test purchases in Xcode and the simulator without App Store Connect.
 @MainActor

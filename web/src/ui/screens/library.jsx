@@ -1,13 +1,13 @@
 import { Fragment } from 'preact';
 import { useState, useRef, useMemo, useEffect } from 'preact/hooks';
-import { useApp, push, openSheet, closeSheet, toast, addSongbookSong, addScore, getState } from '../state.js';
+import { useApp, push, go, openSheet, closeSheet, toast, addSongbookSong, addScore, getState } from '../state.js';
 import { t, getLang, instrumentName, INSTRUMENTS } from '../../core/i18n.js';
 import { Icon, Badge, List, Row, Chip, Button, Card, Section, Stars, Empty, Segmented } from '../components.jsx';
 import { LargeTitle, NavBar, SheetFrame, Avatar } from './common.jsx';
 import { Mascot } from '../mascot.jsx';
 import { importFile, importText, ACCEPT } from '../importer.js';
 import { SONGS, songTitle } from '../../data/songs.js';
-import { loadCatalog, searchCatalog, addCatalogPiece, GENRES } from '../catalog.js';
+import { loadCatalog, searchCatalog, addCatalogPiece, GENRES, catalogSources } from '../catalog.js';
 import { parseJianpu, isJianpu } from '../../core/jianpu.js';
 import { parseChordSheet, sheetChords } from '../../core/chordsheet.js';
 import { keyName, parseName, nameOf } from '../../core/pitch.js';
@@ -197,6 +197,9 @@ export function PasteSheet({ initial = '' }) {
       <textarea class="field" id="paste-text" placeholder={`${t('pasteHere')}\n\nG            G7         C         G\nAmazing grace, how sweet the sound`} value={text} onInput={(e) => setText(e.currentTarget.value)} onPaste={(e) => { const v = e.clipboardData?.getData('text'); if (v) { e.preventDefault(); setText((x) => x + v); } }} />
       {preview && <div class="report-line"><span class="t-green"><Icon name="check" size={20} stroke={2.4} /></span><strong>{preview}</strong></div>}
       <Button onClick={add} disabled={!preview} full>{t('addToLibrary')}</Button>
+      {text.trim() && !/^X:\s*\d/m.test(text) && !isJianpu(text) && (
+        <Button kind="secondary" icon="chords" full id="paste-edit-chords" onClick={() => { closeSheet(); push('chordEditor', { text, fresh: true }, 'write'); go('write'); }}>{t('ceEditChords')}</Button>
+      )}
     </SheetFrame>
   );
 }
@@ -332,6 +335,11 @@ export function CatalogView({ genre: genre0 = '' }) {
           ) : <Empty icon="search" title={t('noResults', { q })} />}
         {found.length > shown && <Button kind="secondary" full onClick={() => setShown(shown + 120)}>{t('loadMore')}</Button>}
         <p class="section-foot">{t('freeLibraryNote', { n: list?.length || 0 })}</p>
+        {list && catalogSources().length > 0 && <details class="cat-sources" id="cat-sources">
+          <summary>{t('catSources')}</summary>
+          <p class="tiny muted">{t('catSourcesSub')}</p>
+          <ul>{catalogSources().map((x) => <li key={x.key}><a href={x.url} target="_blank" rel="noopener noreferrer">{x.name}</a> · {x.count} {x.note ? `· ${x.note}` : ''}</li>)}</ul>
+        </details>}
       </div>
     </div>
   );

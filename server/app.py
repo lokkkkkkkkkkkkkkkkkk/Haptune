@@ -57,7 +57,7 @@ MAX_UPLOAD = 40 * 1024 * 1024
 MAX_RECORDING = 300 * 1024 * 1024        # band recordings may arrive as videos
 JOBS_DIR = os.environ.get("HAPTUNE_JOBS", os.path.join(tempfile.gettempdir(), "haptune-jobs"))
 JOB_TTL = 24 * 3600
-app = FastAPI(title="Haptune engine", version=__version__)
+app = FastAPI(title="Melovyn engine", version=__version__)
 # The web app (GitHub Pages, the Claude preview, local dev) calls the server from the browser. No cookies
 # are used, so allowing these origins only lets those pages call the rate-limited endpoints.
 DEFAULT_ORIGINS = (r"https?://(localhost|127\.0\.0\.1)(:\d+)?|https://[\w-]+\.github\.io|capacitor://localhost"
@@ -79,6 +79,16 @@ from billing import router as billing_router  # noqa: E402  (card payments with 
 app.include_router(billing_router)
 from tutors import router as tutors_router  # noqa: E402  (find a tutor: profiles, lesson requests, ratings)
 app.include_router(tutors_router)
+import teachers  # noqa: E402  (verified teachers)
+app.include_router(teachers.router)
+import google_link  # noqa: E402  (Google Calendar, Drive, Contacts, asked for only when used)
+app.include_router(google_link.router)
+import classroom  # noqa: E402  (stream, classwork topics and rubrics, people, grades, sessions)
+app.include_router(classroom.router)
+import sounds  # noqa: E402  (Sounds on Stage: multitrack ideas, layers, takedowns)
+app.include_router(sounds.router)
+import aichat  # noqa: E402  (Hapi everywhere: the app-wide AI chat with tools)
+app.include_router(aichat.router)
 _jobs: dict[str, dict] = {}
 _lock = threading.Lock()
 _pool = ThreadPoolExecutor(max_workers=int(os.environ.get("HAPTUNE_WORKERS", "1")))
@@ -111,13 +121,13 @@ def home():
     """This address is the engine behind the apps. Someone opening it in a browser is sent on to the website."""
     return (
         "<!doctype html><html lang='en'><head><meta charset='utf-8'>"
-        "<meta name='viewport' content='width=device-width,initial-scale=1'><title>Haptune server</title>"
+        "<meta name='viewport' content='width=device-width,initial-scale=1'><title>Melovyn server</title>"
         "<style>body{font-family:system-ui,sans-serif;max-width:32rem;margin:15vh auto;padding:0 16px;"
         "line-height:1.5;color:#222;background:#fff}a{color:#6d4aff}"
         "@media(prefers-color-scheme:dark){body{color:#eee;background:#111}a{color:#a996ff}}</style></head>"
-        f"<body><h1>Haptune server is running</h1><p>This address is the engine the Haptune apps talk to "
+        f"<body><h1>Melovyn server is running</h1><p>This address is the engine the Melovyn apps talk to "
         f"(version {__version__}). There is nothing to see here in a browser.</p>"
-        f"<p><a href='{WEB_APP_URL}'>Open Haptune &rarr;</a></p>"
+        f"<p><a href='{WEB_APP_URL}'>Open Melovyn &rarr;</a></p>"
         "<p><small><a href='/health'>health</a></small></p></body></html>"
     )
 
@@ -267,7 +277,8 @@ DAY = 24 * 3600
 # Measured: a page read costs about $0.17-0.65, a song search $0.30-1.00, a tutor answer about $0.01.
 ALL_PER_DAY = {"read": int(os.environ.get("HAPTUNE_READS_ALL_PER_DAY", "60")),
                "find": int(os.environ.get("HAPTUNE_FINDS_ALL_PER_DAY", "40")),
-               "tutor": int(os.environ.get("HAPTUNE_TUTOR_ALL_PER_DAY", "300"))}
+               "tutor": int(os.environ.get("HAPTUNE_TUTOR_ALL_PER_DAY", "300")),
+               "chat": int(os.environ.get("HAPTUNE_CHAT_ALL_PER_DAY", "600"))}
 
 
 def _client_ip(request: Request) -> str:
@@ -285,7 +296,7 @@ def _limit(request: Request, kind: str, per_day: int) -> None:
         raise HTTPException(429, "You've used today's free AI reads. Please try again tomorrow.")
     cap = ALL_PER_DAY.get(kind)
     if cap and not _limiter.allow(f"{kind}:all", cap, DAY):
-        raise HTTPException(429, "Haptune's AI is fully booked for today. Please try again tomorrow.")
+        raise HTTPException(429, "Melovyn's AI is fully booked for today. Please try again tomorrow.")
 
 
 def _job(jid: str) -> dict:
@@ -371,7 +382,7 @@ MAX_READ_PAGES = int(os.environ.get("HAPTUNE_MAX_READ_PAGES", "20"))
 def ai_status():
     from haptune.ai.claude import DEFAULT_MODEL, ai_configured
     return {"ai": ai_configured(), "model": _model("read"), "models": {k: _model(k) for k in ("read", "find", "tutor")},
-            "reads_per_day": READS_PER_DAY, "finds_per_day": FINDS_PER_DAY, "max_pages": MAX_READ_PAGES, "tutor": True}
+            "reads_per_day": READS_PER_DAY, "finds_per_day": FINDS_PER_DAY, "max_pages": MAX_READ_PAGES, "tutor": True, "chat": True}
 
 
 def _pages_arg(s: str) -> list[int] | None:
@@ -546,7 +557,7 @@ def _find_cache_put(key: str, result: dict) -> None:
 TUTOR_PER_DAY = int(os.environ.get("HAPTUNE_TUTOR_PER_DAY", "60"))
 LANG_NAMES = {"en": "English", "ms": "Bahasa Melayu", "zh-Hans": "Simplified Chinese", "zh-Hant": "Traditional Chinese"}
 TUTOR_SYSTEM = (
-    "You are Hapi, the friendly music tutor inside Haptune, a practice app for students of every age. "
+    "You are Hapi, the friendly music tutor inside Melovyn, a practice app for students of every age. "
     "Answer warmly and clearly in under 170 words. Use note names (C, D, E...) rather than jargon where you can, "
     "and give one concrete exercise when it helps. The app shows your answer as plain text, so write plain "
     "sentences and short paragraphs: no Markdown (no **bold**, headings, tables or bullet lists). "

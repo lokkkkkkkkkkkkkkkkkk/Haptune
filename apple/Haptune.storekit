@@ -10,13 +10,13 @@
       "internalID" : "6739100001",
       "localizations" : [
         {
-          "description" : "Keep Haptune Plus forever: Band Split, scanning, transcription and full reports.",
-          "displayName" : "Haptune Plus Lifetime",
+          "description" : "Keep Melovyn Plus forever: Band Split, scanning, transcription and full reports.",
+          "displayName" : "Melovyn Plus Lifetime",
           "locale" : "en_US"
         }
       ],
       "productID" : "com.haptune.app.plus.lifetime",
-      "referenceName" : "Haptune Plus Lifetime",
+      "referenceName" : "Melovyn Plus Lifetime",
       "type" : "NonConsumable"
     }
   ],
@@ -36,7 +36,7 @@
       "localizations" : [
 
       ],
-      "name" : "Haptune Plus",
+      "name" : "Melovyn Plus",
       "subscriptions" : [
         {
           "adHocOffers" : [
@@ -58,13 +58,13 @@
           "localizations" : [
             {
               "description" : "Band Split, scanning, transcription and full reports. Billed yearly.",
-              "displayName" : "Haptune Plus Yearly",
+              "displayName" : "Melovyn Plus Yearly",
               "locale" : "en_US"
             }
           ],
           "productID" : "com.haptune.app.plus.yearly",
           "recurringSubscriptionPeriod" : "P1Y",
-          "referenceName" : "Haptune Plus Yearly",
+          "referenceName" : "Melovyn Plus Yearly",
           "subscriptionGroupID" : "21500001",
           "type" : "RecurringSubscription"
         },
@@ -82,13 +82,13 @@
           "localizations" : [
             {
               "description" : "Band Split, scanning, transcription and full reports. Billed monthly.",
-              "displayName" : "Haptune Plus Monthly",
+              "displayName" : "Melovyn Plus Monthly",
               "locale" : "en_US"
             }
           ],
           "productID" : "com.haptune.app.plus.monthly",
           "recurringSubscriptionPeriod" : "P1M",
-          "referenceName" : "Haptune Plus Monthly",
+          "referenceName" : "Melovyn Plus Monthly",
           "subscriptionGroupID" : "21500001",
           "type" : "RecurringSubscription"
         }

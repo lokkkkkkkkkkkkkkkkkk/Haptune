@@ -85,6 +85,9 @@ def signed_in(monkeypatch, sub, name):
 
 def test_open_classes_links_takes_and_progress(monkeypatch):
     teacher = signed_in(monkeypatch, "t", "Ms Tan")
+    # open classes need a verified teacher (teachers.py): here by the music school's email domain
+    monkeypatch.setenv("HAPTUNE_TEACHER_DOMAINS", "example.com")
+    assert client.post("/c/teacher/verify", json={"org": "Example Music School"}, headers=teacher).json()["verified"]
     cl = client.post("/academy/classes", json={"name": "Open Violin", "description": "Beginners welcome", "visibility": "public", "instrument": "violin"}, headers=teacher).json()["class"]
     private = client.post("/academy/classes", json={"name": "Private Piano"}, headers=teacher).json()["class"]
     found = client.get("/academy/discover", params={"q": "violin"}).json()["classes"]

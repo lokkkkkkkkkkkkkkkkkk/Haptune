@@ -16,10 +16,10 @@ let state = {
   ready: false,
   settings: {
     name: '', instrument: 'violin', voice: 'tenor', voiceRange: null, lang: detectLang(), theme: 'system', dailyGoal: 20, wifiOnly: true,
-    server: '', showRoles: true, chordView: 'guitar', syncMs: 0,
+    server: '', showRoles: true, chordView: 'guitar', syncMs: 0, haptics: true,
   },
   plus: false,          // a paid plan (Plus, Pro) or the developer, from the account on the server
-  me: null,             // the Haptune account (community, classes, plan), see account.js
+  me: null,             // the Melovyn account (community, classes, plan), see account.js
   communitySeg: 'home',
   pieces: [],
   history: [],
@@ -72,6 +72,7 @@ export function updateSettings(patch) {
   local.set('settings', settings);
   setState({ settings });
   applyTheme(settings.theme);
+  globalThis.__melovynHaptics = settings.haptics !== false;
 }
 export function applyTheme(theme) {
   try {
@@ -98,6 +99,7 @@ export async function loadAll() {
   local.set('nameFixed', true);
   setLang(settings.lang);
   applyTheme(settings.theme);
+  globalThis.__melovynHaptics = settings.haptics !== false;
   const progress = { ...state.progress, ...local.get('progress', {}) };
   const me = local.get('me', null);
   const plus = ['plus', 'pro', 'dev'].includes(me?.tier);
@@ -305,12 +307,12 @@ const fromB64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0)).buffer;
 export async function makeBackup() {
   const pieces = (await db.all('pieces')).map((p) => (p.pdf ? { ...p, pdf: toB64(p.pdf) } : p));
   const history = await db.all('history');
-  return JSON.stringify({ app: 'Haptune', version: 1, created: new Date().toISOString(), settings: state.settings, progress: state.progress, pieces, history });
+  return JSON.stringify({ app: 'Melovyn', version: 1, created: new Date().toISOString(), settings: state.settings, progress: state.progress, pieces, history });
 }
 
 export async function restoreBackup(text) {
   const data = JSON.parse(text);
-  if (data.app !== 'Haptune') throw new Error('This is not a Haptune backup.');
+  if (!['Melovyn', 'Haptune'].includes(data.app)) throw new Error('This is not a Melovyn backup.');
   for (const p of data.pieces || []) await db.put('pieces', p.pdf ? { ...p, pdf: fromB64(p.pdf) } : p);
   for (const h of data.history || []) await db.put('history', h);
   if (data.progress) saveProgress({ ...state.progress, ...data.progress });

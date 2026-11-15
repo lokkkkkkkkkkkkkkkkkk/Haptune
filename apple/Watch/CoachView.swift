@@ -29,7 +29,7 @@ struct CoachView: View {
         case .sharp, .flat: return .purple
         case .rushing, .dragging: return .yellow
         case .sectionClean: return .green
-        default: return Color(red: 0.62, green: 0.40, blue: 1.00)     // Haptune violet while all is well
+        default: return Color(red: 0.62, green: 0.40, blue: 1.00)     // Melovyn violet while all is well
         }
     }
 

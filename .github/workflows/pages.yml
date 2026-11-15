@@ -1,4 +1,4 @@
-# Builds the Haptune web app (web/) and publishes it to GitHub Pages.
+# Builds the Melovyn web app (web/) and publishes it to GitHub Pages.
 # One-time setup: Settings -> Pages -> Build and deployment -> Source: GitHub Actions.
 name: Web app (GitHub Pages)
 
@@ -50,7 +50,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx --yes wrangler@3 pages deploy dist/pages --project-name=etasheet --branch=main --commit-dirty=true
+        run: npx --yes wrangler@3 pages deploy dist/pages --project-name=melovyn --branch=main --commit-dirty=true
 
   deploy:
     needs: build

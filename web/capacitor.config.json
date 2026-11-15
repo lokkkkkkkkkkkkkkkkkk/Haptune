@@ -1,6 +1,6 @@
 {
-  "appId": "com.sloky.etasheet",
-  "appName": "ETASheet",
+  "appId": "com.sloky.melovyn",
+  "appName": "Melovyn",
   "webDir": "dist/native",
   "server": {
     "androidScheme": "https"

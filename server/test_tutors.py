@@ -94,7 +94,7 @@ def test_lesson_request_accept_confirm_done_and_stars():
     acc = client.post(f"/c/lessons/{lid}", json={"action": "accept", "at": when, "reply": "Saturday 10 am works"}, headers=th).json()["items"][0]
     assert acc["status"] == "accepted" and acc["room"] == "" and acc["role"] == "teacher"
     conf = client.post(f"/c/lessons/{lid}", json={"action": "confirm"}, headers=sh).json()["items"][0]
-    assert conf["status"] == "confirmed" and conf["room"].startswith("https://meet.jit.si/Haptune-") and conf["role"] == "student"
+    assert conf["status"] == "confirmed" and conf["room"].startswith("https://meet.jit.si/Melovyn-") and conf["role"] == "student"
     assert client.get("/c/lessons", headers=th).json()["items"][0]["room"] == conf["room"]             # both see the same room
     assert "lesson" in [n["kind"] for n in client.get("/c/notifications", headers=th).json()["items"]]
     assert client.post(f"/c/lessons/{lid}", json={"action": "done", "rating": 5}, headers=sh).status_code == 400   # it hasn't happened yet

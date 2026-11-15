@@ -1,4 +1,4 @@
-// ETASheet plans and how to pay for them.
+// Melovyn plans and how to pay for them.
 // Free has everything that costs nothing to run. Plus adds the song finder and the tutor; Pro adds reading
 // PDFs and photos with AI. One plan works on every device, whichever way it was paid for:
 //   Android app   Google Play (through RevenueCat): Google's rules require it inside the app
@@ -189,7 +189,7 @@ export function ManualPaySheet({ product = 'plus', period = 'monthly', onDone = 
     setBusy(false);
     if (r) { setSent(true); onDone?.(); }
   };
-  const title = product === 'teacher' ? t('teacherFee') : `ETASheet ${t(`plan_${product}`)} · ${t(period)}`;
+  const title = product === 'teacher' ? t('teacherFee') : `Melovyn ${t(`plan_${product}`)} · ${t(period)}`;
   if (!p) return <SheetFrame title={t('payDuitNow')}><div class="loading"><div class="spinner" /></div></SheetFrame>;
   if (sent) {
     return (

@@ -1,4 +1,4 @@
-# Haptune (触乐): the sheet music for any song, and practice that listens
+# Melovyn: the sheet music for any song, and practice that listens
 
 **Two things, done well.** (1) Get the score: search a song name, drop a PDF, photo, MusicXML or MIDI, or type 簡譜;
 4,900 free pieces are built in. (2) **Stage**, the community: request any song, musicians write it, play the daily
@@ -54,9 +54,9 @@ generated scales and arpeggios.
 
 * **Requests.** Ask for any song's score with a link to listen (YouTube is only linked, never downloaded) or photos/PDF
   of the page. Others tap "I want this too" and can add credits to the reward. A helper taps "I'll make it" (theirs for
-  48 hours), makes the score in any notation app or in Haptune and sends MusicXML. The requester opens it in Haptune,
+  48 hours), makes the score in any notation app or in Melovyn and sends MusicXML. The requester opens it in Melovyn,
   plays it, then accepts it with stars or asks for changes. Closing an unanswered request returns every credit.
-* **Rewards.** The helper gets the whole reward plus a Haptune bonus = size (10 + 1 per 20 notes, up to 60) × speed
+* **Rewards.** The helper gets the whole reward plus a Melovyn bonus = size (10 + 1 per 20 notes, up to 60) × speed
   (×1.5 within a day, ×1.25 within 3 days, ×0.8 after a week) × stars (×0.5 to ×1.5), at most 300 a request and 600 a day
   per helper. Other useful scores (up to 40) and helpful comments (5) are thanked too. Credits are never bought or paid
   out, and nothing in the app needs them.
@@ -152,7 +152,7 @@ only the AI features say they are not switched on yet.
 * **Loops & tempo ladder**, tap a note to loop from its bar, tuner, metronome with tap tempo, scale generator.
 * **Sync:** iCloud keeps pieces and history the same on iPhone, iPad and Mac. Backups are one .zip you can keep
   in Files, Google Drive, Dropbox or OneDrive.
-* **Haptune Plus** (StoreKit 2): Band Split, scanning, recording→sheet music and full reports, with a free first
+* **Melovyn Plus** (StoreKit 2): Band Split, scanning, recording→sheet music and full reports, with a free first
   try of each. Practice, Watch feedback, tuner, metronome, scales and sync stay free.
 
 ## Validation (honest numbers)
@@ -202,7 +202,7 @@ setting up subscriptions, iCloud and TestFlight).
    skewed photos; the AI reader handles those better, and marks any bar it is unsure of. It has been tested
    against the real API on engraved pages with known answers (see Validation); real scans, phone photos of
    real pages and handwriting are the next thing to compare against their originals.
-4. The Watch app taps while it is on screen: set *Return to Clock → Haptune → Return to App* on the Watch.
+4. The Watch app taps while it is on screen: set *Return to Clock → Melovyn → Return to App* on the Watch.
 
 ## Third-party pieces and licences
 

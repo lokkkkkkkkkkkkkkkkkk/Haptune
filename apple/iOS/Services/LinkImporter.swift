@@ -1,7 +1,7 @@
 import Foundation
 
 /// Reads a shared Apple Music, Spotify or YouTube link and returns the song's title, artist and
-/// artwork. Streaming services do not let other apps read their audio, so Haptune then *listens*
+/// artwork. Streaming services do not let other apps read their audio, so Melovyn then *listens*
 /// while you play the song out loud (like Shazam) and splits that recording.
 enum LinkImporter {
     enum LinkError: LocalizedError {

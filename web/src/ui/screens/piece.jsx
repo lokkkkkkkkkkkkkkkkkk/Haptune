@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'preact/hooks';
-import { useApp, getPiece, updatePiece, deletePiece, markOpened, pop, push, openSheet, closeSheet, toast, logMinutes, recordTake, go, awardBadge, getState, setState, addXP, addScore } from '../state.js';
+import { useApp, getPiece, updatePiece, deletePiece, markOpened, pop, push, openSheet, closeSheet, toast, logMinutes, recordTake, go, awardBadge, getState, setState, addXP, addScore, hooks } from '../state.js';
 import { t, getLang, instrumentName, INSTRUMENTS } from '../../core/i18n.js';
 import { Icon, Card, Section, List, Row, Segmented, Stepper, Button, Chip, Stars, FretDiagram, PianoChord, Keyboard, Badge, Toggle } from '../components.jsx';
 import { NavBar, SheetFrame } from './common.jsx';
@@ -142,6 +142,14 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
   const [player, setPlayer] = useState({ playing: false, q: 0, mi: 0, mode: null });
   const [cursorQ, setCursorQ] = useState(0);
   const [speed, setSpeed] = useState(assignment?.tempo_pct ? assignment.tempo_pct / 100 : 1);
+  // Hapi's buttons ("a tone lower", "practise at 70 %") act on the piece that is open
+  const semisNow = useRef(semis); semisNow.current = semis;
+  useEffect(() => {
+    if (!active) return undefined;
+    const h = { transpose: (n) => setSemis(Math.max(-12, Math.min(12, semisNow.current + n))), setSpeed: (x) => setSpeed(Math.max(0.3, Math.min(1.5, x))) };
+    hooks.piece = h;
+    return () => { if (hooks.piece === h) hooks.piece = null; };
+  }, [active]);
   const [metro, setMetro] = useState(false);
   const [countIn, setCountIn] = useState(true);
   const [loop, setLoop] = useState(assignment?.bars_from ? { from: Math.max(0, assignment.bars_from - 1), to: Math.min(lastMi, (assignment.bars_to || assignment.bars_from) - 1) } : null);
@@ -373,7 +381,9 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
     try {
       micStop.current?.();
       takeRec.current = null;
-      const stopMic = await listen((p, rms) => onFrame(p, rms), { record: true });
+      // a second of the room first: the detector learns its noise (café, TV, traffic), then the take starts
+      toast(t('listeningRoom'));
+      const stopMic = await listen((p, rms) => onFrame(p, rms), { record: true, calibrate: 1000, echo: mode === 'beat' && choices.length > 1 });
       micStop.current = stopMic;
       takeRec.current = stopMic.recording;
     } catch (e) {
@@ -426,6 +436,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
     }
     const f = follower.current;
     if (!f) return;
+    micStop.current?.expect?.(f.current ? [...f.current.midis, ...(f.exp[f.k + 1]?.midis || [])] : []);
     const r = f.push(p ? { midi: p.midi, rms: p.rms } : null, rms);
     if (!r) return;
     const box = scoreBox.current;
@@ -478,7 +489,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
     const keyF = sheetKey?.fifths || 0;
     const nm = (m) => pitchName(spellMidi(m, keyF));
     const wrong = (r.wrong || []).slice(0, 40).map((w) => ({ bar: barNo(w.mi), mi: w.mi, want: nm(w.want), played: w.played == null ? '' : nm(w.played) }));
-    setResult({ ...r, wrong, seconds: secs, tricky: trickyBars(r.bars), barsList, mode: pr?.mode, speed: pr?.speed ?? speed, part: pr?.sel?.id, title: meta.title });
+    setResult({ ...r, wrong, seconds: secs, tricky: trickyBars(r.bars), barsList, mode: pr?.mode, speed: pr?.speed ?? speed, part: pr?.sel?.id, title: meta.title, pieceId: meta.id, keySig: sheetKey || null });
     const recP = takeRec.current;
     takeRec.current = null;
     if (recP) recP().then((rec) => { if (rec?.blob?.size > 2000) setResult((x) => x && ({ ...x, recording: rec, recordingURL: URL.createObjectURL(rec.blob) })); }).catch(() => {});
@@ -597,7 +608,8 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
   return (
     <div class={`scroll${showPlayer ? ' has-player' : ''}`}>
       <NavBar title={meta.title} backLabel={assignment ? t('back') : t('library')} actions={<>
-        {score && <button type="button" id="edit-notes" onClick={() => { stop(true); push('editor', { id: meta.id, bar: curMi, onSaved: reload }); }} aria-label={t('editNotes')}><Icon name="pencil" size={21} /></button>}
+        {meta.chordSong && <button type="button" id="edit-chords" onClick={() => { stop(true); push('chordEditor', { id: meta.id }); }} aria-label={t('ceEditChords')}><Icon name="chords" size={21} /></button>}
+        {score && !meta.chordSong && <button type="button" id="edit-notes" onClick={() => { stop(true); push('editor', { id: meta.id, bar: curMi, onSaved: reload }); }} aria-label={t('editNotes')}><Icon name="pencil" size={21} /></button>}
         <button type="button" onClick={() => updatePiece(meta.id, { favorite: !meta.favorite })} aria-label={t('favourite')} class={meta.favorite ? 't-yellow' : ''}><Icon name="star" size={22} fill={meta.favorite} /></button>
         <button type="button" onClick={() => openSheet('export', { pieceId: meta.id, semis, title: meta.title, part: sel.pi !== null ? sel : null, partLabel: sel.pi !== null ? handLabel(sel) : '' })} aria-label={t('export')}><Icon name="share" size={22} /></button>
       </>} />
@@ -643,14 +655,17 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
               <span class="ic"><Icon name="key" size={19} stroke={2.2} /></span><b>{curKeyText || '–'}</b>{t('changeKey')}</button>
             <button type="button" class="tool-btn c-blue" id="tool-speed" onClick={() => setSpeed((x) => (x >= 1 ? 0.75 : x >= 0.75 ? 0.5 : 1))}>
               <span class="ic"><Icon name="clock" size={19} stroke={2.2} /></span><b>{Math.round(speed * 100)}%</b>{t('speed')}</button>
-            {choices.length > 0 && <button type="button" class={`tool-btn c-pink${Object.values(mix).some((m) => m.mute || m.solo || (m.vol ?? 1) < 1) ? ' on' : ''}`} id="tool-mixer" onClick={() => openSheet('mixer', { choices, mix, onChange: setMix, label: handLabel })}>
-              <span class="ic"><Icon name="mixer" size={19} stroke={2.2} /></span><b>{t('partsN', { n: choices.length })}</b>{t('mixer')}</button>}
             <button type="button" class={`tool-btn c-orange${loop ? ' on' : ''}`} id="tool-loop" onClick={toggleLoop}>
               <span class="ic"><Icon name="loop" size={19} stroke={2.2} /></span><b>{loop ? `${barNo(loop.from)}–${barNo(loop.to)}` : t('off')}</b>{t('loop')}</button>
-            <button type="button" class={`tool-btn c-teal${metro ? ' on' : ''}`} onClick={() => setMetro(!metro)}>
-              <span class="ic"><Icon name="metronome" size={19} stroke={2.2} /></span><b>{metro ? t('on') : t('off')}</b>{t('metronome')}</button>
-            <button type="button" class={`tool-btn c-blue${forInst ? ' on' : ''}`} id="tool-inst" onClick={() => openSheet('instrumentPick', { value: forInst, onPick: setForInst })}>
-              <span class="ic"><Icon name="violin" size={19} stroke={2.2} /></span><b>{forInst ? instrumentName(forInst) : t('asWritten')}</b>{t('writtenFor')}</button>
+            <button type="button" class="tool-btn c-gray" id="tool-more" onClick={() => openSheet('pieceMore', {
+              parts: choices.length, mixed: Object.values(mix).some((m) => m.mute || m.solo || (m.vol ?? 1) < 1), metro, forInst,
+              onMixer: () => openSheet('mixer', { choices, mix, onChange: setMix, label: handLabel }), onMetro: setMetro,
+              onInstrument: () => openSheet('instrumentPick', { value: forInst, onPick: setForInst }),
+              onDetails: () => openSheet('details', { pieceId: meta.id, semis }),
+              onEdit: score ? () => { stop(true); push('editor', { id: meta.id, bar: curMi, onSaved: reload }); } : null,
+              onExport: () => openSheet('export', { pieceId: meta.id, semis, title: meta.title, part: sel.pi !== null ? sel : null, partLabel: sel.pi !== null ? handLabel(sel) : '' }),
+            })}>
+              <span class="ic"><Icon name="more" size={19} stroke={2.6} /></span><b>{(metro ? 1 : 0) + (forInst ? 1 : 0) || '\u00a0'}</b>{t('moreDots')}</button>
           </div>
         )}
 
@@ -850,6 +865,7 @@ function ResultCard({ result, barNo, onPractise, onAgain, assignment, onSend, ch
         <div class="r3-rec"><span class="k"><Icon name="mic" size={14} />{t('yourTake')}</span><audio controls preload="metadata" src={result.recordingURL} /></div>
       )}
       <div class="btn-row">
+        <Button small kind="brand" icon="doc" onClick={() => push('report', { result, pieceId: result.pieceId, title: result.title, keySig: result.keySig, onPractise, onShowBar, onSend, onClass, onShare, assignment })} id="view-details">{t('viewDetails')}</Button>
         <Button small icon="mic" onClick={onAgain}>{good && next > Math.round(result.speed * 100) ? t('tryAt', { p: next }) : t('tryAgain')}</Button>
         {assignment && <Button small icon="send" kind="brand" onClick={onSend} disabled={result.sent}>{result.sent ? t('sentToTeacher') : t('submitToTeacher')}</Button>}
         {!assignment && hasServer() && <Button small icon="academy" kind="secondary" onClick={onClass} id="share-class">{result.shared ? t('sharedWithClass') : t('shareWithClass')}</Button>}
@@ -1309,7 +1325,7 @@ export function ExportSheet({ pieceId, semis, title, part = null, partLabel = ''
   const [onlyPart, setOnlyPart] = useState(!!part);
   const [d, setD] = useState(null);
   useEffect(() => { getPiece(pieceId).then(setD); }, [pieceId]);
-  const safe = (title || 'ETASheet').replace(/[\\/:*?"<>|]+/g, ' ').trim();
+  const safe = (title || 'Melovyn').replace(/[\\/:*?"<>|]+/g, ' ').trim();
   const suffix = onlyPart && part ? ` (${partLabel})` : '';
   const scoreNow = () => { let sc = transposeScore(d.score, semis); if (onlyPart && part) sc = extractPart(sc, part.pi, part.staff); return sc; };
   const textOf = () => {
@@ -1422,6 +1438,7 @@ export function PlayAlongSheet({ choices = [], part, mode = 'wait', speed = 1, c
         <p class="note-text">{t(canBuzz() ? 'buzzNote' : 'buzzNoteIOS')}</p>
       </Section>
       <Button kind="brand" full icon="play" onClick={() => onStart?.({ part: p, mode: m, speed: sp, countIn: ci, buzzWrong: bw, buzzBeat: bb && m === 'beat' })}>{t('start')}</Button>
+      <button type="button" class="link-btn" style={{ alignSelf: 'center' }} id="pa-soundcheck" onClick={() => { closeSheet(); push('soundCheck'); }}><Icon name="speaker" size={14} /> {t('scT')}</button>
     </SheetFrame>
   );
 }

@@ -20,7 +20,7 @@ export function AccountSheet() {
   const backup = async () => {
     const json = await makeBackup();
     try {
-      const ok = await saveFile(`ETASheet backup ${new Date().toISOString().slice(0, 10)}.json`, new TextEncoder().encode(json));
+      const ok = await saveFile(`Melovyn backup ${new Date().toISOString().slice(0, 10)}.json`, new TextEncoder().encode(json));
       if (ok) toast(t('backup') + ' ✓');
     } catch { toast(t('saveFailed'), 'err'); }
   };
@@ -87,6 +87,13 @@ export function AccountSheet() {
       <Section footer={t('wifiOnlyHelp')}>
         <List><Row icon="wifi" color="blue" title={t('wifiOnly')} right={<Toggle id="acc-wifi" checked={st.wifiOnly} onChange={(v) => updateSettings({ wifiOnly: v })} label={t('wifiOnly')} />} /></List>
       </Section>
+      <Section>
+        <List>
+          <Row icon="bolt" color="orange" title={t('hapticsT')} subtitle={t('hapticsSub')} right={<Toggle id="acc-haptics" checked={st.haptics !== false} onChange={(v) => updateSettings({ haptics: v })} label={t('hapticsT')} />} />
+          <Row icon="link" color="blue" title={t('connectionsT')} subtitle={t('connectionsSub')} onClick={() => { closeSheet(); setTimeout(() => openSheet('connections'), 0); }} id="acc-connections" />
+          <Row icon="sparkles" color="violet" title={t('replayTour')} onClick={() => { closeSheet(); setTimeout(() => openSheet('welcome'), 0); }} id="acc-tour" />
+        </List>
+      </Section>
       <Section title={t('helpAndFeedback')}>
         <List>
           <Row icon="quiz" color="teal" title={t('help')} subtitle={t('helpSub')} onClick={() => go('help')} />
@@ -123,7 +130,7 @@ export function AccountSheet() {
         </List>
       </Section>
       <Section title={t('about')}>
-        <List><Row title="ETASheet" detail={`${globalThis.HAPTUNE_CONFIG?.version || ''} (${platform()})`} onClick={() => openSheet('about')} /></List>
+        <List><Row title="Melovyn" detail={`${globalThis.HAPTUNE_CONFIG?.version || ''} (${platform()})`} onClick={() => openSheet('about')} /></List>
       </Section>
     </SheetFrame>
   );

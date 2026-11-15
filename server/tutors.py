@@ -3,7 +3,7 @@ ask for a lesson, the teacher accepts (and may suggest another time), and the st
 online (a private video room is made when the lesson is confirmed) or in person, at a fixed weekly time or
 whenever suits. After a lesson the student rates the teacher with stars.
 
-Haptune introduces the two and keeps the schedule; the lesson fee itself is agreed and paid between them.
+Melovyn introduces the two and keeps the schedule; the lesson fee itself is agreed and paid between them.
 
 A profile is listed once it is paid for AND the developer has looked at it (Developer panel > Tutors), so
 "verified" means a person checked it.
@@ -248,7 +248,7 @@ def act_on_lesson(lid: str, body: LessonAct, me: A.Me = Depends(A.current)):
                 raise HTTPException(400, "The student confirms once the teacher has accepted.")
             vals.update(status="confirmed")
             if l["kind"] == "online":
-                vals["room"] = "https://meet.jit.si/Haptune-" + secrets.token_urlsafe(9)
+                vals["room"] = "https://meet.jit.si/Melovyn-" + secrets.token_urlsafe(9)
         elif body.action == "decline":
             if not teacher or l["status"] not in ("requested", "accepted"):
                 raise HTTPException(400, "This can't be declined now.")

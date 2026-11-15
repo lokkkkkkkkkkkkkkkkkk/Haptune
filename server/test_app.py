@@ -31,7 +31,7 @@ def _wav(y):
 def test_home_page_points_to_the_website():
     r = client.get("/")
     assert r.status_code == 200 and "text/html" in r.headers["content-type"]
-    assert "Haptune server is running" in r.text and "haptune.name.my" in r.text
+    assert "Melovyn server is running" in r.text and "haptune.name.my" in r.text
 
 
 def test_the_website_may_call_the_server_and_change_things():

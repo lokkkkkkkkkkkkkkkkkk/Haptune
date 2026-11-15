@@ -11,6 +11,7 @@ import { hasServer, academyMe, academy } from '../api.js';
 import { local } from '../storage.js';
 import { parseMusicXML, writeMusicXML } from '../../core/musicxml.js';
 import { partChoices } from '../../core/score.js';
+import { StreamPanel, ClassworkPanel, PeoplePanel, GradesPanel, VoiceNote } from './classroom.jsx';
 
 const STICKERS = [['star', '⭐'], ['fire', '🔥'], ['clap', '👏'], ['heart', '❤️'], ['rocket', '🚀'], ['trophy', '🏆'], ['music', '🎵'], ['thumbs', '👍']];
 const EMOJI = Object.fromEntries(STICKERS);
@@ -54,7 +55,7 @@ export function StatusChip({ status }) {
   const [k, c] = STATUS[status] || STATUS.open;
   return <span class={`st-chip c-${c}`}>{t(k)}</span>;
 }
-function Person({ name, color = 'blue', size = 36 }) {
+export function Person({ name, color = 'blue', size = 36 }) {
   const ini = (name || '?').trim().split(/\s+/).map((w) => [...w][0]).join('').slice(0, 2).toUpperCase();
   return <span class={`person c-${color}`} style={{ width: size, height: size, fontSize: size * 0.4 }} aria-hidden="true">{ini}</span>;
 }
@@ -62,7 +63,7 @@ const studentsText = (n) => (n === 1 ? t('oneStudent') : t('studentsN', { n }));
 const barsText = (a) => (a.bars_from ? `${a.bars_from}–${a.bars_to || a.bars_from}` : t('wholePiece'));
 const fmtCode = (c) => (c && c.length > 4 ? `${c.slice(0, 3)} ${c.slice(3)}` : c || '');
 
-function useLoad(fn, deps) {
+export function useLoad(fn, deps) {
   const [st, setSt] = useState({ data: null, error: '', loading: true });
   useEffect(() => {
     let alive = true;
@@ -74,7 +75,7 @@ function useLoad(fn, deps) {
   return st;
 }
 
-function Loading({ error }) {
+export function Loading({ error }) {
   if (error) return <Card class="classes-hello"><Mascot mood="sad" size={70} /><p>{error}</p></Card>;
   return <div class="loading"><Mascot mood="think" size={64} /></div>;
 }
@@ -165,15 +166,15 @@ export function MissionCard({ a, color, onClick }) {
 // ---------------------------------------------------------------- one class
 export function ClassView({ id, tab: tab0 }) {
   const s = useApp();
-  const [tab, setTab] = useState(tab0 || 'missions');
+  const [tab, setTab] = useState(tab0 || 'stream');
   const cls = useLoad(() => academy.classDetail(id), [id, s.academyRev]);
-  const feed = useLoad(() => (tab === 'feed' ? academy.feed(id) : Promise.resolve(null)), [id, tab, s.academyRev]);
-  const board = useLoad(() => (tab === 'board' ? academy.leaderboard(id) : Promise.resolve(null)), [id, tab, s.academyRev]);
-  const prog = useLoad(() => (tab === 'students' ? academy.progress(id) : Promise.resolve(null)), [id, tab, s.academyRev]);
+  const feed = useLoad(() => (tab === 'stream' ? academy.feed(id) : Promise.resolve(null)), [id, tab, s.academyRev]);
+  const board = useLoad(() => (tab === 'stream' ? academy.leaderboard(id) : Promise.resolve(null)), [id, tab, s.academyRev]);
+  const prog = useLoad(() => (tab === 'grades' ? academy.progress(id) : Promise.resolve(null)), [id, tab, s.academyRev]);
   const c = cls.data;
   const teacher = c?.role === 'teacher';
-  useEffect(() => { if (c && !teacher && tab === 'students') setTab('missions'); }, [c?.role]);
-  const setVisibility = async (v) => { try { await academy.editClass(id, { visibility: v }); refreshClasses(); toast(v === 'public' ? t('classNowOpen') : t('classNowPrivate')); } catch (e) { toast(e.message, 'err'); } };
+  useEffect(() => { if (c && !teacher && tab === 'grades') setTab('stream'); }, [c?.role]);
+  const setVisibility = async (v) => { try { await academy.editClass(id, { visibility: v }); refreshClasses(); toast(v === 'public' ? t('classNowOpen') : t('classNowPrivate')); } catch (e) { if (e.detail?.code === 'teacher_unverified') openSheet('teacherVerify'); else toast(e.message, 'err'); } };
   const newCode = async () => { if (!confirm(t('newCodeConfirm'))) return; try { await academy.editClass(id, { new_code: true }); refreshClasses(); } catch (e) { toast(e.message, 'err'); } };
 
   const share = async () => {
@@ -217,13 +218,15 @@ export function ClassView({ id, tab: tab0 }) {
               <span class="mascot-peek"><Mascot mood={teacher ? 'cheer' : 'wave'} size={78} /></span>
             </div>
 
-            <div class="ptabs" id="class-tabs">
-              {(teacher ? [['students', t('studentsT')], ['missions', t('assignmentsT')], ['feed', t('classFeed')], ['board', t('leaderboardT')], ['people', t('settingsT')]]
-                : [['missions', t('assignmentsT')], ['mine', t('myProgress')], ['feed', t('classFeed')], ['board', t('leaderboardT')], ['people', t('peopleT')]])
-                .map(([v, l]) => <button type="button" key={v} class={tab === v ? 'on' : ''} onClick={() => (v === 'mine' ? push('student', { classId: id, uid: myId(), name: t('myProgress') }) : setTab(v))}>{l}</button>)}
-            </div>
+            <Segmented id="class-tabs" value={tab} onChange={(v) => (v === 'mine' ? push('student', { classId: id, uid: myId(), name: t('myProgress') }) : setTab(v))}
+              options={(teacher ? [['stream', t('crStream')], ['classwork', t('crClasswork')], ['people', t('crPeople')], ['grades', t('crGrades')]]
+                : [['stream', t('crStream')], ['classwork', t('crClasswork')], ['people', t('crPeople')], ['mine', t('myProgress')]]).map(([value, label]) => ({ value, label }))} />
 
-            {tab === 'students' && teacher && (prog.data ? (
+            {tab === 'stream' && <StreamPanel cid={id} />}
+            {tab === 'classwork' && <ClassworkPanel cid={id} c={c} teacher={teacher} />}
+            {tab === 'grades' && teacher && <GradesPanel cid={id} c={c} />}
+
+            {tab === 'grades' && teacher && (prog.data ? (
               prog.data.students.length ? (
                 <div class="prog-table" id="progress-table">
                   <div class="pt-head"><span>{t('studentT')}</span><span>{t('avgScore')}</span><span class="pc-only">{t('thisWeek')}</span><span>{t('doneT')}</span><span /></div>
@@ -241,20 +244,8 @@ export function ClassView({ id, tab: tab0 }) {
               ) : <Card class="classes-hello"><Mascot mood="wave" size={70} /><p>{t('noStudentsYet')}</p><Button small icon="link" onClick={() => openSheet('classQR', { classId: id })}>{t('hubInvite')}</Button></Card>
             ) : <Loading error={prog.error} />)}
 
-            {tab === 'missions' && (
-              <div class="mission-list">
-                {teacher && <Button kind="brand" full icon="plus" onClick={() => openSheet('newAssignment', { classId: id })}>{t('newAssignment')}</Button>}
-                {!c.assignments.length && (
-                  <Card class="classes-hello"><Mascot mood="think" size={70} /><p>{teacher ? t('noAsgTeacher') : t('noAsgStudent')}</p></Card>
-                )}
-                {c.assignments.map((a) => (teacher
-                  ? <TeacherMission key={a.id} a={a} color={c.color} />
-                  : <MissionCard key={a.id} a={a} color={c.color} />))}
-                {!teacher && c.assignments.length > 0 && <p class="note-text" style={{ textAlign: 'center' }}>{t('classAhead')}</p>}
-              </div>
-            )}
-
-            {tab === 'feed' && (feed.data ? (
+            {tab === 'stream' && <h3 class="cr-topic-name">{t('crActivity')}</h3>}
+            {tab === 'stream' && (feed.data ? (
               feed.data.items.length ? (
                 <div class="feed">
                   {feed.data.items.map((it, i) => (
@@ -278,7 +269,8 @@ export function ClassView({ id, tab: tab0 }) {
               ) : <Card class="classes-hello"><Mascot mood="sleep" size={64} /><p>{t('feedEmpty')}</p></Card>
             ) : <Loading error={feed.error} />)}
 
-            {tab === 'board' && (board.data ? (
+            {tab === 'stream' && <h3 class="cr-topic-name">{t('leaderboardT')}</h3>}
+            {tab === 'stream' && (board.data ? (
               <div class="board">
                 {board.data.board.map((b) => (
                   <div class={`board-row${b.me ? ' me' : ''}${b.rank <= 3 && b.points > 0 ? ' top' : ''}`} key={b.id}>
@@ -302,17 +294,7 @@ export function ClassView({ id, tab: tab0 }) {
                 <Button small kind="secondary" icon="loop" onClick={newCode}>{t('newCode')}</Button>
               </div>
             )}
-            {tab === 'people' && (
-              <List>
-                {c.members.map((m) => (
-                  <div class="row" key={m.id}>
-                    <Person name={m.name} color={m.color} size={32} />
-                    <span class="row-main"><span class="row-title">{m.name}{m.id === myId() ? ` · ${t('youT')}` : ''}</span><span class="row-sub">{m.role === 'teacher' ? t('teacherT') : t('studentT')}</span></span>
-                    {teacher && m.role === 'student' && <button type="button" class="icon-btn" aria-label={t('delete')} onClick={() => remove(m)}><Icon name="trash" size={18} /></button>}
-                  </div>
-                ))}
-              </List>
-            )}
+            {tab === 'people' && <PeoplePanel cid={id} teacher={teacher} onRemove={remove} />}
 
             <List><Row icon={teacher ? 'close' : 'arrowDown'} color="red" title={teacher ? t('closeClass') : t('leaveClass')} danger onClick={leave} chevron={false} /></List>
           </>
@@ -322,7 +304,7 @@ export function ClassView({ id, tab: tab0 }) {
   );
 }
 
-function TeacherMission({ a, color }) {
+export function TeacherMission({ a, color }) {
   const frac = a.students ? a.reached_goal / a.students : 0;
   return (
     <button type="button" class={`mission c-${color}`} onClick={() => push('assignment', { id: a.id })}>
@@ -757,6 +739,7 @@ export function ReviewSheet({ a, subs }) {
       </div>
       <textarea class="field prose" id="review-text" rows={3} placeholder={t('commentHint')} value={text} onInput={(e) => setText(e.currentTarget.value)} maxLength={2000} />
       <Button kind="brand" full icon="send" onClick={send} disabled={busy || !ready}>{t('giveFeedback')}</Button>
+      <VoiceNote target="submission" id={sub.id} bars={focus} />
       {subs.length > 1 && (
         <>
           <h3 class="sheet-sub">{t('earlierTries')}</h3>

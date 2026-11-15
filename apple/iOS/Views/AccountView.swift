@@ -53,7 +53,7 @@ struct AccountView: View {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
             }
             .fileExporter(isPresented: $exporting, document: backup, contentType: .zip,
-                          defaultFilename: backup?.url.deletingPathExtension().lastPathComponent ?? "Haptune Backup") { result in
+                          defaultFilename: backup?.url.deletingPathExtension().lastPathComponent ?? "Melovyn Backup") { result in
                 if case .failure(let e) = result { message = e.localizedDescription }
             }
             .fileImporter(isPresented: $importingBackup, allowedContentTypes: [.zip]) { result in
@@ -67,7 +67,7 @@ struct AccountView: View {
             }
             .onChange(of: settings.reminderOn) { _, _ in updateReminder() }
             .onChange(of: settings.reminderMinutes) { _, _ in updateReminder() }
-            .alert("Haptune", isPresented: Binding(get: { message != nil || store.message != nil },
+            .alert("Melovyn", isPresented: Binding(get: { message != nil || store.message != nil },
                                                   set: { if !$0 { message = nil; store.message = nil } })) {
                 Button("OK", role: .cancel) { message = nil; store.message = nil }
             } message: {
@@ -104,9 +104,9 @@ struct AccountView: View {
     private var subscription: some View {
         Section {
             if Store.isTestBuild {
-                LabeledContent("Haptune Plus", value: store.activePlanName)
+                LabeledContent("Melovyn Plus", value: store.activePlanName)
             } else if store.isPlus {
-                LabeledContent("Haptune Plus", value: store.activePlanName)
+                LabeledContent("Melovyn Plus", value: store.activePlanName)
                 if let d = store.renewalDate {
                     LabeledContent("Renews", value: d.formatted(date: .abbreviated, time: .omitted))
                 }
@@ -118,7 +118,7 @@ struct AccountView: View {
                     HStack(spacing: 12) {
                         IconBadge(symbol: "sparkles", color: .purple, size: 34)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Try Haptune Plus Free").font(.body.weight(.semibold)).foregroundStyle(.primary)
+                            Text("Try Melovyn Plus Free").font(.body.weight(.semibold)).foregroundStyle(.primary)
                             Text("Band Split, sheet music scanning, full reports").font(.footnote).foregroundStyle(.secondary)
                         }
                     }
@@ -202,7 +202,7 @@ struct AccountView: View {
                 Label("Language", systemImage: "globe")
             }
         } footer: {
-            Text("English, Bahasa Melayu, 简体中文 and 繁體中文. Some system text switches the next time you open Haptune.")
+            Text("English, Bahasa Melayu, 简体中文 and 繁體中文. Some system text switches the next time you open Melovyn.")
         }
     }
 
@@ -214,7 +214,7 @@ struct AccountView: View {
         } header: {
             Text("Apple Watch")
         } footer: {
-            Text("Keep Haptune open on your Watch while you practise. Tip: Watch Settings > General > Return to Clock > Haptune > Return to App.")
+            Text("Keep Melovyn open on your Watch while you practise. Tip: Watch Settings > General > Return to Clock > Melovyn > Return to App.")
         }
     }
 
@@ -261,7 +261,7 @@ struct AccountView: View {
         } header: {
             Text("Online Features")
         } footer: {
-            Text("Reading PDFs and photos with AI, finding songs online, recordings to sheet music, Band Split, full reports and Academy classes use the Haptune server. There is nothing to set up. Practice, MusicXML, MIDI and jianpu work offline.")
+            Text("Reading PDFs and photos with AI, finding songs online, recordings to sheet music, Band Split, full reports and Academy classes use the Melovyn server. There is nothing to set up. Practice, MusicXML, MIDI and jianpu work offline.")
         }
     }
 
@@ -292,7 +292,7 @@ struct AccountView: View {
             let ok = await Reminders.update(enabled: settings.reminderOn, minutesAfterMidnight: settings.reminderMinutes, streak: streak)
             if !ok {
                 settings.reminderOn = false
-                message = String(localized: "Allow notifications for Haptune in Settings to get reminders.")
+                message = String(localized: "Allow notifications for Melovyn in Settings to get reminders.")
             }
         }
     }

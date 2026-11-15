@@ -1,0 +1,21 @@
+Metadata-Version: 2.4
+Name: haptune
+Version: 0.2.0
+Summary: Score-informed music practice analysis with Apple Watch feedback
+Requires-Python: >=3.11
+Requires-Dist: numpy>=1.26
+Requires-Dist: scipy>=1.11
+Requires-Dist: soundfile>=0.12
+Requires-Dist: music21>=9.1
+Requires-Dist: mido>=1.3
+Requires-Dist: verovio>=4.3
+Provides-Extra: omr
+Requires-Dist: homr>=0.7; extra == "omr"
+Requires-Dist: pymupdf>=1.24; extra == "omr"
+Provides-Extra: split
+Requires-Dist: onnxruntime>=1.17; extra == "split"
+Provides-Extra: demucs
+Requires-Dist: demucs>=4.0; extra == "demucs"
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: cairosvg; extra == "dev"
