@@ -11,6 +11,7 @@ import { Icon, Chip, Button, Section, Card, Segmented, Empty, List, Row } from '
 import { LargeTitle, NavBar, SheetFrame, Avatar } from './common.jsx';
 import { Feed } from './stagefeed.jsx';
 import { whenSignedIn } from './hub.jsx';
+import { SoundsFeed } from './sound.jsx';
 import { Mascot } from '../mascot.jsx';
 import { hasServer } from '../api.js';
 import { C, ensureAccount, attempt } from '../account.js';
@@ -20,7 +21,7 @@ import { local } from '../storage.js';
 
 const SEGMENTS = [
   { value: 'home', label: 'segForYou' }, { value: 'following', label: 'segFollowing' }, { value: 'requests', label: 'segRequests' },
-  { value: 'library', label: 'segScores' }, { value: 'play', label: 'segPlay' }, { value: 'questions', label: 'segQuestions' },
+  { value: 'sounds', label: 'segSounds' }, { value: 'library', label: 'segScores' }, { value: 'play', label: 'segPlay' }, { value: 'questions', label: 'segQuestions' },
 ];
 
 /** Notes: what people earn on Stage. A small pill with the balance. */
@@ -63,6 +64,7 @@ export function CommunityView({ active }) {
             : seg === 'following' ? <Feed active={active} following />
               : seg === 'requests' ? <><button type="button" class="sr-cta" onClick={helpWrite} id="st-help"><span class="hm-art sm"><Icon name="pencil" size={20} stroke={2.2} /></span><div><strong>{t('helpWrite')}</strong><span>{t('helpWriteSub')}</span></div><Icon name="chevronR" size={16} stroke={2.4} /></button>
                 <PostList key="r" type="request" active={active} mine={!!s.stageMine} /></>
+                : seg === 'sounds' ? <SoundsFeed active={active} />
                 : seg === 'library' ? <PostList key="l" type="share" active={active} />
                   : seg === 'play' ? <Play active={active} />
                     : <PostList key="q" type="question" active={active} />}
@@ -94,7 +96,7 @@ export function StageNewSheet() {
     ['sound', 'wave', 'violet', 'stShareSound', () => push('sound', {}, 'write')],
     ['question', 'quiz', 'blue', 'stAskQuestion', () => openSheet('compose', { type: 'question' })],
     ['score', 'staff', 'green', 'stPostScore', () => openSheet('compose', { type: 'share' })],
-  ].filter(([id]) => id !== 'sound' || SOUNDS_READY());
+  ];
   return (
     <SheetFrame title={t('stageWhatDo')}>
       <div class="list inset" id="stage-new">
@@ -109,7 +111,6 @@ export function StageNewSheet() {
     </SheetFrame>
   );
 }
-export const SOUNDS_READY = () => !!globalThis.__melovynSounds;
 
 /** Who is here: real counts. With few people online the day's and the week's numbers lead instead. */
 function LiveStrip({ c }) {

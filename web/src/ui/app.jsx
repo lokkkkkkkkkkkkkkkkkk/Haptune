@@ -18,6 +18,7 @@ import { WelcomeSheet } from './screens/welcome.jsx';
 import { PracticeView } from './screens/practice.jsx';
 import { SoundCheckView } from './screens/soundcheck.jsx';
 import { ReportView } from './screens/report.jsx';
+import { SoundView, SoundAddSheet, SoundTrackSheet, SoundSettingsSheet, SoundExportSheet, SoundPostSheet } from './screens/sound.jsx';
 import { VaryView } from './screens/moretools.jsx';
 import { LearnView as LearnMoreView } from './screens/learn.jsx';
 import { PieceMoreSheet } from './screens/piecemore.jsx';
@@ -66,7 +67,7 @@ const VIEWS = {
   piece: PieceView, editor: EditorView, studio: StudioView, student: StudentView, tutors: TutorsView, tutor: TutorView, tutorMe: TutorMeView, lessons: LessonsView, songbook: SongbookView, catalog: CatalogView, course: CourseView, tool: ToolView, history: HistoryView, classView: ClassView, assignment: AssignmentView,
   post: PostView, daily: DailyView, profile: ProfileView, leaderboard: LeaderboardView, notifications: NotificationsView, wallet: WalletView, challenge: ChallengeView,
   editProfile: EditProfileView, help: HelpView, admin: AdminView,
-  practice: PracticeView, soundCheck: SoundCheckView, report: ReportView, vary: VaryView, chordEditor: ChordEditorView, learnMore: (p) => <LearnMoreView {...p} pushed />,
+  practice: PracticeView, soundCheck: SoundCheckView, report: ReportView, sound: SoundView, vary: VaryView, chordEditor: ChordEditorView, learnMore: (p) => <LearnMoreView {...p} pushed />,
 };
 const SHEETS = {
   add: AddSheet, paste: PasteSheet, findSong: FindSongSheet, scale: ScaleSheet, report: ImportReportSheet, chord: ChordSheet, findKey: FindKeySheet,
@@ -78,7 +79,7 @@ const SHEETS = {
   newSong: NewSongSheet, hubRole: HubRoleSheet, classQR: ClassQRSheet, pair: PairSheet, take: TakeSheet, joinLink: JoinLinkSheet, moment: MomentSheet,
   setPassword: SetPasswordSheet, signIn: SignInSheet, deleteAccount: DeleteAccountSheet, devCode: DevCodeSheet,
   pieceMore: PieceMoreSheet, chordPick: ChordPickSheet, ceSong: ChordSongSheet, ceSection: ChordSectionSheet, ceExport: ChordExportSheet,
-  stageNew: StageNewSheet, connections: ConnectionsSheet, teacherVerify: TeacherVerifySheet, asgMeta: AsgMetaSheet, session: SessionSheet, invite: InviteSheet, grade: GradeSheet,
+  stageNew: StageNewSheet, soundAdd: SoundAddSheet, soundTrack: SoundTrackSheet, soundSettings: SoundSettingsSheet, soundExport: SoundExportSheet, soundPost: SoundPostSheet, connections: ConnectionsSheet, teacherVerify: TeacherVerifySheet, asgMeta: AsgMetaSheet, session: SessionSheet, invite: InviteSheet, grade: GradeSheet,
 };
 
 /** Android back button: close a sheet, go back a screen, go Home, then leave the app. */
@@ -204,7 +205,7 @@ function App() {
   );
   const tier = s.me?.tier || 'free';
   const top = s.stacks[s.tab]?.[s.stacks[s.tab].length - 1]?.view;
-  const immersive = top === 'piece' || top === 'editor' || top === 'studio' || top === 'chordEditor';
+  const immersive = top === 'piece' || top === 'editor' || top === 'studio' || top === 'chordEditor' || top === 'sound';
   const name = (s.me?.name && s.me.name !== 'Musician' ? s.me.name : s.settings.name || '').trim();
   const sec = TABS.find((x) => x.id === s.tab)?.color || 'violet';
   return (

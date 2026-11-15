@@ -85,6 +85,8 @@ import google_link  # noqa: E402  (Google Calendar, Drive, Contacts, asked for o
 app.include_router(google_link.router)
 import classroom  # noqa: E402  (stream, classwork topics and rubrics, people, grades, sessions)
 app.include_router(classroom.router)
+import sounds  # noqa: E402  (Sounds on Stage: multitrack ideas, layers, takedowns)
+app.include_router(sounds.router)
 _jobs: dict[str, dict] = {}
 _lock = threading.Lock()
 _pool = ThreadPoolExecutor(max_workers=int(os.environ.get("HAPTUNE_WORKERS", "1")))

@@ -44,7 +44,7 @@ async function startApi() {
 }
 
 async function person(browser, base, api, { name, role, handle }) {
-  const ctx = await browser.newContext({ ...devices['iPhone 13'], acceptDownloads: true });
+  const ctx = await browser.newContext({ ...devices['iPhone 13'], acceptDownloads: true, permissions: ['microphone'] });
   await ctx.addInitScript(([server, r]) => {
     localStorage.setItem('haptune.settings', JSON.stringify({ server, name: '', instrument: 'violin' }));
     localStorage.setItem('haptune.welcomed', 'true');
@@ -75,9 +75,9 @@ async function person(browser, base, api, { name, role, handle }) {
   const web = await serveStatic();
   const base = `http://127.0.0.1:${web.address().port}`;
   const { proc, url: api } = await startApi();
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', '--autoplay-policy=no-user-gesture-required'] });
   const problems = [];
-  const step = async (name, fn) => { try { await fn(); } catch (e) { problems.push(`${name}: ${e.message.split('\n')[0]}`); } };
+  const step = async (name, fn) => { try { await fn(); } catch (e) { problems.push(`${name}: ${e.message.split('\n')[0]}`); for (const [k, x] of [['t', T], ['s', S]]) await x?.p.screenshot({ path: path.join(SHOTS, `fail-${k}-${name.slice(0, 12).replace(/\W/g, '')}.png`) }).catch(() => {}); } };
   let T, S, code = '';
   try {
     T = await person(browser, base, api, { name: 'Ms Tan', role: 'teacher', handle: 'ms_tan' });
@@ -183,6 +183,47 @@ async function person(browser, base, api, { name, role, handle }) {
       if (await s.locator('#stage-new .row').count() < 4) throw new Error('the + sheet should offer the post types');
       await s.keyboard.press('Escape');
       await s.screenshot({ path: path.join(SHOTS, 'stage-requests.png') });
+    });
+    let soundId = '';
+    await step('Sounds: record, add backing, mix, export WAV (60 s, 4 tracks), post to Stage', async () => {
+      await tab(s, 'stage'); await tab(s, 'stage'); await s.locator('#stage-plus').click(); await s.locator('#stn-sound').click();
+      await s.waitForSelector('#sd-rec');
+      // 60 seconds: 32 bars of 4/4 at 128
+      await s.locator('#sd-settings').click(); await s.waitForSelector('.sheet input[type=range]');
+      await s.locator('.sheet input[type=range]').first().evaluate((el) => { el.value = '128'; el.dispatchEvent(new Event('change', { bubbles: true })); });
+      await s.locator('.sheet .chip').filter({ hasText: /^32$/ }).click(); await s.keyboard.press('Escape');
+      await s.locator('#sd-rec').click(); await s.waitForTimeout(3500); await s.locator('#sd-rec').click();      // record with the microphone
+      await s.waitForSelector('.sd-track', { timeout: 15000 });
+      for (let i = 0; i < 2; i++) { await s.locator('#sd-add').click(); await s.locator('#sd-add-backing').click(); await s.locator('#sd-add-quick').click(); await s.waitForTimeout(300); }
+      await s.locator('#sd-add').click(); await s.locator('#sd-add-inst').click(); await s.waitForTimeout(300);
+      if ((await s.locator('.sd-track').count()) !== 4) throw new Error(`expected 4 tracks, got ${await s.locator('.sd-track').count()}`);
+      await s.screenshot({ path: path.join(SHOTS, 'sound-mixer.png') });
+      await s.locator('#sd-export').click(); await s.waitForSelector('#sd-exp-wav');
+      const [dl] = await Promise.all([s.waitForEvent('download', { timeout: 60000 }), s.locator('#sd-exp-wav').click()]);
+      const wav = fs.readFileSync(await dl.path());
+      if (wav.subarray(0, 4).toString() !== 'RIFF') throw new Error('the mixdown is not a WAV');
+      const secs = (wav.length - 44) / 4 / 44100;
+      const ms = await s.evaluate(() => globalThis.__lastMixdownMs);
+      console.log(`  mixdown: ${secs.toFixed(1)} s of audio, 4 tracks, rendered in ${ms} ms`);
+      if (secs < 59) throw new Error(`the mixdown is ${secs} s`);
+      if (ms > 10000) throw new Error(`the mixdown took ${ms} ms (target under 10 s)`);
+      if (await s.locator('.sheet').count()) await s.keyboard.press('Escape');
+      await s.locator('#sd-keys-done').click(); await s.locator('#sd-post').click(); await s.waitForSelector('#sd-rights');
+      await s.fill('#sd-post-title', 'Morning riff'); await s.locator('#sd-rights .chip').first().click();
+      await s.locator('#sd-post-send').click(); await s.waitForSelector('#stage-purpose', { timeout: 60000 });
+      soundId = await s.evaluate(async (server) => (await (await fetch(server + '/c/sounds')).json()).items[0]?.id, api);
+      if (!soundId) throw new Error('the Sound is not on Stage');
+    });
+    await step('Sounds: another person layers a track on it', async () => {
+      await tab(t, 'stage'); await tab(t, 'stage');
+      await t.locator('#community-seg .chip').filter({ hasText: /Sounds/ }).click(); await t.waitForSelector('.sound-card');
+      await t.screenshot({ path: path.join(SHOTS, 'stage-sounds.png') });
+      await t.locator('.sound-card .btn').filter({ hasText: /Layer/ }).first().click(); await t.waitForSelector('.sd-track', { timeout: 30000 });
+      await t.locator('#sd-add').click(); await t.locator('#sd-add-inst').click(); await t.waitForTimeout(300);
+      await t.locator('#sd-keys-done').click(); await t.locator('#sd-post').click(); await t.waitForSelector('#sd-rights'); await t.locator('#sd-rights .chip').first().click();
+      await t.locator('#sd-post-send').click(); await t.waitForSelector('#stage-purpose', { timeout: 60000 });
+      const v = await t.evaluate(async ([server, id]) => (await (await fetch(`${server}/c/sounds/${id}`)).json()).versions, [api, soundId]);
+      if (!v || v.layers.length !== 1) throw new Error('no layer: ' + JSON.stringify(v));
     });
   } catch (e) { problems.push(e.message); }
   for (const x of [T, S]) if (x) problems.push(...x.errors);

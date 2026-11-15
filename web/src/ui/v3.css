@@ -601,3 +601,31 @@ body.ce-dragging, body.ce-dragging * { cursor: grabbing !important; }
 .rep-bar.mid .track i { background: var(--s-orange); } .rep-bar.low .track i { background: var(--s-pink); }
 .rep-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 20px; }
 .rep-trend { padding: 12px; }
+
+/* ---------------- Sounds: the mixer ---------------- */
+.sd-transport { display: flex; align-items: center; gap: 12px; }
+.sd-btn { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow); color: var(--ink); }
+.sd-btn.rec .dot { width: 22px; height: 22px; border-radius: 50%; background: #E5383B; display: block; }
+.sd-btn.rec.on { background: #E5383B; } .sd-btn.rec.on .dot { background: #fff; border-radius: 4px; width: 18px; height: 18px; }
+.sd-time { margin-left: auto; font-weight: 700; color: var(--ink2); }
+.sd-ruler { position: relative; display: flex; height: 24px; border-radius: 8px; background: var(--fill); overflow: hidden; cursor: pointer; }
+.sd-ruler i { flex: 1; font-style: normal; font-size: 10.5px; color: var(--ink3); border-left: 1px solid var(--line); padding-left: 3px; line-height: 24px; }
+.sd-ruler b { position: absolute; top: 0; bottom: 0; width: 2px; background: #E5383B; }
+.sd-tracks { display: flex; flex-direction: column; gap: 8px; }
+.sd-track { display: grid; grid-template-columns: 110px 1fr; grid-template-rows: auto auto; gap: 4px 8px; padding: 8px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); }
+.sd-track.muted { opacity: .55; } .sd-track.armed { border-color: var(--c); box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 35%, transparent); }
+.sd-tname { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13.5px; text-align: left; min-width: 0; }
+.sd-tname span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sd-lane { position: relative; height: 44px; border-radius: 8px; background: color-mix(in srgb, var(--c) 9%, transparent); overflow: hidden; }
+.sd-lane svg { position: absolute; top: 2px; height: 40px; fill: var(--c); }
+.sd-note { position: absolute; height: 4px; border-radius: 2px; background: var(--c); }
+.sd-lane-label { position: absolute; inset: 0; display: grid; place-items: center; font-size: 12px; color: var(--c); font-weight: 700; }
+.sd-ctl { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; }
+.sd-ctl button { min-width: 34px; height: 30px; border-radius: 8px; background: var(--fill); font-weight: 800; font-size: 13px; display: grid; place-items: center; }
+.sd-ctl button.on { background: var(--c); color: #fff; }
+.sd-ctl input[type=range] { flex: 1; }
+.sd-keys { position: sticky; bottom: calc(var(--sa-bottom) + 6px); background: var(--bg); padding: 6px 0; z-index: 5; box-shadow: 0 -10px 14px -10px rgba(0,0,0,.18); }
+#sound .sd-tracks { padding-bottom: 12px; }
+.sound-feed { display: flex; flex-direction: column; gap: 12px; }
+.sound-card { display: flex; flex-direction: column; gap: 8px; }
+.sc-head { display: flex; align-items: center; gap: 10px; } .sc-head .t { display: flex; flex-direction: column; min-width: 0; }

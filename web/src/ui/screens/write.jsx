@@ -93,7 +93,7 @@ function SongTile({ p, fix = false }) {
 
 const WIZ = [
   { id: 'lead', icon: 'chords', color: 'orange' }, { id: 'melody', icon: 'note1', color: 'teal' }, { id: 'full', icon: 'staff', color: 'blue' },
-  { id: 'improv', icon: 'sparkles', color: 'pink' }, { id: 'rhythm', icon: 'metronome', color: 'violet' }, { id: 'exercise', icon: 'stairs', color: 'green' },
+  { id: 'improv', icon: 'sparkles', color: 'pink' }, { id: 'rhythm', icon: 'metronome', color: 'violet' }, { id: 'sound', icon: 'wave', color: 'red' }, { id: 'exercise', icon: 'stairs', color: 'green' },
 ];
 const WIZ_LABEL = { lead: 'wizLead', melody: 'wizMelody', full: 'wizFull', improv: 'wizImprov', rhythm: 'wizRhythm', sound: 'wizSound', exercise: 'wizExercise' };
 

@@ -139,6 +139,13 @@ export const C = {
     drive: (name, mime, dataB64) => call('/c/google/drive/upload', { method: 'POST', json: { name, mime, data_b64: dataB64 }, timeout: 120000 }),
     contacts: (text = '') => call(`/c/google/contacts${q({ q: text })}`),
   },
+  sounds: {
+    list: (params = {}) => call(`/c/sounds${q(params)}`),
+    get: (id) => call(`/c/sounds/${id}`),
+    like: (id) => call(`/c/sounds/${id}/like`, { method: 'POST' }),
+    report: (id, body) => call(`/c/sounds/${id}/report`, { method: 'POST', json: body }),
+    remove: (id) => call(`/c/sounds/${id}`, { method: 'DELETE' }),
+  },
   wallet: () => call('/c/wallet'),
   plusWeek: () => call('/c/credits/plus-week', { method: 'POST' }).then((me) => { setMe(me); return me; }),
   practice: (minutes) => call('/c/practice', { method: 'POST', json: { minutes } }),
