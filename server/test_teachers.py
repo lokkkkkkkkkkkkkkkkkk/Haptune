@@ -42,6 +42,8 @@ def google_user(monkeypatch, sub, email, name="Ana"):
 def admin(monkeypatch):
     h = google_user(monkeypatch, "admin", "dev@example.com", "Dev")
     assert client.post("/c/me/dev", json={"code": "dev-code-long-enough"}, headers=h).status_code == 200
+    import testkit
+    testkit.dev_mode_on(client, h)
     return h
 
 

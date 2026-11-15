@@ -42,7 +42,8 @@ def person(name="Aina"):
 
 def dev():
     h, me = person("Lok")
-    assert client.post("/c/me/dev", json={"code": "let-me-in-please-123"}, headers=h).json()["tier"] == "dev"
+    import testkit
+    testkit.make_developer(client, h, "let-me-in-please-123")
     return h, me
 
 
@@ -368,3 +369,4 @@ def test_moments_are_everyday_posts_with_photos_and_recordings():
     assert client.post("/c/posts", json={"type": "question", "title": "x"}, headers=h).status_code == 400
     feed = client.get("/c/posts", params={"type": "moment"}).json()
     assert feed["items"][0]["id"] == p["id"]
+

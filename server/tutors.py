@@ -273,7 +273,7 @@ def act_on_lesson(lid: str, body: LessonAct, me: A.Me = Depends(A.current)):
 
 # ------------------------------------------------------------------------------------------- the developer
 @router.get("/admin/tutors")
-def admin_tutors(me: A.Me = Depends(A.require_admin), status: str = "pending"):
+def admin_tutors(me: A.Me = Depends(A.require_scope("verify_teachers")), status: str = "pending"):
     with engine().connect() as c:
         rows = c.execute(select(tutors).where(tutors.c.status == status).order_by(tutors.c.updated.desc()).limit(100)).mappings().all()
         people = CM._people(c, [r["user_id"] for r in rows])
@@ -286,7 +286,7 @@ class TutorDecide(BaseModel):
 
 
 @router.post("/admin/tutors/{handle}")
-def admin_tutor(handle: str, body: TutorDecide, me: A.Me = Depends(A.require_admin)):
+def admin_tutor(handle: str, body: TutorDecide, me: A.Me = Depends(A.require_scope("verify_teachers"))):
     with engine().begin() as c:
         user, _acc = CM._user_by_handle(c, handle)
         t = c.execute(select(tutors).where(tutors.c.user_id == user["id"])).mappings().first()
@@ -295,4 +295,5 @@ def admin_tutor(handle: str, body: TutorDecide, me: A.Me = Depends(A.require_adm
         status = {"verify": "verified", "reject": "rejected", "pause": "paused"}[body.action]
         c.execute(update(tutors).where(tutors.c.user_id == user["id"]).values(status=status, admin_note=body.note.strip(), updated=_now()))
         A.notify(c, user["id"], "tutor", what=status, note=body.note.strip())
+        A.audit(c, me, f"tutor_{body.action}", user["id"], before={"status": t["status"]}, after={"status": status}, note=body.note.strip())
     return {"ok": True}

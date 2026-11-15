@@ -315,7 +315,7 @@ class AdminIn(BaseModel):
 
 
 @router.get("/admin/sounds")
-def admin_sounds(me: A.Me = Depends(A.require_admin)):
+def admin_sounds(me: A.Me = Depends(A.require_scope("moderate_stage"))):
     with engine().connect() as c:
         rows = c.execute(select(sounds.c.id, sounds.c.title, sounds.c.user_id, sounds.c.reports, sounds.c.hidden, sounds.c.rights)
                          .where(sounds.c.reports > 0).order_by(sounds.c.reports.desc())).mappings().all()
@@ -326,9 +326,12 @@ def admin_sounds(me: A.Me = Depends(A.require_admin)):
 
 
 @router.post("/admin/sounds/{sid}")
-def admin_sound(sid: str, body: AdminIn, me: A.Me = Depends(A.require_admin)):
+def admin_sound(sid: str, body: AdminIn, me: A.Me = Depends(A.require_scope("moderate_stage"))):
     if body.action == "delete":
+        with engine().begin() as c:
+            A.audit(c, me, "sound_delete", c.execute(select(sounds.c.user_id).where(sounds.c.id == sid)).scalar(), after={"sound": sid})
         return delete_sound(sid, me)
     with engine().begin() as c:
         c.execute(update(sounds).where(sounds.c.id == sid).values(hidden=body.action == "hide", **({"reports": 0} if body.action == "restore" else {})))
+        A.audit(c, me, f"sound_{body.action}", c.execute(select(sounds.c.user_id).where(sounds.c.id == sid)).scalar(), after={"sound": sid})
     return {"ok": True}

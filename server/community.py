@@ -1168,7 +1168,7 @@ def report(body: ReportIn, me: A.Me = Depends(A.current)):
 
 # --------------------------------------------------------------------------------------- admin
 @router.get("/admin/overview")
-def admin_overview(me: A.Me = Depends(A.require_admin)):
+def admin_overview(me: A.Me = Depends(A.require_scope("read_analytics"))):
     with engine().connect() as c:
         count = lambda t, *w: c.execute(select(func.count()).select_from(t).where(*w)).scalar()  # noqa: E731
         day = _now() - 86400
@@ -1184,7 +1184,7 @@ def admin_overview(me: A.Me = Depends(A.require_admin)):
 
 
 @router.get("/admin/reports")
-def admin_reports(me: A.Me = Depends(A.require_admin), status: str = "open"):
+def admin_reports(me: A.Me = Depends(A.require_scope("moderate_stage")), status: str = "open"):
     with engine().connect() as c:
         rows = c.execute(select(reports).where(reports.c.status == status).order_by(reports.c.created.desc()).limit(100)).mappings().all()
         people = _people(c, [r["reporter"] for r in rows] + [r["target_user"] for r in rows])
@@ -1209,7 +1209,7 @@ class ModIn(BaseModel):
 
 
 @router.post("/admin/reports/{rid}")
-def admin_handle_report(rid: str, body: ModIn, me: A.Me = Depends(A.require_admin)):
+def admin_handle_report(rid: str, body: ModIn, me: A.Me = Depends(A.require_scope("moderate_stage"))):
     with engine().begin() as c:
         r = c.execute(select(reports).where(reports.c.id == rid)).mappings().first()
         if not r:
@@ -1222,13 +1222,17 @@ def admin_handle_report(rid: str, body: ModIn, me: A.Me = Depends(A.require_admi
         if body.action == "restore" and t is not None:
             c.execute(update(t).where(t.c.id == key).values(hidden=False))
         if body.action == "ban" and r["target_user"]:
+            tacc = c.execute(select(A.accounts).where(A.accounts.c.user_id == r["target_user"])).mappings().first()
+            if tacc and A.staff_of(dict(tacc), None)[0] == "owner":
+                raise HTTPException(403, "The owner can't be banned.")
             c.execute(update(A.accounts).where(A.accounts.c.user_id == r["target_user"]).values(role="banned"))
+        A.audit(c, me, f"report_{body.action}", r["target_user"], after={"target": r["target"]})
         c.execute(update(reports).where(reports.c.target == r["target"], reports.c.status == "open").values(status="done", handled=_now()))
     return {"ok": True}
 
 
 @router.get("/admin/feedback")
-def admin_feedback(me: A.Me = Depends(A.require_admin), status: str = "new"):
+def admin_feedback(me: A.Me = Depends(A.require_scope("manage_users")), status: str = "new"):
     with engine().connect() as c:
         q = select(A.app_feedback).order_by(A.app_feedback.c.created.desc()).limit(100)
         if status != "all":
@@ -1246,9 +1250,10 @@ class FeedbackPatch(BaseModel):
 
 
 @router.post("/admin/feedback/{fid}")
-def admin_feedback_update(fid: str, body: FeedbackPatch, me: A.Me = Depends(A.require_admin)):
+def admin_feedback_update(fid: str, body: FeedbackPatch, me: A.Me = Depends(A.require_scope("manage_users"))):
     with engine().begin() as c:
         c.execute(update(A.app_feedback).where(A.app_feedback.c.id == fid).values(status=body.status, admin_note=body.note))
+        A.audit(c, me, "feedback_status", None, after={"feedback": fid, "status": body.status})
     return {"ok": True}
 
 
@@ -1259,10 +1264,11 @@ class GrantIn(BaseModel):
 
 
 @router.post("/admin/grant")
-def admin_grant(body: GrantIn, me: A.Me = Depends(A.require_admin)):
+def admin_grant(body: GrantIn, me: A.Me = Depends(A.require_scope("manage_users"))):
     """Gives a tester (or a teacher you work with) a plan for some days. days=0: no end date."""
     with engine().begin() as c:
         user, acc = _user_by_handle(c, body.handle)
+        A.audit(c, me, "plan_change", user["id"], before={"tier": acc["tier"], "until": acc["tier_until"]}, after={"tier": body.tier, "days": body.days})
         until = None if body.days == 0 or body.tier == "free" else _now() + body.days * 86400
         c.execute(update(A.accounts).where(A.accounts.c.user_id == user["id"]).values(
             tier=body.tier, tier_until=until, tier_source="grant" if body.tier != "free" else ""))
@@ -1277,21 +1283,25 @@ class CreditsIn(BaseModel):
 
 
 @router.post("/admin/credits")
-def admin_credits(body: CreditsIn, me: A.Me = Depends(A.require_admin)):
+def admin_credits(body: CreditsIn, me: A.Me = Depends(A.require_scope("manage_users"))):
     with engine().begin() as c:
         user, _ = _user_by_handle(c, body.handle)
+        A.audit(c, me, "credits", user["id"], after={"delta": body.delta}, note=body.note)
         bal = A.grant(c, user["id"], body.delta, "admin", note=body.note)
         A.notify(c, user["id"], "credits", amount=body.delta, reason="admin")
     return {"ok": True, "credits": bal}
 
 
 class RoleIn(BaseModel):
-    role: Literal["user", "banned", "admin"]
+    role: Literal["user", "banned"]                 # developer access is given in Access (the owner only)
 
 
 @router.post("/admin/users/{handle}/role")
-def admin_role(handle: str, body: RoleIn, me: A.Me = Depends(A.require_admin)):
+def admin_role(handle: str, body: RoleIn, me: A.Me = Depends(A.require_scope("manage_users"))):
     with engine().begin() as c:
-        user, _ = _user_by_handle(c, handle)
+        user, acc = _user_by_handle(c, handle)
+        import admin
+        admin.check_can_act_on(c, me, user["id"], acc)
         c.execute(update(A.accounts).where(A.accounts.c.user_id == user["id"]).values(role=body.role))
+        A.audit(c, me, "suspend" if body.role == "banned" else "unsuspend", user["id"], before={"role": acc["role"]}, after={"role": body.role})
     return {"ok": True}
