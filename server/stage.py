@@ -423,4 +423,4 @@ def redeem(body: RedeemIn, me: A.Me = Depends(A.current)):
         start = max(_now(), acc["tier_until"] or 0) if acc["tier"] == it["tier"] and acc["tier_source"] == "notes" else _now()
         c.execute(update(A.accounts).where(A.accounts.c.user_id == me.id).values(
             tier=it["tier"], tier_until=start + it["days"] * 86400, tier_source="notes", pass_days=it["days"], plus_redeemed=_now()))
-    return A.me_json(A.reload(me.id))
+    return A.me_json(A.reload(me.id, me))

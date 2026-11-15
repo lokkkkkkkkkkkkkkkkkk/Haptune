@@ -9,6 +9,7 @@ import { Icon, Button, Section, List, Row, MiniLine } from '../components.jsx';
 import { NavBar } from './common.jsx';
 import { buildReport, reportText } from '../../core/report.js';
 import { saveFile } from '../files.js';
+import { flag } from '../analytics.js';
 
 export function ReportView({ result, pieceId, title = '', keySig = null, onPractise, onShowBar, onSend, onClass, onShare, assignment }) {
   const s = useApp();
@@ -78,7 +79,7 @@ export function ReportView({ result, pieceId, title = '', keySig = null, onPract
           {onShare && <Button kind="secondary" icon="stage" onClick={back(onShare)}>{t('shareWin')}</Button>}
           {assignment ? <Button kind="brand" icon="send" onClick={back(onSend)} disabled={result.sent}>{t('submitToTeacher')}</Button>
             : onClass && <Button kind="secondary" icon="academy" onClick={back(onClass)}>{t('shareWithClass')}</Button>}
-          {result.recordingURL && <Button kind="secondary" icon="wave" onClick={() => push('sound', { fromTake: { url: result.recordingURL, title } })} id="rep-sound">{t('repToSound')}</Button>}
+          {result.recordingURL && flag('sounds') && <Button kind="secondary" icon="wave" onClick={() => push('sound', { fromTake: { url: result.recordingURL, title } })} id="rep-sound">{t('repToSound')}</Button>}
         </div>
       </div>
     </div>

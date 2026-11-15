@@ -202,6 +202,7 @@ export const C = {
     decideTutor: (handle, action, note = '') => call(`/c/admin/tutors/${encodeURIComponent(handle)}`, { method: 'POST', json: { action, note } }),
     payments: (status = 'pending') => call(`/c/admin/payments${q({ status })}`),
     decidePayment: (id, action, note = '') => call(`/c/admin/payments/${id}`, { method: 'POST', json: { action, note } }),
+    users: (params = {}) => call(`/c/admin/users${q(params)}`),
     grant: (handle, tier, days) => call('/c/admin/grant', { method: 'POST', json: { handle, tier, days } }),
     credits: (handle, delta, note) => call('/c/admin/credits', { method: 'POST', json: { handle, delta, note } }),
     role: (handle, role) => call(`/c/admin/users/${encodeURIComponent(handle)}/role`, { method: 'POST', json: { role } }),

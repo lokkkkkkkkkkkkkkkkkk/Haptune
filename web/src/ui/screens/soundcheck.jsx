@@ -7,13 +7,14 @@ import { t } from '../../core/i18n.js';
 import { Button, List, Row, Icon } from '../components.jsx';
 import { NavBar } from './common.jsx';
 import { soundCheck, deviceAudioLog } from '../audio.js';
+import { track } from '../analytics.js';
 
 export function SoundCheckView() {
   const [r, setR] = useState(() => deviceAudioLog().soundCheck);
   const [busy, setBusy] = useState(false);
   const run = async () => {
     setBusy(true);
-    try { setR(await soundCheck()); } catch (e) { toast(t(e.code === 'denied' ? 'micDenied' : 'micUnavailable'), 'err'); }
+    try { const res = await soundCheck(); setR(res); track('sound_check', { props: { roomDb: res.roomDb, feedbackDb: res.feedbackDb, rates: `${res.playbackRate}/${res.micRate || res.micContextRate}`, latencyMs: res.baseLatencyMs + res.outputLatencyMs } }); } catch (e) { toast(t(e.code === 'denied' ? 'micDenied' : 'micUnavailable'), 'err'); }
     setBusy(false);
   };
   return (

@@ -41,7 +41,8 @@ def person(name="Aina"):
 
 def dev():
     h, me = person("Lok")
-    client.post("/c/me/dev", json={"code": "let-me-in-please-123"}, headers=h)
+    import testkit
+    testkit.make_developer(client, h, "let-me-in-please-123")
     return h, me
 
 

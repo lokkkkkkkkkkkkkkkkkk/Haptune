@@ -66,7 +66,7 @@ def is_verified(uid: str, c=None) -> bool:
     """True for a verified teacher (by request, by domain, or a verified tutor) and for the developer."""
     def check(cx) -> bool:
         acc = cx.execute(select(A.accounts).where(A.accounts.c.user_id == uid)).mappings().first()
-        if acc and A.effective_tier(dict(acc)) == "dev":
+        if acc and (A.is_owner_acc(dict(acc)) or dict(acc).get("role") == "admin"):
             return True
         if cx.execute(select(verifications.c.status).where(verifications.c.user_id == uid)).scalar() == "verified":
             return True
@@ -166,7 +166,7 @@ class DecideIn(BaseModel):
 
 
 @router.get("/admin/teachers")
-def admin_list(status: str = "pending", me: A.Me = Depends(A.require_admin)):
+def admin_list(status: str = "pending", me: A.Me = Depends(A.require_scope("verify_teachers"))):
     with engine().connect() as c:
         rows = c.execute(select(verifications.c.user_id, verifications.c.org, verifications.c.role_text, verifications.c.email,
                                 verifications.c.doc_type, verifications.c.status, verifications.c.method, verifications.c.created)
@@ -178,7 +178,7 @@ def admin_list(status: str = "pending", me: A.Me = Depends(A.require_admin)):
 
 
 @router.get("/admin/teachers/{uid}/doc")
-def admin_doc(uid: str, me: A.Me = Depends(A.require_admin)):
+def admin_doc(uid: str, me: A.Me = Depends(A.require_scope("verify_teachers"))):
     with engine().connect() as c:
         row = c.execute(select(verifications.c.doc, verifications.c.doc_type).where(verifications.c.user_id == uid)).mappings().first()
     if not row or not row["doc"]:
@@ -188,11 +188,12 @@ def admin_doc(uid: str, me: A.Me = Depends(A.require_admin)):
 
 
 @router.post("/admin/teachers/{uid}")
-def admin_decide(uid: str, body: DecideIn, me: A.Me = Depends(A.require_admin)):
+def admin_decide(uid: str, body: DecideIn, me: A.Me = Depends(A.require_scope("verify_teachers"))):
     with engine().begin() as c:
         if not c.execute(select(verifications.c.user_id).where(verifications.c.user_id == uid)).first():
             raise HTTPException(404, "No request from that person.")
         c.execute(update(verifications).where(verifications.c.user_id == uid).values(
             status="verified" if body.decision == "verify" else "rejected", admin_note=body.note.strip(), decided=_now()))
         A.notify(c, uid, "teacher_verified" if body.decision == "verify" else "teacher_rejected", note=body.note.strip())
+        A.audit(c, me, f"teacher_{body.decision}", uid, note=body.note.strip())
     return status_of(uid)

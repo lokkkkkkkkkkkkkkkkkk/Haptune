@@ -231,7 +231,7 @@ def stripe_sync(body: SyncIn, me: A.Me = Depends(A.current)):
     if (sess.get("client_reference_id") or "") != me.id:
         raise HTTPException(403, "That payment belongs to another account.")
     _apply_session(sess)
-    return A.me_json(A.reload(me.id))
+    return A.me_json(A.reload(me.id, me))
 
 
 @router.post("/billing/stripe/portal")
@@ -340,7 +340,7 @@ def manual_paid(pid: str, body: PaidIn, me: A.Me = Depends(A.current)):
 
 
 @router.get("/admin/payments")
-def admin_payments(me: A.Me = Depends(A.require_admin), status: str = "pending"):
+def admin_payments(me: A.Me = Depends(A.require_scope("manage_users")), status: str = "pending"):
     with engine().connect() as c:
         rows = c.execute(select(payments).where(payments.c.status == status).order_by(payments.c.created.desc()).limit(100)).mappings().all()
         people = {u["user_id"]: {"handle": u["handle"]} for u in c.execute(select(A.accounts.c.user_id, A.accounts.c.handle).where(
@@ -366,7 +366,7 @@ def grant_plan(c, uid: str, product: str, period: str, source: str = "manual") -
 
 
 @router.post("/admin/payments/{pid}")
-def admin_decide(pid: str, body: DecideIn, me: A.Me = Depends(A.require_admin)):
+def admin_decide(pid: str, body: DecideIn, me: A.Me = Depends(A.require_scope("manage_users"))):
     with engine().begin() as c:
         p = c.execute(select(payments).where(payments.c.id == pid)).mappings().first()
         if not p:
@@ -375,6 +375,7 @@ def admin_decide(pid: str, body: DecideIn, me: A.Me = Depends(A.require_admin)):
             raise HTTPException(409, "Already decided.")
         c.execute(update(payments).where(payments.c.id == pid).values(status="approved" if body.action == "approve" else "rejected",
                                                                       admin_note=body.note.strip(), decided=_now(), receipt=None))
+        A.audit(c, me, f"payment_{body.action}", p["user_id"], before={"status": p["status"]}, after={"product": p["product"], "period": p["period"]}, note=body.note.strip())
         if body.action == "approve":
             if p["product"] == "teacher":
                 pass                                             # handled below, outside this transaction

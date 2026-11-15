@@ -357,7 +357,7 @@ def _registered_or_401(uid: str) -> None:
         return
     with engine().connect() as c:
         acc = c.execute(select(acc_t).where(acc_t.c.user_id == uid)).mappings().first()
-    if not is_registered(dict(acc) if acc else None) and effective_tier(dict(acc) if acc else None) != "dev":
+    if not is_registered(dict(acc) if acc else None) and (dict(acc) if acc else {}).get("role") != "admin":
         raise HTTPException(401, {"code": "signin_required", "message": "Sign in first (Google, or a username and password)."})
 
 

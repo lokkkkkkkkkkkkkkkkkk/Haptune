@@ -89,6 +89,26 @@ import sounds  # noqa: E402  (Sounds on Stage: multitrack ideas, layers, takedow
 app.include_router(sounds.router)
 import aichat  # noqa: E402  (Hapi everywhere: the app-wide AI chat with tools)
 app.include_router(aichat.router)
+import analytics  # noqa: E402  (usage events, roll-ups, feature flags: the owner's dashboard)
+app.include_router(analytics.router)
+import admin  # noqa: E402  (Developer mode: users, access, audit log)
+app.include_router(admin.router)
+
+
+@app.middleware("http")
+async def _record_server_errors(request: Request, call_next):
+    """Unexpected server errors go to the dashboard's Errors tab (path and error type; no request bodies)."""
+    try:
+        return await call_next(request)
+    except Exception as e:
+        uid = None
+        try:
+            u = accounts.user_from_token(accounts._token(request.headers.get("authorization", "")))
+            uid = u["id"] if u else None
+        except Exception:  # noqa: BLE001
+            pass
+        analytics.server_event(uid, "server_error", label=f"{type(e).__name__} at {request.url.path}"[:200], request=request)
+        raise
 _jobs: dict[str, dict] = {}
 _lock = threading.Lock()
 _pool = ThreadPoolExecutor(max_workers=int(os.environ.get("HAPTUNE_WORKERS", "1")))

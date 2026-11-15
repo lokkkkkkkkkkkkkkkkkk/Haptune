@@ -5,6 +5,7 @@ import { t } from '../../core/i18n.js';
 import { Icon } from '../components.jsx';
 import { LargeTitle } from './common.jsx';
 import { AcademyBody } from './academy.jsx';
+import { flag } from '../analytics.js';
 
 const dateSeed = () => { const d = new Date(); return d.getFullYear() * 400 + d.getMonth() * 32 + d.getDate(); };
 
@@ -21,7 +22,7 @@ export function LearnView({ active, pushed = false }) {
       <div class="wrap">
         <LargeTitle title={t('mtExercises')} eyebrow={t('learnEyebrow')} back={pushed} color="orange" />
         <div class="tile-grid">
-          {tiles.map((x) => (
+          {tiles.filter((x) => (x.id !== 'tutors' || flag('tutors')) && (x.id !== 'solo' || flag('improvise'))).map((x) => (
             <button type="button" key={x.id} id={`learn-${x.id}`} class={`ftile c-${x.color}`} onClick={x.go}>
               <span class="ic"><Icon name={x.icon} size={21} stroke={2.2} /></span>
               <strong>{t(x.title)}</strong><span>{t(x.sub)}</span>

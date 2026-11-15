@@ -29,6 +29,7 @@ import re
 import secrets
 import threading
 import time
+import urllib.parse
 import urllib.request
 import uuid
 from collections import defaultdict, deque
@@ -68,6 +69,10 @@ accounts = Table("accounts", meta,
                  Column("google_sub", String(64), nullable=True, index=True),   # Sign in with Google (the Google account id)
                  Column("email", String(200), nullable=True),                    # from Google, shown only to the person
                  Column("hub_role", String(10), nullable=False, default=""),     # teacher | student | "" (Learn asks once)
+                 Column("totp_secret", String(300), nullable=True),             # 2-step verification (encrypted when HAPTUNE_TOKEN_KEY is set)
+                 Column("totp_on", Boolean, nullable=False, default=False),
+                 Column("totp_recovery", JSON, nullable=True),                  # hashes of unused recovery codes
+                 Column("totp_last_step", Integer, nullable=True),              # a code works once
                  Column("created", Float, nullable=False),
                  Column("last_seen", Float, nullable=False))
 ledger = Table("ledger", meta,
@@ -109,6 +114,30 @@ app_feedback = Table("app_feedback", meta,
                      Column("admin_note", Text, nullable=False, default=""),
                      Column("created", Float, nullable=False))
 kv = Table("kv", meta, Column("k", String(64), primary_key=True), Column("v", Text, nullable=False))
+# Staff. The owner is set only by HAPTUNE_OWNER_EMAILS; developers are granted by the owner with scopes and an end date.
+dev_grants = Table("dev_grants", meta,
+                   Column("user_id", String(36), primary_key=True),
+                   Column("scopes", JSON, nullable=False),
+                   Column("expires", Float, nullable=True),
+                   Column("reason", String(300), nullable=False, default=""),
+                   Column("granted_by", String(36), nullable=False),
+                   Column("created", Float, nullable=False))
+# Developer mode is switched on per sign-in (one device), with a 2-step code, for a few hours.
+elevations = Table("elevations", meta,
+                   Column("token_hash", String(64), primary_key=True),
+                   Column("user_id", String(36), nullable=False, index=True),
+                   Column("until", Float, nullable=False),
+                   Column("created", Float, nullable=False))
+# Every staff action, append-only (no endpoint changes or deletes rows).
+audit_log = Table("audit_log", meta,
+                  Column("id", Integer, primary_key=True, autoincrement=True),
+                  Column("actor", String(36), nullable=False, index=True),
+                  Column("action", String(40), nullable=False, index=True),
+                  Column("target", String(36), nullable=True, index=True),
+                  Column("before", JSON, nullable=True),
+                  Column("after", JSON, nullable=True),
+                  Column("note", String(500), nullable=False, default=""),
+                  Column("created", Float, nullable=False, index=True))
 
 # ----------------------------------------------------------------------------------------------- plans
 # Features that call the paid AI API (read_pages, find, tutor) are not in the free plan. For Plus and Pro, each
@@ -283,8 +312,6 @@ def ensure_account(c, user: dict) -> dict:
 def effective_tier(acc: dict | None) -> str:
     if not acc:
         return "free"
-    if acc.get("role") == "admin" or acc.get("handle", "").lower() in ADMIN_HANDLES:
-        return "dev"
     t = acc.get("tier") or "free"
     if t != "free" and acc.get("tier_until") and acc["tier_until"] < _now():
         return "free"
@@ -346,25 +373,79 @@ def user_from_token(token: str) -> dict | None:
     return dict(row) if row else None
 
 
-class Me:
-    """The signed-in person: identity (users row) + account."""
+# ----------------------------------------------------------------------------------------------- staff
+# Roles, most powerful first: owner > developer > verified teacher (teachers.py) > user.
+SCOPES = ("read_analytics", "manage_users", "feature_flags", "moderate_stage", "verify_teachers")
+DEV_MODE_HOURS = float(os.environ.get("HAPTUNE_DEV_MODE_HOURS", "8"))
 
-    def __init__(self, user: dict, acc: dict):
+
+def owner_emails() -> set[str]:
+    return {e.strip().lower() for e in os.environ.get("HAPTUNE_OWNER_EMAILS", "").split(",") if e.strip()}
+
+
+def is_owner_acc(acc: dict | None) -> bool:
+    """The owner signed in with Google (a verified email) and that email is in HAPTUNE_OWNER_EMAILS. Nothing in
+    the app can make or unmake the owner."""
+    return bool(acc and acc.get("google_sub") and (acc.get("email") or "").lower() in owner_emails())
+
+
+def staff_of(acc: dict | None, grant_row: dict | None) -> tuple[str | None, set[str]]:
+    """(role, scopes): ('owner', all) | ('developer', scopes) | (None, set())."""
+    if not acc or acc.get("role") == "banned":
+        return None, set()
+    if is_owner_acc(acc):
+        return "owner", set(SCOPES)
+    if grant_row and (grant_row.get("expires") is None or grant_row["expires"] > _now()):
+        return "developer", {x for x in (grant_row.get("scopes") or []) if x in SCOPES}
+    # earlier ways to become the developer (the HAPTUNE_ADMIN_CODE claim, HAPTUNE_ADMINS): every scope, and the
+    # owner can revoke them in Access
+    if acc.get("role") == "admin" or (acc.get("handle") or "").lower() in ADMIN_HANDLES:
+        return "developer", set(SCOPES)
+    return None, set()
+
+
+class Me:
+    """The signed-in person: identity (users row) + account, and for staff their role, scopes and whether
+    Developer mode is on for this sign-in. With Developer mode off, staff use the app like anyone else."""
+
+    def __init__(self, user: dict, acc: dict, *, token_hash: str | None = None, grant_row: dict | None = None, elevated_until: float | None = None):
         self.user, self.acc = user, acc
         self.id = user["id"]
-        self.tier = effective_tier(acc)
+        self.token_hash = token_hash
+        self.staff, self.scopes = staff_of(acc, grant_row)
+        self.grant_row = grant_row
+        self.dev_until = elevated_until if (self.staff and elevated_until and elevated_until > _now()) else None
+        self.dev_mode = self.dev_until is not None
+        self.tier = "dev" if self.dev_mode else effective_tier(acc)
+
+    @property
+    def is_owner(self) -> bool:
+        return self.staff == "owner"
+
+    def can(self, scope: str) -> bool:
+        return self.dev_mode and scope in self.scopes
 
     @property
     def is_admin(self) -> bool:
-        return self.tier == "dev"
+        """Moderation powers on content (hidden posts, deleting others' posts): Developer mode + moderate_stage."""
+        return self.can("moderate_stage")
 
 
 def _token(authorization: str) -> str:
     return (authorization or "").removeprefix("Bearer ").strip()
 
 
+def _staff_rows(c, uid: str, token_hash: str | None) -> tuple[dict | None, float | None]:
+    g = c.execute(select(dev_grants).where(dev_grants.c.user_id == uid)).mappings().first()
+    until = None
+    if token_hash:
+        until = c.execute(select(elevations.c.until).where(elevations.c.token_hash == token_hash, elevations.c.user_id == uid)).scalar()
+    return (dict(g) if g else None), until
+
+
 def current(authorization: str = Header("")) -> Me:
-    user = user_from_token(_token(authorization))
+    tok = _token(authorization)
+    user = user_from_token(tok)
     if user is None:
         raise HTTPException(401, "Please open Melovyn online once to make your account.")
     with engine().begin() as c:
@@ -373,15 +454,19 @@ def current(authorization: str = Header("")) -> Me:
             raise HTTPException(403, "This account can no longer use the community.")
         c.execute(update(accounts).where(accounts.c.user_id == user["id"]).values(last_seen=_now()))
         _monthly_bonus(c, acc)
+        g, until = _staff_rows(c, user["id"], _hash(tok))
     touch(user["id"])
-    return Me(user, acc)
+    return Me(user, acc, token_hash=_hash(tok), grant_row=g, elevated_until=until)
 
 
-def reload(uid: str) -> Me:
+def reload(uid: str, like: Me | None = None) -> Me:
+    """The account again after a change; `like` keeps that sign-in's Developer mode."""
+    th = like.token_hash if like else None
     with engine().connect() as c:
         user = dict(c.execute(select(users).where(users.c.id == uid)).mappings().first())
         acc = dict(c.execute(select(accounts).where(accounts.c.user_id == uid)).mappings().first())
-    return Me(user, acc)
+        g, until = _staff_rows(c, uid, th)
+    return Me(user, acc, token_hash=th, grant_row=g, elevated_until=until)
 
 
 def optional(authorization: str = Header("")) -> Me | None:
@@ -391,10 +476,32 @@ def optional(authorization: str = Header("")) -> Me | None:
         return None
 
 
-def require_admin(me: Me = Depends(current)) -> Me:
-    if not me.is_admin:
-        raise HTTPException(403, "Only the developer can do that.")
+def _staff_gate(me: Me, scope: str | None) -> Me:
+    if not me.staff:
+        raise HTTPException(403, "Only the owner and developers can do that.")
+    if not me.dev_mode:
+        raise HTTPException(403, {"code": "dev_mode_off", "message": "Switch on Developer mode first (Me > Developer mode)."})
+    if scope == "owner" and not me.is_owner:
+        raise HTTPException(403, {"code": "owner_only", "message": "Only the owner can do that."})
+    if scope and scope != "owner" and scope not in me.scopes:
+        raise HTTPException(403, {"code": "scope", "scope": scope, "message": "Your developer access doesn't include this."})
     return me
+
+
+def require_scope(scope: str | None):
+    """FastAPI dependency: staff, Developer mode on for this sign-in, and `scope` ('owner' = the owner only)."""
+    def dep(me: Me = Depends(current)) -> Me:
+        return _staff_gate(me, scope)
+    return dep
+
+
+def require_admin(me: Me = Depends(current)) -> Me:
+    """Any staff member in Developer mode (endpoints that need a particular scope use require_scope)."""
+    return _staff_gate(me, None)
+
+
+def audit(c, me: Me, action: str, target: str | None = None, before=None, after=None, note: str = "") -> None:
+    c.execute(insert(audit_log).values(actor=me.id, action=action[:40], target=target, before=before, after=after, note=(note or "")[:500], created=_now()))
 
 
 def grant(c, uid: str, delta: int, reason: str, *, minted: bool = True, ref: str = "", note: str = "") -> int:
@@ -458,7 +565,10 @@ def me_json(me: Me) -> dict:
             "tier_source": acc["tier_source"], "credits": acc["credits"], "streak": acc["streak"], "usage": u,
             "limits": plan_limits(me.tier, acc), "unread": unread, "guidelines": acc["guidelines"], "has_password": bool(acc["pw_hash"]),
             "registered": is_registered(acc), "google": bool(acc.get("google_sub")), "email": acc.get("email") or "", "hub_role": acc.get("hub_role") or "",
-            "devices": n_sessions + 1, "joined": _iso(acc["created"])}
+            "devices": n_sessions + 1, "joined": _iso(acc["created"]),
+            "staff": {"role": me.staff, "scopes": sorted(me.scopes), "dev_mode": me.dev_mode, "dev_until": _iso(me.dev_until) if me.dev_until else None,
+                      "expires": _iso(me.grant_row["expires"]) if me.grant_row and me.grant_row.get("expires") else None} if me.staff else None,
+            "totp": bool(acc.get("totp_on"))}
 
 
 def _new_identity(c, name: str) -> tuple[dict, str]:
@@ -540,7 +650,7 @@ def patch_me(body: MeIn, me: Me = Depends(current)):
             vals["hub_role"] = body.hub_role if body.hub_role in ("", "teacher", "student") else ""
         if vals:
             c.execute(update(accounts).where(accounts.c.user_id == me.id).values(**vals))
-    return me_json(reload(me.id))
+    return me_json(reload(me.id, me))
 
 
 class PasswordIn(BaseModel):
@@ -565,6 +675,13 @@ class LoginIn(BaseModel):
     device: str = Field("", max_length=60)
 
 
+def _signed_in(uid: str, method: str, request: Request | None, device: str = "") -> None:
+    import analytics
+    d = (device or "").lower()
+    plat = "android" if "android" in d else "ios" if ("iphone" in d or "ipad" in d or "ios" in d) else "web"
+    analytics.server_event(uid, "sign_in", label=method, platform=plat, request=request)
+
+
 def _session(c, uid: str, label: str) -> str:
     token = secrets.token_urlsafe(32)
     c.execute(insert(sessions).values(token_hash=_hash(token), user_id=uid, label=label[:60], created=_now(), last_seen=_now()))
@@ -580,6 +697,7 @@ def login(body: LoginIn, request: Request):
         if not acc or not check_password(body.password, acc["pw_hash"]):
             raise HTTPException(401, "That username and password don't match.")
         token = _session(c, acc["user_id"], body.device)
+    _signed_in(acc["user_id"], "password", request, body.device)
     return {"token": token, "me": me_json(current(f"Bearer {token}"))}
 
 
@@ -691,6 +809,7 @@ def google_signin(body: GoogleIn, request: Request, authorization: str = Header(
                 uid = user["id"]
                 ensure_account(c, user)
                 c.execute(update(accounts).where(accounts.c.user_id == uid).values(google_sub=sub, email=email))
+    _signed_in(uid, "google", request, body.device)
     return {"token": token, "me": me_json(current(f"Bearer {token}"))}
 
 
@@ -752,16 +871,25 @@ def pair_poll(code: str, request: Request):
 def delete_me(me: Me = Depends(current)):
     """Deletes the account: profile, sign-ins, notifications and credits go; posts stay as 'Deleted user' so
     threads still read sensibly (Google Play and the App Store ask for this to be possible in the app)."""
-    from community import forget_user
     with engine().begin() as c:
-        forget_user(c, me.id)
-        for t in (notifications, practice_log, usage, ledger):
-            c.execute(delete(t).where(t.c.user_id == me.id))
-        c.execute(delete(sessions).where(sessions.c.user_id == me.id))
-        c.execute(delete(accounts).where(accounts.c.user_id == me.id))
-        c.execute(update(users).where(users.c.id == me.id).values(name="Deleted user", token_hash=_hash(secrets.token_hex(16)),
-                                                                    link_code=None, link_expires=None))
+        delete_account(c, me.id)
     return {"deleted": True}
+
+
+def delete_account(c, uid: str) -> None:
+    from community import forget_user
+    forget_user(c, uid)
+    for t in (notifications, practice_log, usage, ledger, elevations, dev_grants):
+        c.execute(delete(t).where(t.c.user_id == uid))
+    try:
+        import analytics
+        c.execute(delete(analytics.events).where(analytics.events.c.user_id == uid))
+    except Exception:                                                   # noqa: BLE001
+        pass
+    c.execute(delete(sessions).where(sessions.c.user_id == uid))
+    c.execute(delete(accounts).where(accounts.c.user_id == uid))
+    c.execute(update(users).where(users.c.id == uid).values(name="Deleted user", token_hash=_hash(secrets.token_hex(16)),
+                                                          link_code=None, link_expires=None))
 
 
 class DevIn(BaseModel):
@@ -772,12 +900,246 @@ class DevIn(BaseModel):
 def claim_dev(body: DevIn, request: Request, me: Me = Depends(current)):
     """The developer unlocks everything on their own account with the code in HAPTUNE_ADMIN_CODE."""
     rate(request, "dev", 5, 3600)
+    if owner_emails():
+        raise HTTPException(410, "Developer access is now given by the owner (Developer mode > Access).")
     want = os.environ.get("HAPTUNE_ADMIN_CODE", "")
     if len(want) < 12 or not hmac.compare_digest(want, body.code.strip()):
         raise HTTPException(403, "That code isn't right.")
     with engine().begin() as c:
         c.execute(update(accounts).where(accounts.c.user_id == me.id).values(role="admin"))
-    return me_json(reload(me.id))
+    return me_json(reload(me.id, me))
+
+
+# ----------------------------------------------------------------------------------------------- 2-step verification
+# TOTP (RFC 6238: 6 digits, 30 s, SHA-1), the codes authenticator apps (Google Authenticator, Microsoft
+# Authenticator, 1Password...) make. Required for the owner and developers before Developer mode switches on.
+B32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
+
+
+def totp(secret: str, offset: int = 0, at: float | None = None) -> str:
+    key = base64.b32decode(secret.upper() + "=" * (-len(secret) % 8))
+    counter = int((at if at is not None else time.time()) // 30) + offset
+    h = hmac.new(key, counter.to_bytes(8, "big"), hashlib.sha1).digest()
+    o = h[-1] & 15
+    return f"{(int.from_bytes(h[o:o + 4], 'big') & 0x7FFFFFFF) % 1_000_000:06d}"
+
+
+def _seal(secret: str) -> str:
+    if len(os.environ.get("HAPTUNE_TOKEN_KEY", "")) >= 16:
+        import google_link
+        return "enc:" + google_link.encrypt(secret)
+    return "plain:" + secret
+
+
+def _unseal(stored: str | None) -> str | None:
+    if not stored:
+        return None
+    if stored.startswith("enc:"):
+        import google_link
+        return google_link.decrypt(stored[4:])
+    return stored.removeprefix("plain:")
+
+
+def _recovery_codes() -> tuple[list[str], list[str]]:
+    codes = [f"{secrets.token_hex(2)}-{secrets.token_hex(2)}" for _ in range(10)]
+    return codes, [_hash(x.replace("-", "")) for x in codes]
+
+
+def check_2fa(c, acc: dict, code: str) -> bool:
+    """A current code from the app (each works once), or an unused recovery code (then used up)."""
+    code = re.sub(r"[\s-]", "", code or "").lower()
+    secret = _unseal(acc.get("totp_secret"))
+    if not secret or not code:
+        return False
+    if re.fullmatch(r"\d{6}", code):
+        now = int(time.time() // 30)
+        for off in (-1, 0, 1):
+            step = now + off
+            if (acc.get("totp_last_step") or 0) < step and hmac.compare_digest(totp(secret, off), code):
+                c.execute(update(accounts).where(accounts.c.user_id == acc["user_id"]).values(totp_last_step=step))
+                return True
+        return False
+    left = list(acc.get("totp_recovery") or [])
+    h = _hash(code)
+    if h in left:
+        left.remove(h)
+        c.execute(update(accounts).where(accounts.c.user_id == acc["user_id"]).values(totp_recovery=left))
+        return True
+    return False
+
+
+class CodeIn(BaseModel):
+    code: str = Field("", max_length=20)
+
+
+@router.get("/me/2fa")
+def twofa_status(me: Me = Depends(current)):
+    return {"on": bool(me.acc.get("totp_on")), "recovery_left": len(me.acc.get("totp_recovery") or []), "required": bool(me.staff)}
+
+
+@router.post("/me/2fa/setup")
+def twofa_setup(me: Me = Depends(current)):
+    """A new secret to add to an authenticator app (shown as a QR code and as text). Not on until confirmed."""
+    require_registered(me)
+    if me.acc.get("totp_on"):
+        raise HTTPException(409, "2-step verification is already on.")
+    secret = "".join(secrets.choice(B32) for _ in range(32))
+    with engine().begin() as c:
+        c.execute(update(accounts).where(accounts.c.user_id == me.id).values(totp_secret=_seal(secret), totp_on=False, totp_last_step=None))
+    label = urllib.parse.quote(f"Melovyn:{me.acc['handle']}")
+    return {"secret": secret, "uri": f"otpauth://totp/{label}?secret={secret}&issuer=Melovyn&digits=6&period=30"}
+
+
+@router.post("/me/2fa/enable")
+def twofa_enable(body: CodeIn, request: Request, me: Me = Depends(current)):
+    rate(request, f"2fa:{me.id}", 10, 900)
+    if me.acc.get("totp_on"):
+        raise HTTPException(409, "2-step verification is already on.")
+    codes, hashes = _recovery_codes()
+    with engine().begin() as c:
+        if not check_2fa(c, {**me.acc, "totp_recovery": []}, body.code):
+            raise HTTPException(400, "That code isn't right. Check the time on your phone and try the newest code.")
+        c.execute(update(accounts).where(accounts.c.user_id == me.id).values(totp_on=True, totp_recovery=hashes))
+        if me.staff:
+            audit(c, me, "2fa_on", me.id)
+    return {"on": True, "recovery_codes": codes}
+
+
+@router.post("/me/2fa/recovery")
+def twofa_new_recovery(body: CodeIn, request: Request, me: Me = Depends(current)):
+    rate(request, f"2fa:{me.id}", 10, 900)
+    codes, hashes = _recovery_codes()
+    with engine().begin() as c:
+        if not me.acc.get("totp_on") or not check_2fa(c, me.acc, body.code):
+            raise HTTPException(400, "That code isn't right.")
+        c.execute(update(accounts).where(accounts.c.user_id == me.id).values(totp_recovery=hashes))
+    return {"recovery_codes": codes}
+
+
+@router.post("/me/2fa/disable")
+def twofa_disable(body: CodeIn, request: Request, me: Me = Depends(current)):
+    rate(request, f"2fa:{me.id}", 10, 900)
+    if me.staff:
+        raise HTTPException(409, "The owner and developers must keep 2-step verification on.")
+    with engine().begin() as c:
+        if not me.acc.get("totp_on") or not check_2fa(c, me.acc, body.code):
+            raise HTTPException(400, "That code isn't right.")
+        c.execute(update(accounts).where(accounts.c.user_id == me.id).values(totp_on=False, totp_secret=None, totp_recovery=None))
+    return {"on": False}
+
+
+class DevModeIn(BaseModel):
+    on: bool
+    code: str = Field("", max_length=20)
+
+
+@router.post("/me/devmode")
+def dev_mode(body: DevModeIn, request: Request, me: Me = Depends(current)):
+    """Developer mode for this sign-in only: needs a 2-step code to switch on, ends after DEV_MODE_HOURS."""
+    if not me.staff:
+        raise HTTPException(403, "Only the owner and developers have Developer mode.")
+    with engine().begin() as c:
+        if not body.on:
+            c.execute(delete(elevations).where(elevations.c.token_hash == me.token_hash))
+            audit(c, me, "dev_mode_off", me.id)
+        else:
+            if not me.acc.get("totp_on"):
+                raise HTTPException(409, {"code": "totp_required", "message": "Set up 2-step verification first."})
+            rate(request, f"2fa:{me.id}", 10, 900)
+            if not check_2fa(c, me.acc, body.code):
+                raise HTTPException(400, "That code isn't right.")
+            c.execute(delete(elevations).where(elevations.c.token_hash == me.token_hash))
+            c.execute(insert(elevations).values(token_hash=me.token_hash, user_id=me.id, until=_now() + DEV_MODE_HOURS * 3600, created=_now()))
+            audit(c, me, "dev_mode_on", me.id)
+    return me_json(reload(me.id, me))
+
+
+# ----------------------------------------------------------------------------------------------- sign-ins and devices
+@router.get("/me/sessions")
+def my_sessions(me: Me = Depends(current)):
+    """Where this account is signed in: the device that made it, and every sign-in since (other devices)."""
+    with engine().connect() as c:
+        rows = c.execute(select(sessions).where(sessions.c.user_id == me.id).order_by(sessions.c.last_seen.desc())).mappings().all()
+        elev = {r[0] for r in c.execute(select(elevations.c.token_hash).where(elevations.c.user_id == me.id, elevations.c.until > _now())).all()}
+    out = [{"id": "device", "label": "The device this account was made on", "created": _iso(me.acc["created"]), "seen": None,
+            "current": me.token_hash == me.user["token_hash"], "dev_mode": me.user["token_hash"] in elev}]
+    out += [{"id": r["token_hash"][:16], "label": r["label"] or "Signed in", "created": _iso(r["created"]), "seen": _iso(r["last_seen"]),
+             "current": r["token_hash"] == me.token_hash, "dev_mode": r["token_hash"] in elev} for r in rows]
+    return {"items": out}
+
+
+def _end_session(c, me: Me, sid: str) -> None:
+    if sid == "device":
+        if not is_registered(me.acc):
+            raise HTTPException(409, "This account has no sign-in yet: signing out its first device would lose it.")
+        c.execute(delete(elevations).where(elevations.c.token_hash == me.user["token_hash"]))
+        c.execute(update(users).where(users.c.id == me.id).values(token_hash=_hash(secrets.token_hex(24))))
+        return
+    for r in c.execute(select(sessions.c.token_hash).where(sessions.c.user_id == me.id)).all():
+        if r[0].startswith(sid) and len(sid) >= 8:
+            c.execute(delete(elevations).where(elevations.c.token_hash == r[0]))
+            c.execute(delete(sessions).where(sessions.c.token_hash == r[0]))
+            return
+    raise HTTPException(404, "That sign-in has already ended.")
+
+
+@router.delete("/me/sessions/{sid}")
+def end_session(sid: str, me: Me = Depends(current)):
+    with engine().begin() as c:
+        _end_session(c, me, sid[:64])
+        if me.staff:
+            audit(c, me, "session_signed_out", me.id, note=sid[:16])
+    return {"ok": True}
+
+
+@router.post("/me/sessions/others")
+def end_other_sessions(me: Me = Depends(current)):
+    with engine().begin() as c:
+        for r in c.execute(select(sessions.c.token_hash).where(sessions.c.user_id == me.id, sessions.c.token_hash != me.token_hash)).all():
+            c.execute(delete(elevations).where(elevations.c.token_hash == r[0]))
+            c.execute(delete(sessions).where(sessions.c.token_hash == r[0]))
+        if me.token_hash != me.user["token_hash"] and is_registered(me.acc):
+            _end_session(c, me, "device")
+        if me.staff:
+            audit(c, me, "sessions_signed_out", me.id, note="all other devices")
+    return {"ok": True}
+
+
+# ----------------------------------------------------------------------------------------------- your data
+def export_user(c, uid: str) -> dict:
+    """Everything kept about a person, as JSON (for them, or for the owner answering a data request)."""
+    import academy
+    import community
+    acc = dict(c.execute(select(accounts).where(accounts.c.user_id == uid)).mappings().first() or {})
+    for k in ("pw_hash", "recovery_hash", "totp_secret", "totp_recovery", "totp_last_step", "stripe_customer", "stripe_sub"):
+        acc.pop(k, None)
+    user = dict(c.execute(select(users.c.id, users.c.name, users.c.created).where(users.c.id == uid)).mappings().first() or {})
+    rows = lambda t, col="user_id", cols=None: [dict(r) for r in c.execute(select(*(cols or [t])).where(t.c[col] == uid)).mappings().all()]  # noqa: E731
+    out = {"exported": _iso(_now()), "user": user, "account": acc,
+           "notifications": rows(notifications), "practice": rows(practice_log), "credits": rows(ledger), "ai_usage": rows(usage),
+           "posts": rows(community.posts), "replies": rows(community.replies),
+           "class_memberships": rows(academy.members),
+           "takes": rows(academy.takes, cols=[academy.takes.c.id, academy.takes.c.class_id, academy.takes.c.piece_title, academy.takes.c.accuracy, academy.takes.c.created]),
+           "feedback_sent": rows(app_feedback)}
+    try:
+        import sounds
+        out["sounds"] = rows(sounds.sounds, cols=[sounds.sounds.c.id, sounds.sounds.c.title, sounds.sounds.c.seconds, sounds.sounds.c.created])
+    except Exception:                                                   # noqa: BLE001
+        pass
+    try:
+        import analytics
+        out["usage_events"] = rows(analytics.events, cols=[analytics.events.c.ts, analytics.events.c.name, analytics.events.c.screen,
+                                                           analytics.events.c.label, analytics.events.c.value, analytics.events.c.platform, analytics.events.c.country])
+    except Exception:                                                   # noqa: BLE001
+        pass
+    return json.loads(json.dumps(out, default=str))
+
+
+@router.get("/me/export")
+def export_me(request: Request, me: Me = Depends(current)):
+    rate(request, f"export:{me.id}", 5, 3600)
+    with engine().connect() as c:
+        return export_user(c, me.id)
 
 
 @router.get("/plans")
@@ -871,7 +1233,7 @@ def sync_store(uid: str) -> str:
 def billing_sync(request: Request, me: Me = Depends(current)):
     rate(request, "billing", 30, 3600)
     sync_store(me.id)
-    return me_json(reload(me.id))
+    return me_json(reload(me.id, me))
 
 
 @router.post("/billing/revenuecat")
@@ -912,7 +1274,7 @@ def plus_week(me: Me = Depends(current)):
         c.execute(update(accounts).where(accounts.c.user_id == me.id).values(
             tier="plus", tier_until=start + 7 * 86400, tier_source=acc["tier_source"] if acc["tier"] == "plus" and acc["tier_source"] == "store" else "credits",
             plus_redeemed=_now()))
-    return me_json(reload(me.id))
+    return me_json(reload(me.id, me))
 
 
 # ----------------------------------------------------------------------------------------------- practice

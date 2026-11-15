@@ -8,6 +8,7 @@ import { ensureAccount } from '../account.js';
 import { levelFor } from '../../core/academy.js';
 import { isNative } from '../native.js';
 import { canInstall, promptInstall, onInstallChange } from '../install.js';
+import { DevModeRows } from './staff.jsx';
 
 export function MeView({ active }) {
   const s = useApp();
@@ -82,13 +83,13 @@ export function MeView({ active }) {
           </List>
         </Section>
 
+        {s.me?.staff && <Section title={t('developer')}><DevModeRows /></Section>}
         <Section>
           <List>
             {!isNative() && installable && <Row icon="download" color="violet" title={t('installApp')} subtitle={t('installAppSub')} onClick={promptInstall} id="me-install" />}
             <Row icon="quiz" color="teal" title={t('help')} subtitle={t('helpSub')} onClick={() => push('help')} />
             <Row icon="send" color="blue" title={t('sendFeedback')} subtitle={t('sendFeedbackSub')} onClick={() => openSheet('feedback')} />
             <Row icon="info" color="gray" title={t('about')} onClick={() => openSheet('about')} />
-            {tier === 'dev' && <Row icon="bolt" color="purple" title={t('devPanel')} subtitle={t('devPanelSub')} onClick={() => push('admin')} />}
           </List>
         </Section>
       </div>

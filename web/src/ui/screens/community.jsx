@@ -18,6 +18,7 @@ import { C, ensureAccount, attempt } from '../account.js';
 import { PostCard, Person, timeLeft } from './social.jsx';
 import { ScoreCard } from './home.jsx';
 import { local } from '../storage.js';
+import { flag } from '../analytics.js';
 
 const SEGMENTS = [
   { value: 'home', label: 'segForYou' }, { value: 'following', label: 'segFollowing' }, { value: 'requests', label: 'segRequests' },
@@ -58,7 +59,7 @@ export function CommunityView({ active }) {
             <Icon name="chevronR" size={18} stroke={2.6} />
           </button>
           <div class="chips stage-chips" id="community-seg" role="tablist">
-            {SEGMENTS.map((o) => <Chip key={o.value} on={seg === o.value} color="pink" onClick={() => setState({ communitySeg: o.value, stageMine: false })}>{t(o.label)}</Chip>)}
+            {SEGMENTS.filter((o) => o.value !== 'sounds' || flag('sounds')).map((o) => <Chip key={o.value} on={seg === o.value} color="pink" onClick={() => setState({ communitySeg: o.value, stageMine: false })}>{t(o.label)}</Chip>)}
           </div>
           {seg === 'home' ? <ForYou active={active} />
             : seg === 'following' ? <Feed active={active} following />
@@ -96,7 +97,7 @@ export function StageNewSheet() {
     ['sound', 'wave', 'violet', 'stShareSound', () => push('sound', {}, 'write')],
     ['question', 'quiz', 'blue', 'stAskQuestion', () => openSheet('compose', { type: 'question' })],
     ['score', 'staff', 'green', 'stPostScore', () => openSheet('compose', { type: 'share' })],
-  ];
+  ].filter(([id]) => id !== 'sound' || flag('sounds'));
   return (
     <SheetFrame title={t('stageWhatDo')}>
       <div class="list inset" id="stage-new">

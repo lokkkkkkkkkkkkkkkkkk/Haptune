@@ -9,6 +9,7 @@ import { isNative, platform } from '../native.js';
 import { Person, Coins } from './social.jsx';
 import { SheetFrame } from './common.jsx';
 import { saveFile } from '../files.js';
+import { DevModeRows, SecurityRows } from './staff.jsx';
 
 export function AccountSheet() {
   const s = useApp();
@@ -114,11 +115,16 @@ export function AccountSheet() {
           {s.examples && <Row icon="trash" color="orange" title={t('removeExamples')} onClick={clearExamples} />}
         </List>
       </Section>
-      {hasServer() && (
+      {hasServer() && me && (
+        <Section title={t('privacySecurity')} footer={t('usageStatsFoot')}>
+          <SecurityRows registered={!!me.registered} settings={st} updateSettings={updateSettings} />
+        </Section>
+      )}
+      {hasServer() && me?.staff && <Section title={t('developer')}><DevModeRows /></Section>}
+      {hasServer() && !me?.staff && (
         <Section title={t('developer')}>
           <List>
-            {tier === 'dev' ? <Row icon="bolt" color="purple" title={t('devPanel')} subtitle={t('devPanelSub')} onClick={() => go('admin')} />
-              : <Row icon="key" color="gray" title={t('devUnlock')} subtitle={t('devUnlockSub')} onClick={() => openSheet('devCode')} />}
+            {!me?.staff && <Row icon="key" color="gray" title={t('devUnlock')} subtitle={t('devUnlockSub')} onClick={() => openSheet('devCode')} />}
           </List>
         </Section>
       )}

@@ -24,6 +24,7 @@ import { whenSignedIn } from './hub.jsx';
 import { tick } from '../native.js';
 import * as E from '../soundengine.js';
 import { note as playNote, audioContext } from '../audio.js';
+import { track } from '../analytics.js';
 
 const KIND_ICON = { mic: ['mic', 'pink'], instrument: ['piano', 'violet'], audio: ['upload', 'blue'], backing: ['chords', 'orange'], take: ['ear', 'teal'], stem: ['mixer', 'green'] };
 const saveProject = (s) => db.put('kv', { k: `sound:${s.id}`, sound: s, updated: Date.now() });
@@ -346,6 +347,7 @@ export function SoundPostSheet({ sound }) {
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(typeof j.detail === 'string' ? j.detail : j.detail?.message || `${res.status}`);
       toast(t('sdPosted'));
+      track('sound_made', { value: S.soundSeconds(sound), props: { tracks: sound.tracks.length } });
       closeSheet();
       go('community');
     } catch (e) { toast(e.message || String(e), 'err'); setBusy(false); }

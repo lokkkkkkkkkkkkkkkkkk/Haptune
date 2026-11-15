@@ -14,6 +14,8 @@ import { local } from '../storage.js';
 import { refreshClasses, MissionCard } from './classes.jsx';
 import { isNative, openExternal } from '../native.js';
 import qrcode from 'qrcode-generator';
+import { track } from '../analytics.js';
+import { flag } from '../analytics.js';
 
 const CFG = () => globalThis.HAPTUNE_CONFIG || {};
 const INSTR = ['piano', 'violin', 'guitar', 'voice', 'cello', 'flute', 'ukulele', 'sax'];
@@ -97,7 +99,7 @@ export function LearnView({ active }) {
           </> : <>
             <button type="button" class="act c-orange" id="join-class" onClick={() => whenSignedIn(() => openSheet('joinClass'), 'student')}><span class="ic"><Icon name="users" size={22} stroke={2.2} /></span><strong>{t('joinClass')}</strong><span>{t('hubJoinSub')}</span></button>
             <button type="button" class="act c-pink" onClick={() => document.getElementById('open-classes')?.scrollIntoView({ behavior: 'smooth' })}><span class="ic"><Icon name="globe" size={22} stroke={2.2} /></span><strong>{t('hubBrowse')}</strong><span>{t('hubBrowseSub')}</span></button>
-            <button type="button" class="act c-violet" onClick={() => push('tutors')}><span class="ic"><Icon name="person" size={22} stroke={2.2} /></span><strong>{t('findTutor')}</strong><span>{t('findTutorSub')}</span></button>
+            {flag('tutors') && <button type="button" class="act c-violet" onClick={() => push('tutors')}><span class="ic"><Icon name="person" size={22} stroke={2.2} /></span><strong>{t('findTutor')}</strong><span>{t('findTutorSub')}</span></button>}
             <button type="button" class="act c-teal" id="teach-class" onClick={() => whenSignedIn(() => { C.update({ hub_role: 'teacher' }).catch(() => {}); openSheet('newClass'); }, 'teacher')}><span class="ic"><Icon name="academy" size={22} stroke={2.2} /></span><strong>{t('teachClass')}</strong><span>{t('hubTeachSub')}</span></button>
           </>}
         </div>
@@ -118,9 +120,9 @@ export function LearnView({ active }) {
         <section class="sec3">
           <div class="section-head"><h2>{t('hubTeachers')}</h2></div>
           <div class="grid2">
-            <button type="button" class="tile3 lift" onClick={() => push('tutors')} id="learn-tutors">
+            {flag('tutors') && <button type="button" class="tile3 lift" onClick={() => push('tutors')} id="learn-tutors">
               <span class="k"><Icon name="users" size={15} />{t('findTutor')}</span><strong>{t('hubFindTeacher')}</strong><span class="muted">{t('findTutorSub')}</span>
-            </button>
+            </button>}
             <button type="button" class="tile3 lift" onClick={() => push('lessons')} id="learn-lessons">
               <span class="k"><Icon name="calendar" size={15} />{t('myLessons')}</span><strong>{t('hubLessons')}</strong><span class="muted">{t('myLessonsSub')}</span>
             </button>
@@ -410,6 +412,7 @@ export function JoinLinkSheet({ code }) {
     setBusy(true);
     try {
       const r = await academy.join(code);
+      track('class_joined');
       refreshClasses(); closeSheet(); goLearn();
       toast(t('joinedClass', { name: r.class.name }));
       push('classView', { id: r.class.id }, 'academy');
