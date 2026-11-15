@@ -10,6 +10,7 @@ import { Mascot } from '../mascot.jsx';
 import { C, ensureAccount } from '../account.js';
 import { hasServer } from '../api.js';
 import { platform } from '../native.js';
+import { track } from '../analytics.js';
 
 const TOPICS = [
   { id: 'start', icon: 'sparkles', color: 'purple', qs: ['faq_add', 'faq_formats', 'faq_scanTips', 'faq_searchTips'] },
@@ -66,7 +67,11 @@ export function HelpView({ topic = '' }) {
 
 // the last few errors, so a problem report can say what went wrong
 const errors = [];
-export const keepError = (m) => { errors.push(`${new Date().toISOString().slice(11, 19)} ${String(m).slice(0, 300)}`); if (errors.length > 12) errors.shift(); };
+export const keepError = (m) => {
+  errors.push(`${new Date().toISOString().slice(11, 19)} ${String(m).slice(0, 300)}`); if (errors.length > 12) errors.shift();
+  const s = getState(); const top = s.stacks[s.tab]?.slice(-1)[0];
+  track('error', { label: String(m).split('\n')[0].slice(0, 200), screen: top?.view || s.tab, props: { ua: navigator.userAgent.slice(0, 120) } });
+};
 export function captureErrors() {
   const keep = keepError;
   addEventListener('error', (e) => keep(e.message || e.error));

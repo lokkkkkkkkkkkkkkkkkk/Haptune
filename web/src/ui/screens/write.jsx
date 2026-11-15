@@ -23,6 +23,7 @@ import { openFiles } from '../intake.js';
 import { hasServer } from '../api.js';
 import { hasPlan } from '../account.js';
 import { RHYTHM_IDS } from '../../core/rhythm.js';
+import { flag } from '../analytics.js';
 
 const INSTRUMENTS = ['piano', 'violin', 'guitar', 'voice', 'flute', 'cello', 'ukulele', 'clarinet', 'sax', 'trumpet', 'erhu', 'guzheng'];
 const KEYS = [-4, -3, -2, -1, 0, 1, 2, 3, 4, 5];
@@ -110,7 +111,7 @@ export function NewSongSheet({ kind: kind0 = null }) {
   const [style, setStyle] = useState('pop');
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
-  const kinds = WIZ;
+  const kinds = WIZ.filter((k) => (k.id !== 'sound' || flag('sounds')) && (k.id !== 'improv' || flag('improvise')));
   const choose = (k) => {
     if (k === 'improv') { closeSheet(); push('improvise', {}, 'write'); return; }
     if (k === 'exercise') { closeSheet(); setTimeout(() => openSheet('scale'), 0); return; }

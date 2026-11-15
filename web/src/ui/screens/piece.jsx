@@ -26,6 +26,7 @@ import { Mascot, Confetti } from '../mascot.jsx';
 import { academy, hasServer } from '../api.js';
 import { C, attempt } from '../account.js';
 import { dueText } from './classes.jsx';
+import { track } from '../analytics.js';
 
 export const SOUND = new Proxy({}, { get: (_, k) => soundOf(k) });
 const SINGING = new Set(['voice', 'voice_soprano', 'voice_alto', 'voice_tenor', 'voice_bass']);
@@ -108,6 +109,7 @@ export function PieceView({ id, active, start, assignment, challenge, daily }) {
 
 function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, assignment, challenge, daily, reload }) {
   const s = useApp();
+  useEffect(() => { track('piece_open', { label: meta.title }); }, [meta.id]);
   const { score, sheet: baseSheet, rec } = data;
   const tScore = useMemo(() => (score ? transposeScore(score, semis) : null), [score, semis]);
   const choices = useMemo(() => partChoices(tScore), [tScore]);
@@ -371,6 +373,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
   };
 
   const startPractice = async ({ part, mode, speed: sp, countIn: ci, range: rng, buzzWrong = true, buzzBeat = false }) => {
+    track('play_along_start', { label: meta.title, props: { mode } });
     const psel = choices.find((c) => c.id === part) || { id: 'all', pi: null, staff: null };
     setSpeed(sp); setCountIn(ci);
     setResult(null);
@@ -489,6 +492,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
     const keyF = sheetKey?.fifths || 0;
     const nm = (m) => pitchName(spellMidi(m, keyF));
     const wrong = (r.wrong || []).slice(0, 40).map((w) => ({ bar: barNo(w.mi), mi: w.mi, want: nm(w.want), played: w.played == null ? '' : nm(w.played) }));
+    track('play_along_finish', { label: meta.title, value: Math.round(r.accuracy * 100), props: { seconds: secs, mode: pr?.mode } });
     setResult({ ...r, wrong, seconds: secs, tricky: trickyBars(r.bars), barsList, mode: pr?.mode, speed: pr?.speed ?? speed, part: pr?.sel?.id, title: meta.title, pieceId: meta.id, keySig: sheetKey || null });
     const recP = takeRec.current;
     takeRec.current = null;
@@ -1336,6 +1340,7 @@ export function ExportSheet({ pieceId, semis, title, part = null, partLabel = ''
   };
   /** Makes the file: {name, data}. Slow ones (the PDF) report progress. */
   const make = async (kind) => {
+    track('create_export', { label: kind });
     if (kind === 'musicxml') return { name: `${safe}${suffix}.musicxml`, data: writeMusicXML(scoreNow()) };
     if (kind === 'midi') return { name: `${safe}${suffix}.mid`, data: writeMIDI(scoreNow()) };
     if (kind === 'sheetpdf') return { name: `${safe}${suffix}.pdf`, data: await scorePdf(writeMusicXML(scoreNow()), { title: safe + suffix, onProgress: (a, n) => setProgress(`${a}/${n}`) }) };

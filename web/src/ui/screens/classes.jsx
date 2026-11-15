@@ -12,6 +12,7 @@ import { local } from '../storage.js';
 import { parseMusicXML, writeMusicXML } from '../../core/musicxml.js';
 import { partChoices } from '../../core/score.js';
 import { StreamPanel, ClassworkPanel, PeoplePanel, GradesPanel, VoiceNote } from './classroom.jsx';
+import { track } from '../analytics.js';
 
 const STICKERS = [['star', '⭐'], ['fire', '🔥'], ['clap', '👏'], ['heart', '❤️'], ['rocket', '🚀'], ['trophy', '🏆'], ['music', '🎵'], ['thumbs', '👍']];
 const EMOJI = Object.fromEntries(STICKERS);
@@ -482,6 +483,7 @@ export function JoinClassSheet() {
     try {
       await ensureProfile(name.trim());
       const r = await academy.join(clean);
+      track('class_joined');
       refreshClasses();
       closeSheet();
       toast(t('joinedClass', { name: r.class.name }));

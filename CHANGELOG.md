@@ -1,5 +1,16 @@
 # Changelog
 
+## Owner account, Developer mode and analytics (November 2026)
+- **Roles:** owner (set only by `HAPTUNE_OWNER_EMAILS`, can't be demoted from the app) > developers (scopes and an end
+  date, given and revoked by the owner) > verified teachers > users.
+- **Developer mode:** a switch in Me, off by default, on per device for 8 hours after a 2-step code (authenticator app,
+  recovery codes). Sign-ins and devices list with remote sign-out.
+- **Dashboard:** Overview with charts, Users with timelines and actions, Activity and funnels, Features with feature
+  flags, Errors, Access, an append-only Audit log; every admin endpoint checks Developer mode and its scope.
+- **Analytics without third parties:** batched events to our own server, country only (no IPs), 180-day raw retention
+  then daily totals; switch off in Settings; download my data; privacy policy in English, Chinese and Malay.
+- Fixed: after setting up 2-step verification the app still thought it was off.
+
 ## Melovyn 3.0 (branch `melovyn-v3`, November 2026)
 
 Driven by testers' feedback: the interface was too complicated, Stage was hard to understand, Play Along missed

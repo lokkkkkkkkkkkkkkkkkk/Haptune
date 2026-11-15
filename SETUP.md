@@ -99,9 +99,25 @@ Prices are sent with each checkout (RM 14.90 / 99.90 for Plus, RM 29.90 / 229.90
 - Optional: `fly secrets set HAPTUNE_PAY_NAME="<name on the account>" -a haptune-lok` so people see who they are paying.
 - When someone pays: the app's **Me → Developer panel → Payments** lists it with their code. Find the transfer with that code in your bank, then **Approve**. Their plan turns on and they are notified.
 
-## 8. Developer access and checks you do
-- `fly secrets set HAPTUNE_ADMIN_CODE=<a long code only you know>`; type it once in the app (Me → Settings → Developer access).
-- Developer panel → **Payments**: approve transfers. **Tutors**: read each paid teaching profile and Verify or Reject. **Reports** and **Feedback** as before.
+## 8. You as the owner, Developer mode, and the dashboard
+1. Make yourself the owner (only this server setting can do it; nobody can take it from the app):
+   ```bash
+   fly secrets set HAPTUNE_OWNER_EMAILS=you@gmail.com -a haptune-lok
+   ```
+   Then sign in to Melovyn with **that Google account**. (Once an owner is set, the old developer code no longer works;
+   accounts that used it stay developers until you revoke them in Access.)
+2. **Me → Developer mode**: the first time it asks you to set up 2-step verification with an authenticator app
+   (Google Authenticator, Microsoft Authenticator, 1Password). Save the recovery codes it shows. After that, each
+   switch-on asks for a code and lasts 8 hours on that device. With it off you use Melovyn like everyone else.
+3. The dashboard: **Overview** (people active, sign-ups, sessions, practice, retention, devices, countries), **Users**
+   (search, one person's timeline, give a plan, verify a teacher, suspend, message, export, delete), **Activity**
+   (live feed and where people drop out), **Features** (time per screen; switch unfinished features off or to Beta
+   without a new version), **Errors** (app and server errors grouped), **Access** (give someone developer access with
+   only the parts they need and an end date; revoke instantly), **Audit** (every staff action, can't be edited; CSV).
+   Payments, teacher and tutor checks, Stage reports and feedback are there too.
+4. Optional: `fly secrets set HAPTUNE_TOKEN_KEY=...` (see §3b) also encrypts the 2-step secrets.
+5. Privacy: the tracking is described in `privacy.html` (English, 中文, Bahasa Melayu). People can switch it off in
+   Settings, download their data and delete their account. Raw events are kept 180 days, then only daily totals.
 
 ## 9. Google Play
 Follow `web/ANDROID.md`. The app is now **Melovyn** with the app ID **`com.sloky.melovyn`** (changed from the earlier test IDs before anything was published;

@@ -9,6 +9,7 @@ import { Icon, Button, Chip } from '../components.jsx';
 import { SheetFrame } from './common.jsx';
 import { call, hasServer } from '../api.js';
 import { planError } from '../account.js';
+import { track } from '../analytics.js';
 
 let convo = [];                     // [{role: 'user'|'assistant', text, actions?}]
 const MAX_TURNS = 20;
@@ -87,6 +88,7 @@ export function AIChatSheet() {
     if (!q || busy) return;
     const next = [...msgs, { role: 'user', text: q.slice(0, 2000) }].slice(-MAX_TURNS);
     setMsgs(next); setText(''); setErr(''); setBusy(true);
+    track('hapi_ask', { screen: ctx.current.screen });
     try {
       const r = await call('/ai/chat', { method: 'POST', timeout: 90000,
         json: { messages: next.map(({ role, text: x }) => ({ role, text: x })), context: ctx.current, lang: getLang() } });

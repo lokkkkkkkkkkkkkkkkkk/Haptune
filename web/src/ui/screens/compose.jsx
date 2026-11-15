@@ -8,6 +8,7 @@ import { Mascot } from '../mascot.jsx';
 import { writeMusicXML } from '../../core/musicxml.js';
 import { C, attempt, ensureAccount, fileToAttachment } from '../account.js';
 import { Coins, PostCard } from './social.jsx';
+import { track } from '../analytics.js';
 
 const LEVELS = ['beginner', 'intermediate', 'advanced'];
 const LICENCES = ['pd', 'own', 'arr', 'copyrighted', 'unknown'];
@@ -69,6 +70,7 @@ export function ComposeSheet({ type: initial = 'request', piece = null, show = n
       }
       if (type === 'show') Object.assign(b, { title: t('showTitle', { piece: show.piece }), data: show });
       const r = await attempt(() => C.create(b));
+      if (r) track('post_created', { label: b.type });
       if (r) {
         closeSheet();
         ensureAccount({ fresh: true });

@@ -1,5 +1,5 @@
-// The developer's panel (only for the account unlocked with HAPTUNE_ADMIN_CODE): how the app is doing,
-// reports to look at, the feedback inbox, and giving a plan or credits to someone (testers, teachers).
+// Review screens of the Developer-mode dashboard (screens/dashboard.jsx): payments to approve, teachers and
+// tutors to verify, Stage reports, the feedback inbox, and credits.
 import { useState, useEffect } from 'preact/hooks';
 import { toast } from '../state.js';
 import { t } from '../../core/i18n.js';
@@ -8,45 +8,7 @@ import { NavBar } from './common.jsx';
 import { C, attempt } from '../account.js';
 import { PersonLine, timeAgo } from './social.jsx';
 
-export function AdminView({ active }) {
-  const [tab, setTab] = useState('overview');
-  return (
-    <div class="scroll">
-      <NavBar title={t('devPanel')} backLabel={t('back')} color="purple" />
-      <div class="wrap">
-        <Segmented value={tab} onChange={setTab} options={[{ value: 'overview', label: t('overview') }, { value: 'payments', label: t('payments') }, { value: 'tutors', label: t('tutorsTab') }, { value: 'teachers', label: t('adminTeachers') }, { value: 'reports', label: t('reports') }, { value: 'feedback', label: t('feedback') }, { value: 'tools', label: t('tools') }]} />
-        {tab === 'overview' && <Overview active={active} />}
-        {tab === 'payments' && <Payments active={active} />}
-        {tab === 'tutors' && <TutorsAdmin active={active} />}
-        {tab === 'teachers' && <TeachersAdmin active={active} />}
-        {tab === 'reports' && <Reports active={active} />}
-        {tab === 'feedback' && <Inbox active={active} />}
-        {tab === 'tools' && <Tools />}
-      </div>
-    </div>
-  );
-}
-
-function Overview({ active }) {
-  const [o, setO] = useState(null);
-  useEffect(() => { if (active) C.admin.overview().then(setO).catch((e) => toast(e.message, 'err')); }, [active]);
-  if (!o) return <div class="loading"><div class="spinner" /></div>;
-  const tiles = [
-    ['members', o.members], ['activeToday', o.active_today], ['plan_plus', o.plus], ['plan_pro', o.pro], ['postsToday', o.posts_today],
-    ['openRequests', o.open_requests], ['reports', o.open_reports], ['newFeedback', o.new_feedback], ['creditsMintedWeek', o.credits_minted_week],
-  ];
-  return (
-    <>
-      <div class="stat-grid">{tiles.map(([k, v]) => <div key={k}><strong class="num">{v}</strong><span>{t(k)}</span></div>)}</div>
-      <Section title={t('aiThisMonth')} footer={t('aiCostNote')}>
-        <div class="stat-grid">{['read_pages', 'find', 'tutor'].map((k) => <div key={k}><strong class="num">{o.ai_this_month[k]}</strong><span>{t(`use_${k}`)}</span></div>)}</div>
-      </Section>
-    </>
-  );
-}
-
-/** DuitNow / bank transfers people say they made: check the bank for the code and amount, then approve. */
-function Payments({ active }) {
+export function Payments({ active }) {
   const [items, setItems] = useState(null);
   const [notes, setNotes] = useState({});
   const load = () => C.admin.payments().then((r) => setItems(r.items)).catch((e) => toast(e.message, 'err'));
@@ -75,7 +37,7 @@ function Payments({ active }) {
 }
 
 /** Teaching profiles that are paid for and waiting to be looked at before they are listed. */
-function TutorsAdmin({ active }) {
+export function TutorsAdmin({ active }) {
   const [items, setItems] = useState(null);
   const [notes, setNotes] = useState({});
   const load = () => C.admin.tutors().then((r) => setItems(r.items)).catch((e) => toast(e.message, 'err'));
@@ -98,7 +60,7 @@ function TutorsAdmin({ active }) {
   ));
 }
 
-function Reports({ active }) {
+export function Reports({ active }) {
   const [items, setItems] = useState(null);
   const load = () => C.admin.reports().then((r) => setItems(r.items)).catch((e) => toast(e.message, 'err'));
   useEffect(() => { if (active) load(); }, [active]);
@@ -122,7 +84,7 @@ function Reports({ active }) {
   ));
 }
 
-function Inbox({ active }) {
+export function Inbox({ active }) {
   const [status, setStatus] = useState('new');
   const [items, setItems] = useState(null);
   const load = () => C.admin.feedback(status).then((r) => setItems(r.items)).catch((e) => toast(e.message, 'err'));
@@ -147,7 +109,7 @@ function Inbox({ active }) {
   );
 }
 
-function Tools() {
+export function Tools() {
   const [handle, setHandle] = useState('');
   const [tier, setTier] = useState('plus');
   const [days, setDays] = useState(30);
@@ -176,7 +138,7 @@ function Tools() {
 }
 
 /** Teacher verification requests: who, which school, the document, and Verify / Reject. */
-function TeachersAdmin({ active }) {
+export function TeachersAdmin({ active }) {
   const [list, setList] = useState(null);
   const load = () => C.teacher.adminList().then((r) => setList(r.teachers)).catch((e) => toast(e.message, 'err'));
   useEffect(() => { if (active) load(); }, [active]);

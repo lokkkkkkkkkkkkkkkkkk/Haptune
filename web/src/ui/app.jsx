@@ -20,6 +20,8 @@ import { SoundCheckView } from './screens/soundcheck.jsx';
 import { ReportView } from './screens/report.jsx';
 import { AIChatSheet, AIFab } from './screens/aichat.jsx';
 import { Boundary } from './boundary.jsx';
+import { startTracking, loadFlags, screenShown, flag } from './analytics.js';
+import { TwoStepSheet, DevModeSheet, SessionsSheet } from './screens/staff.jsx';
 import { SoundView, SoundAddSheet, SoundTrackSheet, SoundSettingsSheet, SoundExportSheet, SoundPostSheet } from './screens/sound.jsx';
 import { VaryView } from './screens/moretools.jsx';
 import { LearnView as LearnMoreView } from './screens/learn.jsx';
@@ -43,7 +45,7 @@ import { ComposeSheet } from './screens/compose.jsx';
 import { ProfileView, LeaderboardView, NotificationsView, WalletView, ChallengeView, EditProfileView } from './screens/people.jsx';
 import { PlansSheet, ManualPaySheet } from './screens/plans.jsx';
 import { HelpView, FeedbackSheet, GuidelinesSheet, AboutSheet, captureErrors } from './screens/help.jsx';
-import { AdminView } from './screens/admin.jsx';
+import { AdminView, AdminUserView, DeleteUserSheet } from './screens/dashboard.jsx';
 import { ReportSheet, MoreSheet } from './screens/social.jsx';
 import { hasServer } from './api.js';
 import { ensureAccount, C } from './account.js';
@@ -68,7 +70,7 @@ const VIEWS = {
   improvise: (p) => <ImproviseView {...p} pushed />, tools: (p) => <ToolsView {...p} pushed />, courses: (p) => <AcademyView {...p} pushed />,
   piece: PieceView, editor: EditorView, studio: StudioView, student: StudentView, tutors: TutorsView, tutor: TutorView, tutorMe: TutorMeView, lessons: LessonsView, songbook: SongbookView, catalog: CatalogView, course: CourseView, tool: ToolView, history: HistoryView, classView: ClassView, assignment: AssignmentView,
   post: PostView, daily: DailyView, profile: ProfileView, leaderboard: LeaderboardView, notifications: NotificationsView, wallet: WalletView, challenge: ChallengeView,
-  editProfile: EditProfileView, help: HelpView, admin: AdminView,
+  editProfile: EditProfileView, help: HelpView, admin: AdminView, adminUser: AdminUserView,
   __crash: () => { throw new Error('test crash'); },           // the click-through test checks the error boundary with it
   practice: PracticeView, soundCheck: SoundCheckView, report: ReportView, sound: SoundView, vary: VaryView, chordEditor: ChordEditorView, learnMore: (p) => <LearnMoreView {...p} pushed />,
 };
@@ -82,7 +84,7 @@ const SHEETS = {
   newSong: NewSongSheet, hubRole: HubRoleSheet, classQR: ClassQRSheet, pair: PairSheet, take: TakeSheet, joinLink: JoinLinkSheet, moment: MomentSheet,
   setPassword: SetPasswordSheet, signIn: SignInSheet, deleteAccount: DeleteAccountSheet, devCode: DevCodeSheet,
   pieceMore: PieceMoreSheet, chordPick: ChordPickSheet, ceSong: ChordSongSheet, ceSection: ChordSectionSheet, ceExport: ChordExportSheet,
-  aiChat: AIChatSheet, stageNew: StageNewSheet, soundAdd: SoundAddSheet, soundTrack: SoundTrackSheet, soundSettings: SoundSettingsSheet, soundExport: SoundExportSheet, soundPost: SoundPostSheet, connections: ConnectionsSheet, teacherVerify: TeacherVerifySheet, asgMeta: AsgMetaSheet, session: SessionSheet, invite: InviteSheet, grade: GradeSheet,
+  aiChat: AIChatSheet, deleteUser: DeleteUserSheet, twoStep: TwoStepSheet, devMode: DevModeSheet, sessions: SessionsSheet, stageNew: StageNewSheet, soundAdd: SoundAddSheet, soundTrack: SoundTrackSheet, soundSettings: SoundSettingsSheet, soundExport: SoundExportSheet, soundPost: SoundPostSheet, connections: ConnectionsSheet, teacherVerify: TeacherVerifySheet, asgMeta: AsgMetaSheet, session: SessionSheet, invite: InviteSheet, grade: GradeSheet,
 };
 
 /** Android back button: close a sheet, go back a screen, go Home, then leave the app. */
@@ -184,6 +186,8 @@ function App() {
     captureErrors();
     hooks.practice = reportPractice;
     loadAll().then(() => {
+      startTracking();
+      loadFlags().then(() => setState({ flagsRev: Date.now() }));
       if (!local.get('welcomed', false)) openSheet('welcome');
       if (hasServer()) ensureAccount().then(backFromCheckout);
       openHash();
@@ -196,6 +200,8 @@ function App() {
   useEffect(() => { setSyncOffset(s.settings.syncMs || 0); }, [s.settings.syncMs]);
   const [soundTap, setSoundTap] = useState(null);       // the phone paused the sound and wants a tap to carry on
   useEffect(() => onAudioProblem(setSoundTap), []);
+  const shown = s.stacks[s.tab]?.[s.stacks[s.tab].length - 1]?.view || s.tab;
+  useEffect(() => { if (s.ready) screenShown(shown); }, [shown, s.ready]);
   if (!s.ready) return <div class="splash"><div class="spinner" /></div>;
   const tabBtn = (tab, cls) => (
     <button type="button" key={tab.id} id={`${cls === 'bar' ? 'tab' : 'side'}-${tab.label}`} class={`c-${tab.color}${s.tab === tab.id ? ' on' : ''}${tab.center && cls === 'bar' ? ' center' : ''}`} onClick={() => {
@@ -236,7 +242,7 @@ function App() {
         {TABS.map((tab) => <div class="tab-pane" hidden={s.tab !== tab.id} key={tab.id}><Stack tab={tab.id} active={s.tab === tab.id} /></div>)}
       </main>
       <nav class="tabbar" aria-label="Sections">{TABS.filter((x) => x.side !== false).map((tab) => tabBtn(tab, 'bar'))}</nav>
-      {!immersive && !s.sheet && hasServer() && <AIFab />}
+      {!immersive && !s.sheet && hasServer() && flag('hapi') && <AIFab />}
       {s.sheet && <SheetHost sheet={s.sheet} />}
       {soundTap && <button type="button" class="sound-pill" id="sound-pill"><Icon name="speaker" size={18} stroke={2.3} />{t('tapForSound')}</button>}
       {s.toast && <div class={`toast${s.toast.kind === 'err' ? ' err' : ''}`} role="status"><Icon name={s.toast.kind === 'err' ? 'info' : 'check'} size={18} stroke={2.4} />{s.toast.text}</div>}
@@ -249,5 +255,5 @@ export function mount() {
   if (!root) { root = document.createElement('div'); root.id = 'haptune'; document.body.appendChild(root); }
   root.style.height = '100%';
   render(<App />, root);
-  globalThis.__haptune = { getState, push };
+  globalThis.__haptune = { getState, push, go, popToRoot };
 }

@@ -32,12 +32,12 @@ async function startApi() {
   const db = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'melovyn-e2e-')), 'a.db');
   const proc = spawn(process.env.PYTHON || 'python3', ['-m', 'uvicorn', 'app:app', '--port', String(port), '--log-level', 'warning'], {
     cwd: path.join(__dirname, '..', '..', 'server'),
-    env: { ...process.env, DATABASE_URL: `sqlite:///${db}`, HAPTUNE_SIGNIN_REQUIRED: '1', HAPTUNE_CORS_ORIGINS: '.*', PYTHONPATH: path.join(__dirname, '..', '..', 'engine') },
+    env: { ...process.env, DATABASE_URL: `sqlite:///${db}`, HAPTUNE_SIGNIN_REQUIRED: '1', HAPTUNE_CORS_ORIGINS: '.*', HAPTUNE_OWNER_EMAILS: 'owner@e2e.test', PYTHONPATH: path.join(__dirname, '..', '..', 'engine') },
     stdio: ['ignore', 'inherit', 'inherit'],
   });
   const url = `http://127.0.0.1:${port}`;
   for (let i = 0; i < 120; i++) {
-    try { const ok = await new Promise((res) => http.get(url + '/health', (r) => res(r.statusCode === 200)).on('error', () => res(false))); if (ok) return { proc, url }; } catch { /* starting */ }
+    try { const ok = await new Promise((res) => http.get(url + '/health', (r) => res(r.statusCode === 200)).on('error', () => res(false))); if (ok) return { proc, url, db }; } catch { /* starting */ }
     await new Promise((r) => setTimeout(r, 500));
   }
   proc.kill(); throw new Error('the server did not start');
@@ -74,7 +74,7 @@ async function person(browser, base, api, { name, role, handle }) {
   fs.mkdirSync(SHOTS, { recursive: true });
   const web = await serveStatic();
   const base = `http://127.0.0.1:${web.address().port}`;
-  const { proc, url: api } = await startApi();
+  const { proc, url: api, db } = await startApi();
   const browser = await chromium.launch({ args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', '--autoplay-policy=no-user-gesture-required'] });
   const problems = [];
   const step = async (name, fn) => { try { await fn(); } catch (e) { problems.push(`${name}: ${e.message.split('\n')[0]}`); for (const [k, x] of [['t', T], ['s', S]]) await x?.p.screenshot({ path: path.join(SHOTS, `fail-${k}-${name.slice(0, 12).replace(/\W/g, '')}.png`) }).catch(() => {}); } };
@@ -225,6 +225,66 @@ async function person(browser, base, api, { name, role, handle }) {
       await tab(s, 'library'); await s.evaluate(() => globalThis.__haptune.push('catalog', {}, 'library'));
       await s.locator('#cat-sources:visible summary').click();
       if ((await s.locator('#cat-sources:visible li').count()) < 5) throw new Error('the list of collections is short');
+    });
+    await step('Owner: Developer mode with 2-step verification, grant one scope, the developer sees only that, revoke', async () => {
+      const crypto = require('crypto');
+      const totp = (secret, offset = 0) => {
+        const alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+        let bits = ''; for (const ch of secret.replace(/\s/g, '')) bits += alpha.indexOf(ch).toString(2).padStart(5, '0');
+        const key = Buffer.from(bits.match(/.{8}/g).map((b) => parseInt(b, 2)));
+        const ctr = Buffer.alloc(8); ctr.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000) + offset));
+        const h = crypto.createHmac('sha1', key).update(ctr).digest(); const o = h[h.length - 1] & 15;
+        return String((h.readUInt32BE(o) & 0x7fffffff) % 1000000).padStart(6, '0');
+      };
+      // Ms Tan's account becomes the owner: Google-verified email listed in HAPTUNE_OWNER_EMAILS (set on the server)
+      require('child_process').execFileSync(process.env.PYTHON || 'python3', ['-c',
+        `import sqlite3;c=sqlite3.connect(${JSON.stringify(db)});c.execute("update accounts set google_sub='g-owner', email='owner@e2e.test' where handle='ms_tan'");c.commit()`]);
+      const tokOf = (pg) => pg.evaluate(() => JSON.parse(localStorage.getItem('haptune.academyToken')));
+      const apiGet = async (pg, p2) => pg.evaluate(async ([server, tk, pth]) => { const r = await fetch(server + pth, { headers: { Authorization: `Bearer ${tk}` } }); return { status: r.status, body: await r.json().catch(() => null) }; }, [api, await tokOf(pg), p2]);
+      const devModeOn = async (pg) => {
+        await pg.reload({ waitUntil: 'networkidle' });
+        await pg.evaluate(() => globalThis.__haptune.go('me')); await pg.waitForSelector('#me-devmode', { state: 'attached', timeout: 15000 });
+        await pg.locator('label[for=me-devmode]').first().click();
+        await pg.locator('#dm-setup').click(); await pg.locator('#ts-begin').click();
+        const secret = (await pg.locator('#ts-secret').innerText()).replace(/\s/g, '');
+        await pg.fill('#ts-code', totp(secret)); await pg.locator('#ts-enable').click();
+        await pg.waitForSelector('#ts-recovery'); await pg.locator('.sheet .sheet-head .r').click();
+        await pg.waitForSelector('#dm-code'); await pg.fill('#dm-code', totp(secret, 1));
+        const t0 = Date.now(); await pg.locator('#dm-on').click();
+        await pg.waitForSelector('#dashboard');
+        return Date.now() - t0;
+      };
+      // the owner switches on Developer mode: the dashboard opens
+      await devModeOn(t);
+      const t1 = Date.now(); await t.waitForSelector('#dash-overview #st-dau'); const loadMs = Date.now() - t1;
+      console.log(`  dashboard overview shown ${loadMs} ms after Developer mode`);
+      if (loadMs > 1500) throw new Error(`the dashboard took ${loadMs} ms`);
+      await t.screenshot({ path: path.join(SHOTS, 'dash-overview.png') });
+      // Users > Ben > give developer access with one scope
+      await t.locator('#dash-tab-users').click(); await t.waitForSelector('#u-ben_violin');
+      await t.screenshot({ path: path.join(SHOTS, 'dash-users.png') });
+      await t.locator('#u-ben_violin').click(); await t.waitForSelector('#admin-user #au-timeline');
+      await t.locator('#au-access').click(); await t.waitForSelector('#grant-form');
+      if (await t.inputValue('#grant-handle') !== 'ben_violin') throw new Error('the grant form is not filled in');
+      await t.fill('#grant-reason', 'Helps with the numbers'); await t.locator('#grant-go').click();
+      await t.waitForSelector('#acc-ben_violin');
+      // Ben: Developer mode shows only the read-analytics tabs
+      await devModeOn(s);
+      await s.waitForSelector('#dash-tab-overview');
+      for (const k of ['users', 'access', 'audit', 'features', 'payments']) if (await s.locator(`#dash-tab-${k}`).count()) throw new Error(`the developer sees ${k}`);
+      if ((await apiGet(s, '/c/admin/users')).status !== 403) throw new Error('scope not enforced');
+      await s.screenshot({ path: path.join(SHOTS, 'dash-developer.png') });
+      // the owner revokes: Ben's next call is refused
+      await t.locator('#revoke-ben_violin').click(); await t.waitForSelector('#acc-ben_violin', { state: 'detached' });
+      if ((await apiGet(s, '/c/admin/analytics/overview')).status !== 403) throw new Error('revoked access still works');
+      await s.reload({ waitUntil: 'networkidle' }); await s.evaluate(() => globalThis.__haptune.go('me')); await s.waitForTimeout(800);
+      if (await s.locator('#me-devmode').count()) throw new Error('the switch is still there');
+      // every step is in the audit log
+      const audit = (await apiGet(t, '/c/admin/audit?limit=200')).body.items.map((x) => x.action);
+      for (const a of ['2fa_on', 'dev_mode_on', 'viewed_user', 'grant_developer', 'revoke_developer']) if (!audit.includes(a)) throw new Error(`no audit entry for ${a}: ${audit}`);
+      // back to a normal account
+      await t.evaluate(() => { globalThis.__haptune.popToRoot('me'); globalThis.__haptune.go('me'); }); await t.waitForSelector('#me-devmode', { state: 'attached' });
+      await t.locator('label[for=me-devmode]:visible').first().click(); await t.waitForFunction(() => !globalThis.__haptune.getState().me?.staff?.dev_mode);
     });
     let soundId = '';
     await step('Sounds: record, add backing, mix, export WAV (60 s, 4 tracks), post to Stage', async () => {
