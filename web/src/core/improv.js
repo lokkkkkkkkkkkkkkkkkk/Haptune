@@ -308,7 +308,8 @@ function buildScore(events, { key, time, bars, spans, tempo, instrument, title, 
       return { off: e.t.sub(start), dur: e.dur, pitch: n, label: e.label };
     });
     const notes = notesFromSpans(items, time);
-    // copy labels to the first note of each item
+    // copy labels to the first note of each item (a long note may be split into tied pieces)
+    for (const it of items) { const n = notes.find((x) => !x.rest && x.off.eq(it.off)); if (n) n.label = it.label; }
     const harmonies = spans.filter((s) => s.t.ge(start) && s.t.lt(start.add(barLen))).map((s) => ({ off: s.t.sub(start), chord: s.chord, text: formatChord(s.chord) }));
     part.measures.push({ key: b === 0 ? key : null, clefs: b === 0 ? [clef] : [], harmonies, notes, directions: [], extraAttrs: [] });
   }

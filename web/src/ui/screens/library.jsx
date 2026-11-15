@@ -7,7 +7,7 @@ import { LargeTitle, NavBar, SheetFrame, Avatar } from './common.jsx';
 import { Mascot } from '../mascot.jsx';
 import { importFile, importText, ACCEPT } from '../importer.js';
 import { SONGS, songTitle } from '../../data/songs.js';
-import { loadCatalog, searchCatalog, addCatalogPiece, GENRES } from '../catalog.js';
+import { loadCatalog, searchCatalog, addCatalogPiece, GENRES, catalogSources } from '../catalog.js';
 import { parseJianpu, isJianpu } from '../../core/jianpu.js';
 import { parseChordSheet, sheetChords } from '../../core/chordsheet.js';
 import { keyName, parseName, nameOf } from '../../core/pitch.js';
@@ -335,6 +335,11 @@ export function CatalogView({ genre: genre0 = '' }) {
           ) : <Empty icon="search" title={t('noResults', { q })} />}
         {found.length > shown && <Button kind="secondary" full onClick={() => setShown(shown + 120)}>{t('loadMore')}</Button>}
         <p class="section-foot">{t('freeLibraryNote', { n: list?.length || 0 })}</p>
+        {list && catalogSources().length > 0 && <details class="cat-sources" id="cat-sources">
+          <summary>{t('catSources')}</summary>
+          <p class="tiny muted">{t('catSourcesSub')}</p>
+          <ul>{catalogSources().map((x) => <li key={x.key}><a href={x.url} target="_blank" rel="noopener noreferrer">{x.name}</a> · {x.count} {x.note ? `· ${x.note}` : ''}</li>)}</ul>
+        </details>}
       </div>
     </div>
   );

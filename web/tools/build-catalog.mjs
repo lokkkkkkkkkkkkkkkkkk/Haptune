@@ -19,7 +19,11 @@ const root = path.join(path.dirname(new URL(import.meta.url).pathname), '..');
 const OUT = path.join(root, 'assets', 'catalog');
 const M21 = process.env.MUSIC21_CORPUS, LIEDER = process.env.LIEDER;
 if (!M21 || !LIEDER) { console.error('Set MUSIC21_CORPUS and LIEDER'); process.exit(1); }
-fs.rmSync(OUT, { recursive: true, force: true });
+// This script owns these collections; ones added with tools/import-catalog.mjs (Mutopia, OpenScore quartets...)
+// are kept as they are.
+const OWN = ['ryans', 'oneills', 'airds', 'folk', 'bach', 'lieder'];
+const before = fs.existsSync(path.join(OUT, 'index.json')) ? JSON.parse(fs.readFileSync(path.join(OUT, 'index.json'), 'utf8')) : { items: [], sources: [] };
+for (const d of ['abc', 'bach', 'lieder']) fs.rmSync(path.join(OUT, d), { recursive: true, force: true });
 fs.mkdirSync(path.join(OUT, 'abc'), { recursive: true });
 class Quiet extends DOMParser { constructor() { super({ onError: () => {} }); } }
 const dom = { DOMParser: Quiet, XMLSerializer };
@@ -112,6 +116,15 @@ const lieder = [];
 })(LIEDER);
 await addMxl('lieder', lieder, { genre: 'song', licence: 'CC0 · OpenScore Lieder Corpus', instrument: 'voice' });
 
-fs.writeFileSync(path.join(OUT, 'index.json'), JSON.stringify({ version: 1, made: new Date().toISOString().slice(0, 10), items }));
+const kept = before.items.filter((r) => !OWN.includes(String(r[0]).split('-')[0]));
+const count = (k) => items.filter((r) => r[0].startsWith(`${k}-`)).length;
+const sources = [
+  { key: 'tunebooks', name: "Ryan's Mammoth Collection, O'Neill's Music of Ireland, Aird's Airs (ABC via music21)", url: 'https://github.com/cuthbertLab/music21/tree/master/music21/corpus', note: 'Public domain tune books', count: count('ryans') + count('oneills') + count('airds') + count('folk') },
+  { key: 'bach', name: 'Bach chorales (music21 corpus)', url: 'https://github.com/cuthbertLab/music21/tree/master/music21/corpus/bach', note: 'Public domain', count: count('bach') },
+  { key: 'lieder', name: 'OpenScore Lieder Corpus', url: 'https://github.com/OpenScore/Lieder', note: 'CC0', count: count('lieder') },
+  ...(before.sources || []).filter((x) => !['tunebooks', 'bach', 'lieder'].includes(x.key)),
+];
+items.push(...kept);
+fs.writeFileSync(path.join(OUT, 'index.json'), JSON.stringify({ version: 1, made: new Date().toISOString().slice(0, 10), items, sources }));
 const size = (d) => fs.readdirSync(d, { recursive: true }).reduce((s, f) => { const p = path.join(d, f); return s + (fs.statSync(p).isFile() ? fs.statSync(p).size : 0); }, 0);
 console.log(stats, 'total', items.length, 'pieces,', (size(OUT) / 1e6).toFixed(1), 'MB; index', (fs.statSync(path.join(OUT, 'index.json')).size / 1e3).toFixed(0), 'KB');

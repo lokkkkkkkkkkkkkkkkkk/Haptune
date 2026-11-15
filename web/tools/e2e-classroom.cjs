@@ -203,6 +203,12 @@ async function person(browser, base, api, { name, role, handle }) {
       await tab(s, 'stage'); await s.waitForSelector('#stage-plus');                         // the tab bar still works after
       if (await s.evaluate(() => innerWidth) > 400) throw new Error('the page got wider than the phone');
     });
+    await step('A crash stays on its screen: back still works', async () => {
+      await s.evaluate(() => globalThis.__haptune.push('__crash'));
+      await s.waitForSelector('#crash-__crash');
+      await s.locator('#crash-__crash .btn.secondary').click(); await s.waitForSelector('#crash-__crash', { state: 'detached' });
+      await tab(s, 'stage'); await s.waitForSelector('#stage-plus');
+    });
     let soundId = '';
     await step('Sounds: record, add backing, mix, export WAV (60 s, 4 tracks), post to Stage', async () => {
       await tab(s, 'stage'); await tab(s, 'stage'); await s.locator('#stage-plus').click(); await s.locator('#stn-sound').click();

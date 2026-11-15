@@ -46,7 +46,7 @@ export const V2 = {
   dropHere: ['Drop your music here', 'Lepaskan muzik anda di sini', '把乐谱拖到这里', '把樂譜拖到這裡'],
   dropHereSub: ['PDF, photo, MusicXML, MIDI or ABC', 'PDF, foto, MusicXML, MIDI atau ABC', 'PDF、照片、MusicXML、MIDI 或 ABC', 'PDF、照片、MusicXML、MIDI 或 ABC'],
   oneFileAtATime: ['Music files are added one at a time; the first one was opened.', 'Fail muzik ditambah satu demi satu; yang pertama telah dibuka.', '乐谱文件一次添加一个，已打开第一个。', '樂譜檔案一次加入一個，已開啟第一個。'],
-  genre_classical: ['Classical', 'Klasik', '古典', '古典'], genre_piano: ['Piano', 'Piano', '钢琴', '鋼琴'], genre_folk: ['Folk', 'Rakyat', '民谣', '民謠'],
+  genre_classical: ['Classical', 'Klasik', '古典', '古典'], genre_piano: ['Piano', 'Piano', '钢琴', '鋼琴'], genre_guitar: ['Guitar', 'Gitar', '吉他', '吉他'], genre_folk: ['Folk', 'Rakyat', '民谣', '民謠'],
   genre_song: ['Songs', 'Lagu', '艺术歌曲', '藝術歌曲'], genre_hymn: ['Hymns', 'Lagu pujian', '圣诗', '聖詩'], genre_kids: ['Kids', 'Kanak-kanak', '儿歌', '兒歌'],
   genre_christmas: ['Christmas', 'Krismas', '圣诞', '聖誕'], genre_jazz: ['Ragtime & early jazz', 'Ragtime & jazz awal', '拉格泰姆与早期爵士', '散拍與早期爵士'],
   genre_chinese: ['Chinese folk', 'Rakyat Cina', '中国民歌', '中國民歌'], genre_celtic: ['Celtic', 'Celtic', '凯尔特', '凱爾特'], genre_choral: ['Choral', 'Koir', '合唱', '合唱'],

@@ -136,11 +136,17 @@ def _people(c, ids) -> dict:
     return community._people(c, ids)
 
 
+def _limit_user(me: A.Me, key: str, n: int, window: float, msg: str) -> None:
+    import community
+    community._limit_user(me, key, n, window, msg)
+
+
 @router.post("/sounds")
 async def post_sound(title: str = Form(..., min_length=1, max_length=120), body: str = Form("", max_length=1000), rights: str = Form(...),
                      project: str = Form("{}"), parent_id: str = Form(""), sheet_xml: str = Form(""), audio: UploadFile = File(...),
                      me: A.Me = Depends(A.current)):
     A.require_registered(me)
+    _limit_user(me, "sound_post", 12, 3600, "That's a lot of Sounds in an hour. Please wait a little before posting more.")
     if rights not in RIGHTS:
         raise HTTPException(400, {"code": "rights", "message": "Say whose music this is: your own, public domain, or licensed to you."})
     lim = _limits(me)
@@ -251,6 +257,7 @@ def sound_sheet(sid: str):
 
 @router.post("/sounds/{sid}/like")
 def like(sid: str, me: A.Me = Depends(A.current)):
+    _limit_user(me, "sound_like", 120, 3600, "Slow down a little.")
     with engine().begin() as c:
         if not c.execute(select(sounds.c.id).where(sounds.c.id == sid)).first():
             raise HTTPException(404, "No such Sound.")
@@ -275,6 +282,7 @@ class ReportIn(BaseModel):
 @router.post("/sounds/{sid}/report")
 def report(sid: str, body: ReportIn, me: A.Me = Depends(A.current)):
     A.require_registered(me)
+    _limit_user(me, "sound_report", 20, 3600, "You've sent many reports in an hour. Thank you; please wait a little.")
     with engine().begin() as c:
         if not c.execute(select(sounds.c.id).where(sounds.c.id == sid)).first():
             raise HTTPException(404, "No such Sound.")

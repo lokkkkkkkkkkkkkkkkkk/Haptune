@@ -138,6 +138,10 @@ fs.writeFileSync(out('pages', '.nojekyll'), '');
 // ---- native app: the same files without the service worker (the app is installed, not cached) ----
 // Store keys are public by design (RevenueCat "public SDK key"); purchases are checked on the server.
 const REVENUECAT = (process.env.HAPTUNE_REVENUECAT_ANDROID || '').trim();
-fs.cpSync(app(), out('native'), { recursive: true, filter: (src) => !/(sw\.js|manifest\.webmanifest)$/.test(src) });
+// The free library's pieces (~80 MB) stay on the website: the app carries only the search index and downloads a
+// piece when it is opened (CONFIG.site + /app/catalog/...), as the web version does.
+const catalogPiece = (src) => { const r = path.relative(app('catalog'), src); return !r.startsWith('..') && r !== '' && r !== 'index.json' && !path.isAbsolute(r); };
+fs.rmSync(out('native'), { recursive: true, force: true });
+fs.cpSync(app(), out('native'), { recursive: true, filter: (src) => !/(sw\.js|manifest\.webmanifest)$/.test(src) && !catalogPiece(src) });
 fs.writeFileSync(out('native', 'index.html'), page({ pwa: false, native: true, revenuecat: REVENUECAT, ...ASSETS }, { pwa: false }));
 console.log('server', SERVER || '(none)', '| build', BUILD, '| artifact', (artifact.length / 1024).toFixed(0), 'KB; app.js', (result.outputFiles[0].text.length / 1024).toFixed(0), 'KB');

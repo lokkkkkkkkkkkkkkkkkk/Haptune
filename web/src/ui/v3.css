@@ -661,3 +661,13 @@ body.ce-dragging, body.ce-dragging * { cursor: grabbing !important; }
 /* A screen sliding in starts a third of the way off to the right. Without clipping, a phone browser widens the
    page to fit it for that first frame and then stays zoomed out (the tab bar ends up off its taps). */
 .content { overflow: hidden; overflow: clip; }
+.cat-sources { margin: 6px 0 24px; padding: 10px 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); }
+.cat-sources summary { font-weight: 700; cursor: pointer; }
+.cat-sources ul { margin: 8px 0 0; padding-left: 18px; font-size: 13.5px; line-height: 1.6; }
+.crash { display: grid; place-items: center; min-height: 60vh; padding: 24px; }
+.sheet.crash { min-height: 40vh; }
+.crash-card { max-width: 380px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.crash-card h2 { margin: 4px 0 0; font-size: 20px; }
+.crash-card p { margin: 0; color: var(--ink2); line-height: 1.45; }
+.crash-ic { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; background: color-mix(in srgb, var(--s-orange) 16%, transparent); color: var(--s-orange); }
+.crash-btns { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 8px; }

@@ -120,7 +120,7 @@ export function AIChatSheet() {
         <div ref={end} />
       </div>
       <form class="ai-input" onSubmit={(e) => { e.preventDefault(); send(); }}>
-        <textarea id="ai-q" rows={1} maxLength={2000} value={text} placeholder={t('aiAsk')} onInput={(e) => setText(e.currentTarget.value)}
+        <textarea id="ai-q" aria-label={t('aiAsk')} rows={1} maxLength={2000} value={text} placeholder={t('aiAsk')} onInput={(e) => setText(e.currentTarget.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }} />
         <button type="submit" class="ai-send" disabled={busy || !text.trim()} aria-label={t('send')} id="ai-send"><Icon name="arrowUp" size={20} stroke={2.6} /></button>
       </form>

@@ -19,6 +19,7 @@ import { PracticeView } from './screens/practice.jsx';
 import { SoundCheckView } from './screens/soundcheck.jsx';
 import { ReportView } from './screens/report.jsx';
 import { AIChatSheet, AIFab } from './screens/aichat.jsx';
+import { Boundary } from './boundary.jsx';
 import { SoundView, SoundAddSheet, SoundTrackSheet, SoundSettingsSheet, SoundExportSheet, SoundPostSheet } from './screens/sound.jsx';
 import { VaryView } from './screens/moretools.jsx';
 import { LearnView as LearnMoreView } from './screens/learn.jsx';
@@ -68,6 +69,7 @@ const VIEWS = {
   piece: PieceView, editor: EditorView, studio: StudioView, student: StudentView, tutors: TutorsView, tutor: TutorView, tutorMe: TutorMeView, lessons: LessonsView, songbook: SongbookView, catalog: CatalogView, course: CourseView, tool: ToolView, history: HistoryView, classView: ClassView, assignment: AssignmentView,
   post: PostView, daily: DailyView, profile: ProfileView, leaderboard: LeaderboardView, notifications: NotificationsView, wallet: WalletView, challenge: ChallengeView,
   editProfile: EditProfileView, help: HelpView, admin: AdminView,
+  __crash: () => { throw new Error('test crash'); },           // the click-through test checks the error boundary with it
   practice: PracticeView, soundCheck: SoundCheckView, report: ReportView, sound: SoundView, vary: VaryView, chordEditor: ChordEditorView, learnMore: (p) => <LearnMoreView {...p} pushed />,
 };
 const SHEETS = {
@@ -149,11 +151,11 @@ function Stack({ tab, active }) {
   useEffect(() => { prev.current = stack.length; });
   return (
     <>
-      <div class={`view${popped && stack.length === 0 ? ' popped' : ''}`} hidden={stack.length > 0}><Root active={active && stack.length === 0} /></div>
+      <div class={`view${popped && stack.length === 0 ? ' popped' : ''}`} hidden={stack.length > 0}><Boundary name={tab}><Root active={active && stack.length === 0} /></Boundary></div>
       {stack.map((v, i) => {
         const V = VIEWS[v.view];
         const top = i === stack.length - 1;
-        return <div class={`view pushed${popped && top ? ' popped' : ''}`} hidden={!top} key={v.key}><V {...v.props} active={active && top} /></div>;
+        return <div class={`view pushed${popped && top ? ' popped' : ''}`} hidden={!top} key={v.key}><Boundary name={v.view}>{V ? <V {...v.props} active={active && top} /> : null}</Boundary></div>;
       })}
     </>
   );
@@ -169,7 +171,7 @@ function SheetHost({ sheet }) {
   if (!S) return null;
   return (
     <div class="sheet-bg" onClick={(e) => { if (e.target === e.currentTarget && !S.modal) closeSheet(); }}>
-      <S {...sheet.props} />
+      <Boundary sheet name={sheet.type}><S {...sheet.props} /></Boundary>
     </div>
   );
 }
@@ -245,5 +247,5 @@ export function mount() {
   if (!root) { root = document.createElement('div'); root.id = 'haptune'; document.body.appendChild(root); }
   root.style.height = '100%';
   render(<App />, root);
-  globalThis.__haptune = { getState };
+  globalThis.__haptune = { getState, push };
 }

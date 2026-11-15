@@ -345,4 +345,9 @@ export const V4 = {
   aiStartDue: ['What is due for my classes?', 'Apa tugasan kelas saya?', '我的课有什么作业要交？', '我的課有什麼作業要交？'],
   aiStartChords: ['Help me pick chords for my song', 'Bantu saya pilih kord untuk lagu saya', '帮我的歌配和弦', '幫我的歌配和弦'],
   aiStartSound: ['How do I make a Sound with backing?', 'Bagaimana buat Bunyi dengan iringan?', '怎么做一个带伴奏的声音作品？', '怎麼做一個帶伴奏的聲音作品？'],
+  catSources: ['Where this music comes from', 'Dari mana muzik ini', '这些乐谱从哪里来', '這些樂譜從哪裡來'],
+  catSourcesSub: ['Every piece is public domain or openly licensed (CC0, CC BY, CC BY-SA); its licence is under Details. Songs still in copyright are not here: ask for them on Stage or import a sheet you own.', 'Setiap karya ialah domain awam atau berlesen terbuka (CC0, CC BY, CC BY-SA); lesennya di bawah Butiran. Lagu yang masih berhak cipta tiada di sini: minta di Stage atau import skor milik anda.', '每首都属公有领域或开放授权（CC0、CC BY、CC BY-SA），授权见“详情”。仍受版权保护的歌曲不在这里：可在 Stage 请求，或导入你拥有的乐谱。', '每首都屬公有領域或開放授權（CC0、CC BY、CC BY-SA），授權見「詳情」。仍受版權保護的歌曲不在這裡：可在 Stage 請求，或匯入你擁有的樂譜。'],
+  crashT: ['This screen ran into a problem', 'Skrin ini menghadapi masalah', '这个页面出了问题', '這個頁面出了問題'],
+  crashSub: ['The rest of Melovyn is fine and your music is safe. Try again, go back, or tell us what happened.', 'Bahagian lain Melovyn baik dan muzik anda selamat. Cuba lagi, kembali, atau beritahu kami apa yang berlaku.', 'Melovyn 的其他部分正常，你的乐谱也安全。可以重试、返回，或告诉我们发生了什么。', 'Melovyn 的其他部分正常，你的樂譜也安全。可以重試、返回，或告訴我們發生了什麼。'],
+  crashReport: ['Report the problem', 'Laporkan masalah', '报告问题', '回報問題'],
 };

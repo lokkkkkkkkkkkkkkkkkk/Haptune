@@ -66,8 +66,9 @@ export function HelpView({ topic = '' }) {
 
 // the last few errors, so a problem report can say what went wrong
 const errors = [];
+export const keepError = (m) => { errors.push(`${new Date().toISOString().slice(11, 19)} ${String(m).slice(0, 300)}`); if (errors.length > 12) errors.shift(); };
 export function captureErrors() {
-  const keep = (m) => { errors.push(`${new Date().toISOString().slice(11, 19)} ${String(m).slice(0, 300)}`); if (errors.length > 12) errors.shift(); };
+  const keep = keepError;
   addEventListener('error', (e) => keep(e.message || e.error));
   addEventListener('unhandledrejection', (e) => keep(e.reason?.message || e.reason));
 }
