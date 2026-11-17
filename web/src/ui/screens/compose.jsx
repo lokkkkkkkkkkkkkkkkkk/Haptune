@@ -75,7 +75,7 @@ export function ComposeSheet({ type: initial = 'request', piece = null, show = n
         closeSheet();
         ensureAccount({ fresh: true });
         toast(t(type === 'request' ? 'requestPosted' : 'posted'));
-        push('post', { id: r.id }, 'community');
+        push('post', { id: r.id, justPosted: type }, 'community');
       }
     } catch (e) { toast(e.message, 'err'); }
     setBusy(false);

@@ -959,9 +959,12 @@ def profile(handle: str, me: A.Me | None = Depends(A.optional)):
         following = c.execute(select(func.count()).select_from(follows).where(follows.c.follower == user["id"])).scalar()
         is_following = bool(me and c.execute(select(follows.c.follower).where(follows.c.follower == me.id, follows.c.followee == user["id"])).first())
         is_blocked = bool(me and c.execute(select(blocks.c.blocker).where(blocks.c.blocker == me.id, blocks.c.blocked == user["id"])).first())
+    import friends as FR
+    with engine().connect() as c:
+        friend = FR.friend_state(c, me.id if me else None, user["id"])
     return {**A.public_user(user, acc), "bio": acc["bio"], "joined": _iso(acc["created"]), "badges": badges, "stats": stats,
             "followers": followers, "following": following, "is_following": is_following, "is_blocked": is_blocked,
-            "is_me": bool(me and me.id == user["id"])}
+            "is_me": bool(me and me.id == user["id"]), "friend": friend}
 
 
 @router.post("/users/{handle}/follow")

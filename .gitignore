@@ -4,3 +4,4 @@ __pycache__/
 web/shots/
 web/dist/
 web/node_modules/
+server/*.db

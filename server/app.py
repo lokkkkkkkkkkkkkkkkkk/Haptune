@@ -93,6 +93,10 @@ import analytics  # noqa: E402  (usage events, roll-ups, feature flags: the owne
 app.include_router(analytics.router)
 import admin  # noqa: E402  (Developer mode: users, access, audit log)
 app.include_router(admin.router)
+import home  # noqa: E402  (Home in one call)
+app.include_router(home.router)
+import learn  # noqa: E402  (Part 2 C: kinds, my work, path, teacher overview, private comments, guardians, Drive, roster)
+app.include_router(learn.router)
 
 
 @app.middleware("http")
@@ -634,3 +638,7 @@ def ai_fetch(request: Request, url: str = Query(..., max_length=2000)):
     return Response(content=data, media_type=media,
                     headers={"Content-Disposition": f'attachment; filename="{name}"', "X-Haptune-Format": fmt,
                              "Access-Control-Expose-Headers": "Content-Disposition, X-Haptune-Format"})
+import friends  # noqa: E402  (Part 2 D: friends, messages, challenges, Sound moments, reposts, Friends feed)
+app.include_router(friends.router)
+import signin  # noqa: E402  (Part 2 E: Sign in with Apple, sign-in methods)
+app.include_router(signin.router)

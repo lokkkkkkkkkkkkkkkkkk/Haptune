@@ -7,6 +7,7 @@ import { build } from 'esbuild';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const root = path.dirname(new URL(import.meta.url).pathname);
 const out = (...p) => path.join(root, 'dist', ...p);
@@ -23,6 +24,40 @@ const result = await build({
   loader: { '.css': 'text' },
 });
 const js = result.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
+// The web and Android app ship English inside app.js and each other language as its own file (i18n/<lang>.json),
+// loaded once when that language is chosen: three quarters of the interface text never reaches people who
+// don't need it. The one-file version above keeps every language.
+const { allRows } = await import(pathToFileURL(path.join(root, 'src/core/i18n.js')).href);
+const englishOnly = {
+  name: 'english-only',
+  setup(b) {
+    b.onLoad({ filter: /src[\\/]core[\\/]i18n-\w+\.js$/ }, async (args) => {
+      const mod = await import(pathToFileURL(args.path).href);
+      const code = Object.entries(mod).map(([name, table]) => `export const ${name} = ${JSON.stringify(Object.fromEntries(Object.entries(table).map(([k, row]) => [k, [row[0]]])))};`).join('\n');
+      return { contents: code, loader: 'js' };
+    });
+  },
+};
+// ...and as ES modules split by screen: app.js holds the shell and Home, each other screen is a chunk loaded the
+// first time it opens (chunks/<name>-<hash>.js, cached offline by the service worker).
+const slim = await build({
+  entryPoints: { app: path.join(root, 'src/main.jsx') }, bundle: true, format: 'esm', splitting: true, outdir: out('pages', 'app'),
+  chunkNames: 'chunks/[name]-[hash]', minify: process.env.HAPTUNE_MINIFY !== '0', write: false, metafile: true,
+  jsx: 'automatic', jsxImportSource: 'preact', target: ['es2020', 'safari15'], legalComments: 'none',
+  loader: { '.css': 'text' }, plugins: [englishOnly],
+});
+const slimMain = slim.outputFiles.find((f) => path.basename(f.path) === 'app.js');
+// the chunks Home needs straight away: fetched together with app.js instead of one after another
+const START = (() => {
+  const outs = slim.metafile.outputs, rel = (k) => path.relative(out('pages', 'app'), path.resolve(root, k)).split(path.sep).join('/');
+  const first = Object.keys(outs).find((k) => k.endsWith('/app.js') && !k.includes('chunks/'));
+  const seen = new Set(); const q = [first];
+  while (q.length) { const k = q.pop(); if (seen.has(k)) continue; seen.add(k); for (const i of outs[k].imports) if (i.kind === 'import-statement') q.push(i.path); }
+  seen.delete(first);
+  return [...seen].map(rel);
+})();
+const CHUNKS = slim.outputFiles.filter((f) => f !== slimMain && f.path.endsWith('.js')).map((f) => path.relative(out('pages', 'app'), f.path).split(path.sep).join('/'));
+const LANG_PACKS = ['ms', 'zh-Hans', 'zh-Hant'];
 // styles.css: layout and every component; theme.css: the Melovyn 2 look on top of it
 const css = ['styles.css', 'theme.css', 'v3.css'].map((f) => fs.readFileSync(path.join(root, 'src/ui', f), 'utf8')).join('\n');
 const VERSION = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version;
@@ -36,7 +71,9 @@ const SITE = (process.env.HAPTUNE_SITE_URL || 'https://haptune.name.my').trim().
 const PLAY = (process.env.HAPTUNE_PLAY_URL || '').trim();           // the Google Play page, once the app is published
 // Sign in with Google: the OAuth client ID (public by design) from Google Cloud Console, GitHub variable GOOGLE_CLIENT_ID.
 const GOOGLE = (process.env.HAPTUNE_GOOGLE_CLIENT_ID || '').trim();
-const CONFIG = (extra) => JSON.stringify({ version: VERSION, build: BUILD, server: SERVER, site: SITE, play: PLAY, google: GOOGLE, ...extra });
+// Sign in with Apple on the web: the Services ID from the Apple Developer account (GitHub variable APPLE_SERVICES_ID).
+const APPLE = (process.env.HAPTUNE_APPLE_SERVICES_ID || '').trim();
+const CONFIG = (extra) => JSON.stringify({ version: VERSION, build: BUILD, server: SERVER, site: SITE, play: PLAY, google: GOOGLE, apple: APPLE, ...extra });
 
 // ---- artifact page (the publish skeleton adds doctype/head/body) ----
 const artifact = `<title>Melovyn</title>
@@ -68,18 +105,28 @@ ${pwa ? `<meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 ` : ''}<link rel="icon" href="icons/icon-48.png" sizes="48x48"><link rel="icon" href="icons/icon-192.png" sizes="192x192">
 <style>:root{padding-top:var(--sa-top);box-sizing:border-box;height:100%}${css}</style>
+${config.native || !START.length ? '' : START.map((f) => `<link rel="modulepreload" href="${f}">`).join('')}
 </head>
 <body>
-<div id="haptune"></div>
+<div id="haptune" style="height:100%"><div class="splash boot"><div><svg width="56" height="56" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="bootG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5B5BF6"/><stop offset=".55" stop-color="#9B5CF6"/><stop offset="1" stop-color="#F65C9B"/></linearGradient></defs><rect width="32" height="32" rx="9" fill="url(#bootG)"/><path d="M7 21.5h18M7 16.5h18M7 11.5h18" stroke="#fff" stroke-opacity=".35" stroke-width="1.4"/><ellipse cx="13" cy="21.3" rx="4.2" ry="3.2" transform="rotate(-20 13 21.3)" fill="#fff"/><path d="M16.6 20V7.5c2.8.6 5.6 2.4 6.4 5.3" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg><strong>Melovyn</strong></div></div></div>
 <script>window.HAPTUNE_CONFIG=${CONFIG(config)};</script>
-<script src="app.js?v=${BUILD}"></script>
+<script type="module" src="app.js?v=${BUILD}"></script>
 </body>
 </html>
 `;
 const ASSETS = { verovio: 'vendor/verovio-toolkit-wasm.js', pdfjs: 'vendor/pdf.min.js', pdfWorker: 'vendor/pdf.worker.min.js', piano: 'piano/' };
 const html = page({ pwa: true, ...ASSETS }, { pwa: true });
 fs.writeFileSync(app('index.html'), html);
-fs.writeFileSync(app('app.js'), result.outputFiles[0].text);
+fs.mkdirSync(app('chunks'), { recursive: true });
+for (const f of slim.outputFiles) if (f.path.endsWith('.js')) fs.writeFileSync(f.path, f.text);
+fs.mkdirSync(app('i18n'), { recursive: true });
+{
+  const { S, INSTR } = allRows();
+  LANG_PACKS.forEach((l, j) => {
+    const pick = (table) => Object.fromEntries(Object.entries(table).filter(([, row]) => row[j + 1]).map(([k, row]) => [k, row[j + 1]]));
+    fs.writeFileSync(app('i18n', `${l}.json`), JSON.stringify({ s: pick(S), i: pick(INSTR) }));
+  });
+}
 fs.copyFileSync(path.join(root, 'node_modules/verovio/dist/verovio-toolkit-wasm.js'), app('vendor', 'verovio-toolkit-wasm.js'));
 fs.copyFileSync(path.join(root, 'node_modules/pdfjs-dist/build/pdf.min.js'), app('vendor', 'pdf.min.js'));
 fs.copyFileSync(path.join(root, 'node_modules/pdfjs-dist/build/pdf.worker.min.js'), app('vendor', 'pdf.worker.min.js'));
@@ -106,7 +153,7 @@ fs.writeFileSync(app('manifest.webmanifest'), JSON.stringify({
   background_color: '#F5F5FA', theme_color: '#6246FF', orientation: 'any', categories: ['music', 'education'],
   icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }, { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' }, { src: 'icons/icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }],
 }, null, 2));
-const cacheList = ['./', 'index.html', `app.js?v=${BUILD}`, 'manifest.webmanifest', 'fonts/jakarta-latin.woff2', 'vendor/verovio-toolkit-wasm.js', 'vendor/pdf.min.js', 'vendor/pdf.worker.min.js', 'icons/apple-touch-icon.png', 'icons/icon-192.png'];
+const cacheList = ['./', 'index.html', `app.js?v=${BUILD}`, ...CHUNKS, ...LANG_PACKS.map((l) => `i18n/${l}.json?v=${BUILD}`), 'manifest.webmanifest', 'fonts/jakarta-latin.woff2', 'vendor/verovio-toolkit-wasm.js', 'vendor/pdf.min.js', 'vendor/pdf.worker.min.js', 'icons/apple-touch-icon.png', 'icons/icon-192.png'];
 fs.writeFileSync(app('sw.js'), `// Offline cache for Melovyn (cache-first for the app shell, network-first for index.html)
 const CACHE = 'melovyn-app-${BUILD}';
 const FILES = ${JSON.stringify(cacheList)};
@@ -144,4 +191,4 @@ const catalogPiece = (src) => { const r = path.relative(app('catalog'), src); re
 fs.rmSync(out('native'), { recursive: true, force: true });
 fs.cpSync(app(), out('native'), { recursive: true, filter: (src) => !/(sw\.js|manifest\.webmanifest)$/.test(src) && !catalogPiece(src) });
 fs.writeFileSync(out('native', 'index.html'), page({ pwa: false, native: true, revenuecat: REVENUECAT, ...ASSETS }, { pwa: false }));
-console.log('server', SERVER || '(none)', '| build', BUILD, '| artifact', (artifact.length / 1024).toFixed(0), 'KB; app.js', (result.outputFiles[0].text.length / 1024).toFixed(0), 'KB');
+console.log('server', SERVER || '(none)', '| build', BUILD, '| artifact', (artifact.length / 1024).toFixed(0), 'KB; app.js', (slimMain.text.length / 1024).toFixed(0), 'KB +', CHUNKS.length, 'chunks', (slim.outputFiles.filter((f) => f !== slimMain).reduce((n, f) => n + f.text.length, 0) / 1024).toFixed(0), 'KB (one file, all languages', (result.outputFiles[0].text.length / 1024).toFixed(0), 'KB)');

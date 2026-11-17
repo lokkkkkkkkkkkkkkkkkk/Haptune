@@ -90,6 +90,7 @@ submissions = Table("submissions", meta,
                     Column("recording_type", String(40), nullable=True),
                     Column("late", Boolean, nullable=False, default=False),
                     Column("points", Integer, nullable=False, default=0),
+                    Column("mode", String(10), nullable=False, default=""),       # "" Play Along | turnin (learn.py)
                     Column("created", Float, nullable=False))
 # Signed-in devices of one account (phone, tablet, PC). A device made with POST /academy/me keeps using
 # users.token_hash; signing in with a handle and password (community.py) adds a row here.
@@ -196,6 +197,15 @@ def _add_missing_columns(eng) -> None:
                 if not col.nullable and "DEFAULT" in ddl:
                     ddl += " NOT NULL"
                 c.execute(text(ddl))
+        # text columns made longer in a newer version (SQLite ignores lengths; Postgres enforces them)
+        if eng.dialect.name == "postgresql":
+            for table in meta.sorted_tables:
+                have = {col["name"]: col for col in insp.get_columns(table.name)}
+                for col in table.columns:
+                    want = getattr(col.type, "length", None)
+                    now = getattr(have.get(col.name, {}).get("type"), "length", None)
+                    if want and now and now < want:
+                        c.execute(text(f'ALTER TABLE "{table.name}" ALTER COLUMN "{col.name}" TYPE VARCHAR({want})'))
 
 
 def reset_engine(url: str | None = None) -> None:
@@ -547,7 +557,7 @@ def get_assignment(aid: str, me: dict = Depends(current_user)):
         role = _require(c, a["class_id"], me["id"])
         q = select(submissions.c.id, submissions.c.user_id, submissions.c.accuracy, submissions.c.timing, submissions.c.tempo_pct,
                    submissions.c.seconds, submissions.c.bars, submissions.c.note, submissions.c.late, submissions.c.points,
-                   submissions.c.created, submissions.c.recording_type, users.c.name).join(users, users.c.id == submissions.c.user_id)\
+                   submissions.c.created, submissions.c.recording_type, submissions.c.mode, users.c.name).join(users, users.c.id == submissions.c.user_id)\
             .where(submissions.c.assignment_id == aid).order_by(submissions.c.created.desc())
         if role != "teacher":
             q = q.where(submissions.c.user_id == me["id"])
@@ -562,10 +572,14 @@ def get_assignment(aid: str, me: dict = Depends(current_user)):
     out["submissions"] = [{"id": s["id"], "student": {"id": s["user_id"], "name": s["name"]}, "accuracy": round(s["accuracy"] * 100),
                            "timing": round(s["timing"] * 100) if s["timing"] is not None else None, "tempo_pct": s["tempo_pct"],
                            "seconds": s["seconds"], "bars": s["bars"] or [], "note": s["note"], "late": s["late"], "points": s["points"],
-                           "created": _iso(s["created"]), "has_recording": bool(s["recording_type"]), "feedback": fb.get(s["id"], [])}
+                           "created": _iso(s["created"]), "has_recording": bool(s["recording_type"]), "feedback": fb.get(s["id"], []),
+                           "turned_in": s["mode"] == "turnin"}
                           for s in subs]
     if role != "teacher":
         out["status"] = _assignment_status(a, [{"accuracy": s["accuracy"] / 100} for s in out["submissions"]], now)
+    import learn                                       # its kind (Play Along, record, theory, ...) and question
+    with engine().connect() as c:
+        out.update(learn._kinds(c, [aid]).get(aid, {"kind": "play", "prompt": ""}))
     return out
 
 

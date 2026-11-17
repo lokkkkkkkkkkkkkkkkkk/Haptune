@@ -125,6 +125,11 @@ export function Section({ title, footer, children, action }) {
 
 export function List({ children, inset = true }) { return <div class={`list${inset ? ' inset' : ''}`}>{children}</div>; }
 
+/** The shape of what is loading (rows, or cover cards), instead of a spinner. */
+export function Skeleton({ rows = 3, kind = 'rows' }) {
+  return <div class={kind === 'cards' ? 'shelf-skeleton' : 'skeleton-rows'} aria-busy="true" role="status">{Array.from({ length: rows }, (_, i) => <i key={i} />)}</div>;
+}
+
 export function Row({ icon, color, title, subtitle, detail, onClick, chevron, right, danger, children, id }) {
   const Tag = onClick ? 'button' : 'div';
   return (

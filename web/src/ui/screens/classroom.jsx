@@ -8,10 +8,11 @@ import { Icon, Card, List, Row, Button, Chip, Toggle } from '../components.jsx';
 import { SheetFrame } from './common.jsx';
 import { academy } from '../api.js';
 import { C } from '../account.js';
-import { connectGoogle, toBase64, withGoogle } from '../google.js';
+import { connectGoogle, toBase64, withGoogle, isDeclined } from '../google.js';
 import { saveFile } from '../files.js';
 import { openExternal } from '../native.js';
 import { Person, useLoad, Loading, relTime, refreshClasses, MissionCard, TeacherMission } from './classes.jsx';
+import { DriveRow, KindPill, KINDS, PrivateThread } from './learnwork.jsx';
 
 const when = (iso) => { try { return new Date(iso).toLocaleString(getLang(), { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }); } catch { return iso; } };
 
@@ -85,6 +86,7 @@ export function ClassworkPanel({ cid, c, teacher }) {
           <Button kind="secondary" icon="folder" onClick={addTopic} id="cr-new-topic">{t('crNewTopic')}</Button>
         </div>
       )}
+      <DriveRow cid={cid} url={cw.data?.drive_url || ''} teacher={teacher} />
       <SessionsPanel cid={cid} teacher={teacher} />
       {!c.assignments.length && <Card class="classes-hello"><p>{teacher ? t('noAsgTeacher') : t('noAsgStudent')}</p></Card>}
       {groups.map((g) => (
@@ -94,7 +96,8 @@ export function ClassworkPanel({ cid, c, teacher }) {
             <div key={a.id} class="cr-asg">
               {teacher ? <TeacherMission a={a} color={c.color} /> : <MissionCard a={a} color={c.color} />}
               <div class="cr-asg-meta">
-                {meta[a.id]?.tempo_pct ? <span class="pill3">{t('crTargetTempo', { n: meta[a.id].tempo_pct })}</span> : null}
+                <KindPill kind={meta[a.id]?.kind} />
+                {meta[a.id]?.tempo_pct && (meta[a.id]?.kind || 'play') === 'play' ? <span class="pill3">{t('crTargetTempo', { n: meta[a.id].tempo_pct })}</span> : null}
                 {meta[a.id]?.goal ? <span class="pill3">{t('crMinScore', { n: meta[a.id].goal })}</span> : null}
                 {meta[a.id]?.rubric?.length ? <span class="pill3">{t('crRubric')} · {meta[a.id].rubric.reduce((n, r) => n + r.points, 0)}</span> : null}
                 {teacher && <button type="button" class="link-btn" onClick={() => openSheet('asgMeta', { aid: a.id, topics, meta: meta[a.id] })}>{t('crTopic')} / {t('crRubric')}</button>}
@@ -110,12 +113,17 @@ export function ClassworkPanel({ cid, c, teacher }) {
 export function AsgMetaSheet({ aid, topics = [], meta = {} }) {
   const [topic, setTopic] = useState(meta?.topic_id || null);
   const [rubric, setRubric] = useState(meta?.rubric?.length ? meta.rubric : []);
+  const [kind, setKind] = useState(meta?.kind || 'play');
+  const [promptText, setPromptText] = useState(meta?.prompt || '');
   const set = (i, patch) => setRubric((r) => r.map((x, k) => (k === i ? { ...x, ...patch } : x)));
   const save = async () => {
-    try { await academy.setMeta(aid, { topic_id: topic, rubric: rubric.filter((r) => r.criterion.trim()).map((r) => ({ criterion: r.criterion.trim(), points: Math.max(1, Math.min(100, r.points | 0)) })) }); refreshClasses(); closeSheet(); } catch (e) { toast(e.message, 'err'); }
+    try { await academy.setMeta(aid, { topic_id: topic, kind, prompt: promptText.trim(), rubric: rubric.filter((r) => r.criterion.trim()).map((r) => ({ criterion: r.criterion.trim(), points: Math.max(1, Math.min(100, r.points | 0)) })) }); refreshClasses(); closeSheet(); } catch (e) { toast(e.message, 'err'); }
   };
   return (
     <SheetFrame title={`${t('crTopic')} / ${t('crRubric')}`} right={t('done')} onRight={save}>
+      <span class="tiny">{t('kindT')}</span>
+      <div class="chips wrap" id="asg-kinds">{KINDS.map(([k, icon]) => <Chip key={k} on={kind === k} onClick={() => setKind(k)} id={`kind-${k}`}><Icon name={icon} size={14} /> {t(`kind_${k}`)}</Chip>)}</div>
+      {kind !== 'play' && <label class="field3"><span>{t('kindPrompt')}</span><textarea id="asg-prompt" rows={3} maxLength={2000} value={promptText} onInput={(e) => setPromptText(e.currentTarget.value)} placeholder={t(`kindPh_${kind}`)} /></label>}
       <span class="tiny">{t('crTopic')}</span>
       <div class="chips wrap"><Chip on={!topic} onClick={() => setTopic(null)}>{t('crNoTopic')}</Chip>{topics.map((tp) => <Chip key={tp.id} on={topic === tp.id} onClick={() => setTopic(tp.id)}>{tp.name}</Chip>)}</div>
       <span class="tiny">{t('crRubric')}</span>
@@ -180,7 +188,7 @@ export function SessionSheet({ cid }) {
       {cal && (linked
         ? <Row icon="video" color="green" title="Google Meet" right={<Toggle id="session-meet" checked={meet} onChange={setMeet} label="Google Meet" />} chevron={false} />
         : <div class="banner"><Icon name="calendar" size={18} /><div style={{ flex: 1 }}>{t('crCalendarHint')}</div>
-          {cal.available && <Button small onClick={async () => { try { setCal(await connectGoogle('calendar')); } catch (e) { toast(e.message, 'err'); } }}>{t('connect')}</Button>}</div>)}
+          {cal.available && <Button small onClick={async () => { try { setCal(await connectGoogle('calendar')); } catch (e) { toast(e.message, isDeclined(e) ? 'ok' : 'err'); } }}>{t('connect')}</Button>}</div>)}
       <Button full icon="calendar" disabled={busy} onClick={save} id="session-save">{t('crNewSession')}</Button>
     </SheetFrame>
   );
@@ -197,6 +205,7 @@ export function PeoplePanel({ cid, teacher, onRemove }) {
       <Person name={p.name} color={p.color} size={32} />
       <span class="row-main"><span class="row-title">{p.name}</span><span class="row-sub">{p.role === 'teacher' ? t('teacherT') : (p.email || t('studentT'))}{p.muted ? ` · ${t('crMuted')}` : ''}</span></span>
       {teacher && p.role === 'student' && <>
+        <button type="button" class="link-btn" onClick={() => openSheet('guardians', { cid, uid: p.id, name: p.name })}>{t('parentsT')}</button>
         <button type="button" class="link-btn" onClick={() => mute(p)}>{p.muted ? t('crUnmute') : t('crMute')}</button>
         <button type="button" class="icon-btn" aria-label={t('delete')} onClick={() => onRemove?.(p)}><Icon name="trash" size={18} /></button>
       </>}
@@ -220,7 +229,7 @@ export function InviteSheet({ cid }) {
   const emails = text.split(/[\s,;]+/).map((x) => x.trim()).filter((x) => /.+@.+\..+/.test(x));
   const send = async () => { setBusy(true); try { setRes(await academy.invite(cid, emails)); refreshClasses(); } catch (e) { toast(e.message, 'err'); } setBusy(false); };
   const fromContacts = async () => {
-    try { const r = await withGoogle('contacts', () => C.gconn.contacts()); setText((x) => [x, ...r.contacts.map((c) => c.email)].filter(Boolean).join('\n')); } catch (e) { toast(e.message, 'err'); }
+    try { const r = await withGoogle('contacts', () => C.gconn.contacts()); setText((x) => [x, ...r.contacts.map((c) => c.email)].filter(Boolean).join('\n')); } catch (e) { toast(e.message, isDeclined(e) ? 'ok' : 'err'); }
   };
   return (
     <SheetFrame title={t('crInvite')}>
@@ -311,6 +320,7 @@ export function GradeSheet({ cid, a, student, cell }) {
         </div>
       )) : <label class="field3"><span>{t('crGradeT')}</span><input id="grade-value" type="number" min="0" max="1000" value={grade} onInput={(e) => setGrade(e.currentTarget.value)} /></label>}
       <Button full icon="check" onClick={save} id="grade-save">{t('crReturn')}</Button>
+      <PrivateThread aid={a.id} student={student.id} />
     </SheetFrame>
   );
 }

@@ -89,6 +89,13 @@ export const C = {
     local.set('academyToken', r.token); local.set('academyUser', null); setMe(r.me);
     return r.me;
   },
+  appleSignIn: async (idToken, name = '') => {
+    const r = await call('/c/auth/apple', { method: 'POST', json: { id_token: idToken, name, device: navigator.userAgent.slice(0, 60) } });
+    local.set('academyToken', r.token); local.set('academyUser', null); setMe(r.me);
+    return r.me;
+  },
+  signinMethods: () => call('/c/me/signin'),
+  removeSignin: (method) => call(`/c/me/signin/${method}`, { method: 'DELETE' }),
   pairStart: () => call('/c/auth/pair', { method: 'POST', token: '' }),
   pairPoll: (code) => call(`/c/auth/pair/${code}`, { token: '' }),
   pairApprove: (code) => call(`/c/auth/pair/${code}/approve`, { method: 'POST' }),
@@ -185,6 +192,21 @@ export const C = {
   fileBlobURL: async (fid) => URL.createObjectURL(await (await call(`/c/files/${fid}`, { raw: true })).blob()),
   profile: (handle) => call(`/c/users/${encodeURIComponent(handle)}`),
   follow: (handle, on = true) => call(`/c/users/${encodeURIComponent(handle)}/follow`, { method: on ? 'POST' : 'DELETE' }),
+  // friends, messages, challenges, moments, reposts (server/friends.py)
+  friends: () => call('/c/friends'),
+  friend: (handle, on = true) => call(`/c/friends/${encodeURIComponent(handle)}`, { method: on ? 'POST' : 'DELETE' }),
+  dms: () => call('/c/dms'),
+  dm: (handle) => call(`/c/dms/${encodeURIComponent(handle)}`),
+  sendDm: (handle, text) => call(`/c/dms/${encodeURIComponent(handle)}`, { method: 'POST', json: { text } }),
+  duels: () => call('/c/duels'),
+  duel: (id) => call(`/c/duels/${encodeURIComponent(id)}`),
+  newDuel: (body) => call('/c/duels', { method: 'POST', json: body }),
+  enterDuel: (id, body) => call(`/c/duels/${encodeURIComponent(id)}/entry`, { method: 'POST', json: body }),
+  moments: (sid) => call(`/c/sounds/${encodeURIComponent(sid)}/moments`),
+  addMoment: (sid, at, text) => call(`/c/sounds/${encodeURIComponent(sid)}/moments`, { method: 'POST', json: { at, text } }),
+  delMoment: (id) => call(`/c/moments/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  repost: (target, on = true) => (on ? call('/c/reposts', { method: 'POST', json: { target } }) : call(`/c/reposts/${encodeURIComponent(target)}`, { method: 'DELETE' })),
+  friendsFeed: () => call('/c/feed/friends'),
   block: (handle, on = true) => call(`/c/users/${encodeURIComponent(handle)}/block`, { method: on ? 'POST' : 'DELETE' }),
   blocks: () => call('/c/blocks'),
   leaderboard: (board, period) => call(`/c/leaderboard${q({ board, period })}`),

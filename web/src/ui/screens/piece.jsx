@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'preact/hooks';
 import { useApp, getPiece, updatePiece, deletePiece, markOpened, pop, push, openSheet, closeSheet, toast, logMinutes, recordTake, go, awardBadge, getState, setState, addXP, addScore, hooks } from '../state.js';
+import { NextChips } from '../nextchips.jsx';
 import { t, getLang, instrumentName, INSTRUMENTS } from '../../core/i18n.js';
 import { Icon, Card, Section, List, Row, Segmented, Stepper, Button, Chip, Stars, FretDiagram, PianoChord, Keyboard, Badge, Toggle } from '../components.jsx';
 import { NavBar, SheetFrame } from './common.jsx';
@@ -23,7 +24,7 @@ import { suggestChords, difficulty, bestKeys, VOICE_RANGES } from '../../core/an
 import { expectedNotes, Follower, trickyBars } from '../../core/follow.js';
 import { q, Q, ZERO } from '../../core/q.js';
 import { Mascot, Confetti } from '../mascot.jsx';
-import { academy, hasServer } from '../api.js';
+import { academy, academyMe, hasServer } from '../api.js';
 import { C, attempt } from '../account.js';
 import { dueText } from './classes.jsx';
 import { track } from '../analytics.js';
@@ -83,7 +84,7 @@ const idle = (fn) => (globalThis.requestIdleCallback ? requestIdleCallback(fn, {
 
 // ---------- the piece screen ----------
 
-export function PieceView({ id, active, start, assignment, challenge, daily }) {
+export function PieceView({ id, active, start, assignment, challenge, daily, duel = null, bar: resumeBar = 0 }) {
   const s = useApp();
   const meta = s.pieces.find((p) => p.id === id);
   const [data, setData] = useState(null);
@@ -104,10 +105,10 @@ export function PieceView({ id, active, start, assignment, challenge, daily }) {
   if (!meta) return <div class="scroll"><NavBar title="" backLabel={t('library')} /></div>;
   if (!data) return <div class="scroll"><NavBar title={meta.title} backLabel={t('library')} /><div class="loading"><Mascot mood="think" size={80} /></div></div>;
   return <PieceBody meta={meta} data={data} semis={semis} setSemis={(v) => { setSemis(v); updatePiece(id, { transpose: v }); if (v) awardBadge('transposer'); }}
-    view={view} setView={setView} active={active} start={start} assignment={assignment} challenge={challenge} daily={daily} reload={reload} />;
+    view={view} setView={setView} active={active} start={start} assignment={assignment} challenge={challenge} daily={daily} duel={duel} reload={reload} resumeBar={resumeBar} />;
 }
 
-function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, assignment, challenge, daily, reload }) {
+function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, assignment, challenge, daily, duel = null, reload, resumeBar = 0 }) {
   const s = useApp();
   useEffect(() => { track('piece_open', { label: meta.title }); }, [meta.id]);
   const { score, sheet: baseSheet, rec } = data;
@@ -217,8 +218,41 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
   };
   const latest = useRef({});
   latest.current.stop = stop;
-  useEffect(() => () => { latest.current.stop(true); micStop.current?.(); }, []);
-  useEffect(() => { if (!active) { stop(true); endWait(true); } }, [active]);
+  latest.current.spanAt = spanAt; latest.current.barNo = barNo; latest.current.tempos = perf?.tempos; latest.current.sp = speed;
+  latest.current.lastQ = () => lastQ.current;
+  latest.current.mode = player.mode;
+  // Leaving the piece while listening hands the music to the mini-player (Spotify-style): it keeps playing, the
+  // mini-player pauses it, and Play there opens the piece again at the same bar.
+  useEffect(() => () => {
+    const tr = transport.current;
+    micStop.current?.();
+    if (!(tr?.playing && latest.current.mode === 'listen')) { latest.current.stop(true); return; }
+    const id = meta.id, t0 = playStart.current;
+    const bar = () => { const sp = latest.current.spanAt?.(latest.current.lastQ?.() || 0); return sp ? latest.current.barNo(sp.mi) : 0; };
+    const finish = () => { logMinutes((performance.now() - t0) / 1000); const b = bar(); if (b) updatePiece(id, { lastBar: b, opened: Date.now() }).catch(() => {}); };
+    const reopen = (listen) => { const b = bar(); hooks.player = null; setState({ nowPlaying: null }); push('piece', { id, ...(listen ? { start: 'listen' } : {}), ...(b > 1 ? { bar: b } : {}) }, 'library'); };
+    const resume = () => reopen(true);
+    const open = () => { const was = tr.playing; if (was) { tr.stop(); finish(); } reopen(was); };
+    tr.onTime = (sec) => { latest.current.bgSec = sec; latest.current.lastQ = () => quartersAt(latest.current.tempos, sec, latest.current.sp); };
+    tr.onEnd = () => { finish(); hooks.player = null; if (getState().nowPlaying?.id === id) setState({ nowPlaying: null }); };
+    hooks.player = { id, bg: true, open, toggle: () => { tr.stop(); finish(); const np = getState().nowPlaying; if (np?.id === id) setState({ nowPlaying: { ...np, playing: false } }); hooks.player = { id, bg: true, open, toggle: resume }; } };
+  }, []);
+  // Leaving the screen (another tab, another screen on top): plain listening carries on (the mini-player shows it);
+  // Play Along and anything else stops.
+  useEffect(() => { if (!active && !(transport.current?.playing && player.mode === 'listen')) { stop(true); endWait(true); } }, [active]);
+  // where you stopped: Home's "Continue" opens the piece at that bar
+  const saveBar = () => { const sp = perf ? spanAt(lastQ.current || cursorQ) : null; if (sp) updatePiece(meta.id, { lastBar: barNo(sp.mi), opened: Date.now() }).catch(() => {}); };
+  latest.current.saveBar = saveBar;
+  useEffect(() => () => latest.current.saveBar?.(), []);
+  // the mini-player: what is playing, and how to pause / resume it from any tab
+  useEffect(() => {
+    const np = getState().nowPlaying;
+    if (player.playing && player.mode === 'listen') {
+      hooks.player = { id: meta.id, toggle: () => latest.current.toggleListen?.() };
+      if (!np || np.id !== meta.id || !np.playing) setState({ nowPlaying: { kind: 'piece', id: meta.id, title: meta.title, sub: meta.composer || meta.keyText || '', instrument: meta.instrument, keyText: meta.keyText, playing: true } });
+    } else if (np?.id === meta.id && np.playing) { setState({ nowPlaying: { ...np, playing: false } }); saveBar(); }
+  }, [player.playing, player.mode]);
+  useEffect(() => () => { if (hooks.player?.id === meta.id && !hooks.player.bg) { hooks.player = null; if (getState().nowPlaying?.id === meta.id) setState({ nowPlaying: null }); } }, []);
 
   /** Every note (plus chords and metronome clicks) of the piece, in seconds from the start at speed `sp`.
    *  Built once per setting, so starting and jumping to a bar are instant. `mute` = the part the player plays. */
@@ -338,6 +372,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
     setResult(null);
     play(null, { mode: 'listen' });
   };
+  latest.current.toggleListen = toggleListen;
   const goToBar = (mi) => {
     mi = clamp(mi, 0, lastMi);
     const sp = spanOfBar(mi);
@@ -576,10 +611,15 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
 
   // start straight away when opened from Home ("Play Along" / "Listen")
   const started = useRef(false);
+  // Continue from Home: the cursor waits at the bar you stopped on
   useEffect(() => {
-    if (started.current || !perf || !start) return;
-    started.current = true;
-    setTimeout(() => (start === 'listen' ? play(null, { mode: 'listen' }) : openPlayAlong()), 350);
+    if (!perf) return;
+    const mi = resumeBar ? (tScore?.measures || []).findIndex((m, i) => barNo(i) === Number(resumeBar)) : -1;
+    if (start && !started.current) {
+      started.current = true;
+      const from = mi > 0 ? spanOfBar(mi)?.t.num() ?? null : null;
+      setTimeout(() => (start === 'listen' ? play(from, { mode: 'listen' }) : openPlayAlong()), 350);
+    } else if (mi > 0 && !start) setTimeout(() => goToBar(mi), 300);
   }, [perf]);
 
   const playSheetChords = () => {
@@ -695,7 +735,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
           </div>
         )}
 
-        {result && <ResultCard result={result} barNo={barNo} onPractise={practiseBars} onAgain={openPlayAlong} assignment={assignment} onSend={sendToTeacher}
+        {result && <ResultCard result={result} meta={meta} duel={duel} barNo={barNo} onPractise={practiseBars} onAgain={openPlayAlong} assignment={assignment} onSend={sendToTeacher}
           onClass={() => openSheet('take', { result })} onShowBar={(mi) => { setView('sheet'); goToBar(mi); }}
           challenge={challenge || (rec.songId && challengeSong.current === rec.songId ? rec.songId : null)} onChallenge={enterChallenge}
           onShare={() => openSheet('compose', { type: 'show', show: { piece: meta.title, accuracy: Math.round(result.accuracy * 1000) / 1000, minutes: Math.round((result.seconds || 0) / 6) / 10, mode: result.mode, tempo_pct: Math.round((result.speed || 1) * 100) } })} />}
@@ -815,7 +855,7 @@ function MiniKeys({ want, played }) {
   return <div class="kbd-wrap"><Keyboard lo={start} hi={start + 24} marks={marks} height={58} /></div>;
 }
 
-function ResultCard({ result, barNo, onPractise, onAgain, assignment, onSend, challenge, onChallenge, onShare, onClass, onShowBar }) {
+function ResultCard({ result, meta, duel, barNo, onPractise, onAgain, assignment, onSend, challenge, onChallenge, onShare, onClass, onShowBar }) {
   const acc = Math.round(result.accuracy * 100);
   const good = acc >= 85;
   const next = Math.min(150, Math.round(result.speed * 100) + 10);
@@ -870,14 +910,50 @@ function ResultCard({ result, barNo, onPractise, onAgain, assignment, onSend, ch
       )}
       <div class="btn-row">
         <Button small kind="brand" icon="doc" onClick={() => push('report', { result, pieceId: result.pieceId, title: result.title, keySig: result.keySig, onPractise, onShowBar, onSend, onClass, onShare, assignment })} id="view-details">{t('viewDetails')}</Button>
-        <Button small icon="mic" onClick={onAgain}>{good && next > Math.round(result.speed * 100) ? t('tryAt', { p: next }) : t('tryAgain')}</Button>
-        {assignment && <Button small icon="send" kind="brand" onClick={onSend} disabled={result.sent}>{result.sent ? t('sentToTeacher') : t('submitToTeacher')}</Button>}
-        {!assignment && hasServer() && <Button small icon="academy" kind="secondary" onClick={onClass} id="share-class">{result.shared ? t('sharedWithClass') : t('shareWithClass')}</Button>}
         {challenge && <Button small icon="trophy" color="orange" onClick={onChallenge} disabled={result.entered}>{result.entered ? t('challengeEntered') : t('enterChallenge')}</Button>}
-        {hasServer() && <Button small icon="share" kind="secondary" onClick={onShare}>{t('shareWin')}</Button>}
+        {result.sent && <span class="pill-ok" id="sent-ok"><Icon name="check" size={14} stroke={2.6} />{t('sentToTeacher')}</span>}
       </div>
+      <TakeNext result={result} meta={meta} duel={duel} assignment={assignment} onAgain={onAgain} onSend={onSend} onClass={onClass} onShare={onShare} onPractise={onPractise} />
     </Card>
   );
+}
+
+/** What next after a take: hand it in, go faster or loop the hard bar, share it; after handing in, the next assignment. */
+function TakeNext({ result, meta, duel, assignment, onAgain, onSend, onClass, onShare, onPractise }) {
+  const [nextAsg, setNextAsg] = useState(null);
+  const [duelSent, setDuelSent] = useState(false);
+  const sendDuel = async () => {
+    try {
+      const r = await C.enterDuel(duel, { score: result.accuracy, tempo_pct: Math.round((result.speed || 1) * 100) });
+      setDuelSent(true);
+      toast(r.winner && r.over ? t('duelWinner', { name: r.winner.name }) : t('duelScoreSent', { n: r.mine }));
+      push('duel', { id: duel }, 'community');
+    } catch (e) { toast(e.message, 'err'); }
+  };
+  const challengeFriend = () => openSheet('duelPick', { piece_title: meta?.title || result.title, catalog_id: meta?.catalogId || '', score: result.accuracy, tempo_pct: Math.round((result.speed || 1) * 100) });
+  const online = hasServer();
+  useEffect(() => {
+    if (!result.sent || !online) return;
+    academyMe().then((r) => setNextAsg((r.todo || []).find((a) => a.id !== assignment?.id) || null)).catch(() => {});
+  }, [result.sent]);
+  const pct = Math.max(40, Math.round((result.speed || 1) * 100) - 20);
+  if (result.sent) {
+    return <NextChips flow="handIn" ctx={{ nextAssignment: nextAsg }} on={{
+      nextAssignment: nextAsg ? () => push('assignment', { id: nextAsg.id }, 'academy') : null,
+      again: onAgain,
+      classPage: assignment?.class_id ? () => push('classView', { id: assignment.class_id }, 'academy') : null,
+    }} />;
+  }
+  return <NextChips flow="take" ctx={{ assignment: !!assignment, accuracy: result.accuracy, speed: result.speed, tricky: result.tricky?.length > 0, online, inClass: online, duel: !!duel, duelSent }} on={{
+    sendDuel: duel && online ? sendDuel : null,
+    challengeFriend: online && !duel && !assignment ? challengeFriend : null,
+    handIn: assignment ? onSend : null,
+    faster: onAgain, again: onAgain,
+    loopTricky: result.tricky?.length ? () => onPractise(result.tricky[0].mi, pct) : null,
+    shareClass: !assignment && online && !result.shared ? onClass : null,
+    shareStage: online ? onShare : null,
+    similar: () => push('find', {}),
+  }} />;
 }
 
 const fmtSecs = (n) => `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`;

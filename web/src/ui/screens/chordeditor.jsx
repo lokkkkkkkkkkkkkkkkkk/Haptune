@@ -18,6 +18,8 @@ import { Transport, audioContext } from '../audio.js';
 import { saveFile } from '../files.js';
 import { writePdf } from '../../core/pdf.js';
 import { tick } from '../native.js';
+import { NextChips } from '../nextchips.jsx';
+import { hasServer } from '../api.js';
 
 const KEYS = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6];
 const BEATS = [[2, 4], [3, 4], [4, 4], [5, 4], [6, 8], [12, 8]];
@@ -209,10 +211,10 @@ export function ChordEditorView({ id = null, text = '', title = '', fresh = fals
             </div>
           </>
         )}
-        <div class="ce-bottom">
-          <Button kind="brand" icon="mic" onClick={playAlong} id="ce-playalong">{t('cePlayAlong')}</Button>
-          <Button kind="secondary" icon="share" onClick={() => openSheet('ceExport', { onPick: exp })} id="ce-export">{t('export')}</Button>
-        </div>
+        <NextChips flow="create" ctx={{ online: hasServer() }} id="ce-next" on={{
+          playAlong, export: () => openSheet('ceExport', { onPick: exp }),
+          shareStage: hasServer() ? async () => { stop(); const rec = await saveChordSong(song, pieceId); openSheet('compose', { type: 'share', piece: { id: rec.id, title: rec.title } }); } : null,
+        }} />
       </div>
     </div>
   );

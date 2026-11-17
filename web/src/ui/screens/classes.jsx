@@ -4,7 +4,9 @@
 import { useState, useEffect } from 'preact/hooks';
 import { useApp, push, pop, go, openSheet, closeSheet, toast, getPiece, addScore, addXP, setState, updateSettings, goLearn } from '../state.js';
 import { t, getLang, instrumentName } from '../../core/i18n.js';
-import { Icon, Card, Section, List, Row, Button, Badge, Segmented, Chip, Stepper, Rings } from '../components.jsx';
+import { Icon, Card, Section, List, Row, Button, Badge, Segmented, Chip, Stepper, Rings, Skeleton } from '../components.jsx';
+import { NextChips } from '../nextchips.jsx';
+import { PathPanel, TeacherGlance, PeopleTools, TurnInCard, PrivateThread, KindPill } from './learnwork.jsx';
 import { NavBar, SheetFrame } from './common.jsx';
 import { Mascot, Confetti } from '../mascot.jsx';
 import { hasServer, academyMe, academy } from '../api.js';
@@ -78,7 +80,7 @@ export function useLoad(fn, deps) {
 
 export function Loading({ error }) {
   if (error) return <Card class="classes-hello"><Mascot mood="sad" size={70} /><p>{error}</p></Card>;
-  return <div class="loading"><Mascot mood="think" size={64} /></div>;
+  return <Skeleton />;
 }
 
 // ---------------------------------------------------------------- Academy home: classes + to-do
@@ -165,7 +167,7 @@ export function MissionCard({ a, color, onClick }) {
 }
 
 // ---------------------------------------------------------------- one class
-export function ClassView({ id, tab: tab0 }) {
+export function ClassView({ id, tab: tab0, joined = false }) {
   const s = useApp();
   const [tab, setTab] = useState(tab0 || 'stream');
   const cls = useLoad(() => academy.classDetail(id), [id, s.academyRev]);
@@ -219,9 +221,16 @@ export function ClassView({ id, tab: tab0 }) {
               <span class="mascot-peek"><Mascot mood={teacher ? 'cheer' : 'wave'} size={78} /></span>
             </div>
 
-            <Segmented id="class-tabs" value={tab} onChange={(v) => (v === 'mine' ? push('student', { classId: id, uid: myId(), name: t('myProgress') }) : setTab(v))}
-              options={(teacher ? [['stream', t('crStream')], ['classwork', t('crClasswork')], ['people', t('crPeople')], ['grades', t('crGrades')]]
-                : [['stream', t('crStream')], ['classwork', t('crClasswork')], ['people', t('crPeople')], ['mine', t('myProgress')]]).map(([value, label]) => ({ value, label }))} />
+            {joined && !teacher && <JoinNext classId={id} />}
+
+            <Segmented id="class-tabs" value={tab} onChange={setTab}
+              options={(teacher ? [['stream', t('crStream')], ['classwork', t('crClasswork')], ['people', t('crPeople')], ['grades', t('crProgress')]]
+                : [['stream', t('crStream')], ['classwork', t('crClasswork')], ['people', t('crPeople')], ['progress', t('crProgress')]]).map(([value, label]) => ({ value, label }))} />
+            {tab === 'progress' && !teacher && <>
+              <PathPanel cid={id} />
+              <Button small kind="secondary" icon="stairs" onClick={() => push('student', { classId: id, uid: myId(), name: t('myProgress') })} id="my-details">{t('myProgress')}</Button>
+            </>}
+            {tab === 'grades' && teacher && <TeacherGlance cid={id} />}
 
             {tab === 'stream' && <StreamPanel cid={id} />}
             {tab === 'classwork' && <ClassworkPanel cid={id} c={c} teacher={teacher} />}
@@ -295,6 +304,7 @@ export function ClassView({ id, tab: tab0 }) {
                 <Button small kind="secondary" icon="loop" onClick={newCode}>{t('newCode')}</Button>
               </div>
             )}
+            {tab === 'people' && teacher && <PeopleTools cid={id} />}
             {tab === 'people' && <PeoplePanel cid={id} teacher={teacher} onRemove={remove} />}
 
             <List><Row icon={teacher ? 'close' : 'arrowDown'} color="red" title={teacher ? t('closeClass') : t('leaveClass')} danger onClick={leave} chevron={false} /></List>
@@ -345,7 +355,7 @@ export function AssignmentView({ id }) {
     try {
       const pid = await pieceFor(a);
       if (!pid) { toast(t('engineFailedShort'), 'err'); return; }
-      const asg = { id: a.id, part: a.part, mode: a.mode, tempo_pct: a.tempo_pct, goal: a.goal, title: a.title, due_at: a.due_at,
+      const asg = { id: a.id, class_id: a.class_id, part: a.part, mode: a.mode, tempo_pct: a.tempo_pct, goal: a.goal, title: a.title, due_at: a.due_at,
         bars_from: range ? range.from : a.bars_from, bars_to: range ? range.to : a.bars_to };
       push('piece', { id: pid, assignment: asg, start: 'playAlong' });
     } catch (e) { toast(e.message, 'err'); } finally { setBusy(false); }
@@ -372,12 +382,13 @@ export function AssignmentView({ id }) {
   return (
     <div class="scroll">
       <NavBar title={a.title} color="orange" backLabel={t('back')} />
-      <div class="wrap" style={{ paddingTop: 14 }}>
+      <div class="wrap" style={{ paddingTop: 14 }} id="asg-view">
         {a.status === 'done' && <Confetti />}
         <div class="hero class-hero c-orange">
           <div class="m-top">{!teacher && <StatusChip status={a.status} />}<span class="due">{dueText(a)}</span></div>
           <h2>{a.title}</h2>
           {a.piece_title && <p>{a.piece_title}</p>}
+          <KindPill kind={a.kind} />
           <div class="facts">
             <span><small>{t('barsRange')}</small>{barsText(a)}</span>
             <span><small>{t('speed')}</small>{a.tempo_pct}%</span>
@@ -394,12 +405,16 @@ export function AssignmentView({ id }) {
         {!teacher && (
           <>
             {a.status === 'done' && <div class="goal-banner"><Mascot mood="cheer" size={54} /><strong>{t('goalReachedT')}</strong></div>}
-            <Button kind="brand" full icon="mic" onClick={() => practise()} disabled={busy || upcoming || !a.has_piece}>{upcoming ? dueText(a) : t('practiseNow')}</Button>
+            {(a.kind || 'play') === 'play'
+              ? <Button kind="brand" full icon="mic" onClick={() => practise()} disabled={busy || upcoming || !a.has_piece}>{upcoming ? dueText(a) : t('practiseNow')}</Button>
+              : <>{a.has_piece && <Button kind="secondary" full icon="staff" onClick={() => practise()} disabled={busy}>{t('openThePiece')}</Button>}
+                {upcoming ? <p class="note-text">{dueText(a)}</p> : <TurnInCard a={a} />}</>}
             {a.attempts ? <p class="note-text" style={{ textAlign: 'center' }}>{t('attemptsLeft', { n: Math.max(0, a.attempts - subs.length) })}</p> : null}
             <Section title={t('myTries')}>
               {!subs.length && <Card class="classes-hello"><Mascot mood="think" size={60} /><p>{t('noTriesYet')}</p></Card>}
               {subs.map((sub) => <TryCard key={sub.id} sub={sub} a={a} onPractise={practise} />)}
             </Section>
+            {hasServer() && <PrivateThread aid={a.id} />}
           </>
         )}
 
@@ -444,10 +459,12 @@ function TryCard({ sub, a, onPractise }) {
   const reached = sub.accuracy >= a.goal;
   return (
     <Card class="try-card">
-      <div class="try-top">
+      {sub.turned_in && <div class="try-top"><span class="try-pct ok"><Icon name="check" size={18} stroke={3} /></span><span class="try-meta">{t('turnedIn')} · {relTime(sub.created)}{sub.late ? ` · ${t('late')}` : ''}</span></div>}
+      {sub.turned_in && sub.note && <p class="ti-answer">{sub.note}</p>}
+      {!sub.turned_in && <div class="try-top">
         <span class={`try-pct${reached ? ' ok' : ''}`}>{sub.accuracy}%</span>
         <span class="try-meta">{relTime(sub.created)}{sub.late ? ` · ${t('late')}` : ''}{sub.points ? ` · +${sub.points}` : ''}{sub.tempo_pct ? ` · ${t('speed')} ${sub.tempo_pct}%` : ''}</span>
-      </div>
+      </div>}
       {bars.length > 1 && <div class="bar-strip">{bars.map((b) => <i key={b.bar} title={`${b.bar}`} style={{ '--a': b.acc }} class={b.acc >= 0.85 ? 'ok' : b.acc >= 0.6 ? 'mid' : 'low'} />)}</div>}
       {sub.feedback.map((f, i) => {
         const fb = [...(f.focus_bars || [])].sort((x, y) => x - y);
@@ -489,7 +506,7 @@ export function JoinClassSheet() {
       toast(t('joinedClass', { name: r.class.name }));
       addXP(10);
       goLearn();
-      push('classView', { id: r.class.id }, 'academy');
+      push('classView', { id: r.class.id, joined: true }, 'academy');
     } catch (e) { setErr(e.message); setBusy(false); }
   };
   return (
@@ -750,4 +767,15 @@ export function ReviewSheet({ a, subs }) {
       )}
     </SheetFrame>
   );
+}
+
+/** Just joined: the first assignment, the class page, more songs. */
+function JoinNext({ classId }) {
+  const [next, setNext] = useState(null);
+  useEffect(() => { academyMe().then((r) => setNext((r.todo || []).find((a) => a.class_id === classId) || null)).catch(() => {}); }, [classId]);
+  return <NextChips flow="join" ctx={{ nextAssignment: next }} id="join-next" on={{
+    nextAssignment: next ? () => push('assignment', { id: next.id }) : null,
+    classPage: () => document.getElementById('class-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+    findSongs: () => push('find', {}, 'summary'),
+  }} />;
 }

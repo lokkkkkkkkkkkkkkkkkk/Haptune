@@ -63,6 +63,26 @@ Teachers ask in the app (**Me → Get verified as a teacher**, or when they try 
 To approve a music school's teachers at once, list its email domains:
 `fly secrets set HAPTUNE_TEACHER_DOMAINS="yourmusicschool.edu.my,partner-school.com" -a haptune-lok`
 
+### 3e. Google One Tap, Sign in with Apple, and Google sign-in inside the Android app (optional)
+- **One Tap** needs nothing more than step 3: on the website, someone who isn't signed in sees Google's small
+  "Continue as …" card once (at most every 3 days). Add `https://haptune.name.my` to the Web client's
+  authorised JavaScript origins if it isn't there yet.
+- **Sign in with Apple** (needs the paid Apple Developer account):
+  1. developer.apple.com → Certificates, IDs & Profiles → **Identifiers**: on the app's App ID tick
+     *Sign in with Apple*; add a **Services ID** (e.g. `my.melovyn.web`), tick Sign in with Apple, Configure:
+     domain `haptune.name.my`, return URL `https://haptune.name.my/app/`.
+  2. GitHub → Variables → `APPLE_SERVICES_ID` = that Services ID (the website shows "Continue with Apple").
+  3. `fly secrets set APPLE_CLIENT_IDS="my.melovyn.web,<the app's bundle id>" -a haptune-lok` (the server checks
+     Apple's signature, the issuer, this audience and the expiry; nothing secret is needed).
+  4. For the iPhone app: `npm i @capacitor-community/apple-sign-in && npx cap sync ios`; the app uses it when present.
+- **Google sign-in inside the Android app** (instead of signing in on the website with a code):
+  1. Google Cloud → Credentials → **OAuth client ID → Android**: package `my.melovyn.app` and the SHA-1 of the
+     signing key (Play Console → App integrity → App signing).
+  2. `cd web && npm i @codetrix-studio/capacitor-google-auth && npx cap sync android`, and in
+     `capacitor.config.json` set `plugins.GoogleAuth.serverClientId` to the **Web** client ID (so the token's
+     audience is the one the server already checks). The app uses it when present, and pairs through the
+     website otherwise.
+
 ## 4. Google search (Search Console)
 1. https://search.google.com/search-console → your property `haptune.name.my` (the TXT record you added is already there).
 2. **Sitemaps** → add `https://haptune.name.my/sitemap.xml` → Submit.

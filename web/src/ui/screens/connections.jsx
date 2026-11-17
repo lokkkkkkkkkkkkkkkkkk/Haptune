@@ -6,24 +6,57 @@ import { t } from '../../core/i18n.js';
 import { Icon, List, Row, Button } from '../components.jsx';
 import { SheetFrame } from './common.jsx';
 import { C, ensureAccount } from '../account.js';
-import { connectGoogle, toBase64 } from '../google.js';
+import { connectGoogle, toBase64, isDeclined } from '../google.js';
 import { hasServer } from '../api.js';
 
 const ICON = { calendar: ['calendar', 'blue'], drive: ['cloud', 'green'], contacts: ['users', 'orange'] };
+
+const SIGNIN_ICON = { google: ['globe', 'blue'], apple: ['phone', 'gray'], password: ['key', 'violet'] };
+
+/** The ways this account signs in; one can be removed only while another remains. */
+function SignInMethods() {
+  const [m, setM] = useState(null);
+  const [err, setErr] = useState('');
+  const load = () => C.signinMethods().then(setM).catch((e) => setErr(e.message));
+  useEffect(() => { if (hasServer()) load(); }, []);
+  const remove = async (id) => {
+    if (!confirm(t('removeSigninQ', { m: t(`signin_${id}`) }))) return;
+    try { setM(await C.removeSignin(id)); ensureAccount({ fresh: true }); } catch (e) { setErr(e.detail?.message || e.message); }
+  };
+  if (!m) return err ? <p class="t-red tiny">{err}</p> : null;
+  return (
+    <section id="signin-methods">
+      <h3 class="cr-topic-name">{t('signinWays')}</h3>
+      <List>
+        {m.methods.map((x) => (
+          <Row key={x.id} id={`signin-${x.id}`} icon={SIGNIN_ICON[x.id][0]} color={SIGNIN_ICON[x.id][1]} title={t(`signin_${x.id}`)} chevron={false}
+            subtitle={x.linked ? (x.email || (x.handle ? `@${x.handle}` : t('linkedT'))) : t('notLinkedT')}
+            right={x.can_remove ? <Button small kind="secondary" onClick={() => remove(x.id)}>{t('remove')}</Button>
+              : x.linked ? <span class="pill-ok"><Icon name="check" size={13} stroke={2.6} />{t('linkedT')}</span> : null} />
+        ))}
+      </List>
+      <p class="tiny muted">{t('signinWaysSub')}</p>
+      {err && <p class="t-red tiny">{err}</p>}
+    </section>
+  );
+}
 
 export function ConnectionsSheet() {
   const [info, setInfo] = useState(null);
   const [busy, setBusy] = useState('');
   const [err, setErr] = useState('');
+  const [note, setNote] = useState('');
   useEffect(() => { if (hasServer()) C.gconn.list().then(setInfo).catch((e) => setErr(e.message)); }, []);
   const act = async (f, on) => {
-    setBusy(f); setErr('');
-    try { setInfo(on ? await connectGoogle(f) : await C.gconn.revoke(f)); } catch (e) { setErr(e.message || String(e)); }
+    setBusy(f); setErr(''); setNote('');
+    try { setInfo(on ? await connectGoogle(f) : await C.gconn.revoke(f)); } catch (e) { if (isDeclined(e)) setNote(e.message); else setErr(e.message || String(e)); }
     setBusy('');
   };
   const any = info?.features?.some((f) => f.linked);
   return (
     <SheetFrame title={t('connectionsT')}>
+      <SignInMethods />
+      <h3 class="cr-topic-name">{t('connGoogleT')}</h3>
       <p class="note-text">{t('connHelp')}</p>
       {!info ? (err ? <p class="t-red">{err}</p> : <div class="loading"><div class="spinner" /></div>) : (
         <>
@@ -38,6 +71,7 @@ export function ConnectionsSheet() {
             ))}
           </List>
           {any && <Button kind="plain" full icon="trash" onClick={() => act('all', false)} id="conn-all">{t('disconnectAll')}</Button>}
+          {note && <p class="note-text" id="conn-declined">{note}</p>}
           {err && <p class="t-red tiny">{err}</p>}
         </>
       )}

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, push, openSheet, closeSheet, toast } from '../state.js';
 import { t } from '../../core/i18n.js';
-import { Icon, Button } from '../components.jsx';
+import { Icon, Button, Skeleton } from '../components.jsx';
 import { SheetFrame } from './common.jsx';
 import { Mascot } from '../mascot.jsx';
 import { C, attempt, ensureAccount, fileToAttachment } from '../account.js';
@@ -54,7 +54,7 @@ export function Feed({ active, following = false }) {
   };
   useEffect(() => { if (active) load(0); }, [active, following, s.me?.id, s.stageRev]);
   if (err && !items) return <div class="empty3 card"><Mascot mood="sad" size={70} /><p>{err}</p><Button kind="secondary" onClick={() => load(0)}>{t('tryAgain')}</Button></div>;
-  if (!items) return <div class="loading"><Mascot mood="think" size={70} /></div>;
+  if (!items) return <Skeleton />;
   if (!items.length) return (
     <div class="empty3 card" id="stage-empty"><Mascot mood="wave" size={80} /><h3>{following ? t('feedFollowEmpty') : t('stageEmptyT')}</h3><p>{t('stageEmptySub')}</p>
       <ol class="stage-how-list">{['stageHow1', 'stageHow2', 'stageHow3'].map((k) => <li key={k}>{t(k)}</li>)}</ol>
@@ -84,7 +84,7 @@ export function FeedCard({ p }) {
   };
   const share = async (e) => {
     e.stopPropagation();
-    const url = `${(globalThis.HAPTUNE_CONFIG?.site || location.origin).replace(/\/+$/, '')}/app/#post/${p.id}`;
+    const url = `${(globalThis.HAPTUNE_CONFIG?.site || location.origin).replace(/\/+$/, '')}/app/#stage/post/${p.id}`;
     try { if (navigator.share) { await navigator.share({ title: p.title, url }); return; } } catch (er) { if (er?.name === 'AbortError') return; }
     try { await navigator.clipboard.writeText(url); toast(t('copied')); } catch { toast(url); }
   };

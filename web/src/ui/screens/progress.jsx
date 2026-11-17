@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { useApp, closeSheet, toast } from '../state.js';
 import { t } from '../../core/i18n.js';
-import { Icon, Button, Chip } from '../components.jsx';
+import { Icon, Button, Chip, Skeleton } from '../components.jsx';
 import { NavBar, SheetFrame } from './common.jsx';
 import { Mascot, Confetti } from '../mascot.jsx';
 import { academy, academyMe } from '../api.js';
@@ -37,7 +37,7 @@ export function StudentView({ classId, uid, name, active }) {
       <NavBar title={data?.student?.name || name || ''} backLabel={t('back')} />
       <div class="wrap" style={{ paddingTop: 12 }}>
         {err && <div class="empty3 card"><Mascot mood="sad" size={70} /><p>{err}</p></div>}
-        {!data && !err && <div class="loading"><Mascot mood="think" size={64} /></div>}
+        {!data && !err && <Skeleton />}
         {data && <>
           <div class="bento stagger">
             <div class="tile3 w2 c-orange"><span class="k"><Icon name="star" size={14} />{t('avgScore')}</span><span class="big">{avg ?? '–'}<small>{avg != null ? '%' : ''}</small></span><div class="meter"><i style={{ width: `${avg || 0}%` }} /></div></div>

@@ -5,6 +5,7 @@ import { useApp, getPiece, addScore, toast, push, go, openSheet, logMinutes, awa
 import { t } from '../../core/i18n.js';
 import { Icon, Card, Section, List, Row, Button, Chip } from '../components.jsx';
 import { Mascot } from '../mascot.jsx';
+import { NavBar } from './common.jsx';
 import { renderMusicXML } from '../verovio.js';
 import { Transport, audioContext } from '../audio.js';
 import { SOUND } from './piece.jsx';
@@ -258,5 +259,15 @@ export function VaryPanel({ active, src }) {
       {svg.loading && !svg.pages.length && <div class="loading"><Mascot mood="think" size={70} /></div>}
       <div class="score-box vrv vary-score" ref={boxRef} dangerouslySetInnerHTML={{ __html: svg.pages.join('') }} />
     </>
+  );
+}
+
+/** Vary a song (the variation panel that used to live only inside Improvise), as its own small page. */
+export function VaryView({ active, src }) {
+  return (
+    <div class="scroll">
+      <NavBar title={t('mtVary')} color="pink" backLabel={t('back')} />
+      <div class="wrap c-pink" style={{ paddingTop: 12 }}><VaryPanel active={active} src={src} /></div>
+    </div>
   );
 }

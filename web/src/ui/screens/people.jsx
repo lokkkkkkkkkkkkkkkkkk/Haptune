@@ -2,8 +2,9 @@
 // editing your own profile.
 import { useState, useEffect } from 'preact/hooks';
 import { useApp, push, pop, openSheet, toast, addSongbookSong, updateSettings } from '../state.js';
+import { FriendButton } from './friends.jsx';
 import { t, instrumentName, INSTRUMENTS } from '../../core/i18n.js';
-import { Icon, Button, Section, Card, Segmented, Chip, Empty, List, Row } from '../components.jsx';
+import { Icon, Button, Section, Card, Segmented, Chip, Empty, List, Row, Skeleton } from '../components.jsx';
 import { NavBar, SheetFrame } from './common.jsx';
 import { Mascot } from '../mascot.jsx';
 import { C, attempt, ensureAccount } from '../account.js';
@@ -25,7 +26,7 @@ export function ProfileView({ handle, active }) {
     C.profile(handle).then(setU).catch((e) => setErr(e.message));
     C.posts({ author: handle, limit: 30 }).then((r) => setPosts(r.items)).catch(() => setPosts([]));
   }, [active, handle]);
-  if (!u) return <div class="scroll"><NavBar title="" backLabel={t('back')} /><div class="wrap">{err ? <p class="sub">{err}</p> : <div class="loading"><Mascot mood="think" size={70} /></div>}</div></div>;
+  if (!u) return <div class="scroll"><NavBar title="" backLabel={t('back')} /><div class="wrap">{err ? <p class="sub">{err}</p> : <Skeleton />}</div></div>;
   const toggle = async (fn) => { const r = await attempt(fn); if (r) setU(r); };
   const st = u.stats;
   return (
@@ -44,6 +45,7 @@ export function ProfileView({ handle, active }) {
           <div class="follow-row"><span><strong class="num">{u.followers}</strong> {t('followers')}</span><span><strong class="num">{u.following}</strong> {t('following')}</span></div>
           {u.is_me ? <Button kind="secondary" icon="pencil" onClick={() => push('editProfile')}>{t('editProfile')}</Button>
             : <Button kind={u.is_following ? 'secondary' : 'primary'} icon={u.is_following ? 'check' : 'plus'} onClick={() => toggle(() => C.follow(u.handle, !u.is_following))}>{u.is_following ? t('followingBtn') : t('follow')}</Button>}
+          {!u.is_me && <FriendButton u={u} />}
         </div>
         <div class="stat-grid">
           <div><strong class="num">{st.helps}</strong><span>{t('scoresMade')}</span></div>
@@ -81,7 +83,7 @@ export function LeaderboardView({ active, board: b0 = 'helpers' }) {
         <Segmented value={board} onChange={setBoard} options={[{ value: 'helpers', label: t('lbHelpers') }, { value: 'practice', label: t('lbPractice') }, { value: 'challenge', label: t('lbChallenge') }]} />
         {board !== 'challenge' && <div class="chips">{[['week', 'thisWeek'], ['month', 'thisMonth'], ['all', 'allTime']].map(([v, l]) => <Chip key={v} on={period === v} onClick={() => setPeriod(v)}>{t(l)}</Chip>)}</div>}
         <p class="note-text">{t(`lbNote_${board}`)}</p>
-        {!data ? <div class="loading"><Mascot mood="think" size={70} /></div> : data.items.length ? (
+        {!data ? <Skeleton /> : data.items.length ? (
           <div class="lb">
             {data.items.map((x) => (
               <button type="button" key={x.user.id} class={`lb-row${data.me?.user.id === x.user.id ? ' me' : ''}`} onClick={() => x.user.handle && push('profile', { handle: x.user.handle })}>
@@ -103,7 +105,37 @@ const NOTE_ICON = {
   answer: ['quiz', 'blue'], want: ['users', 'purple'], follow: ['plus', 'purple'], ready: ['bell', 'green'], challenge: ['trophy', 'yellow'],
   credits: ['star', 'yellow'], mod: ['info', 'red'], claim: ['pencil', 'orange'], like: ['heart', 'pink'], new_post: ['bell', 'blue'], nudge: ['bolt', 'orange'], paid_ok: ['crown', 'purple'], paid_no: ['info', 'red'], lesson: ['calendar', 'green'], tutor: ['academy', 'orange'],
   expired: ['info', 'gray'], plan: ['crown', 'purple'], published: ['books', 'green'],
+  class_announcement: ['academy', 'orange'], class_comment: ['chat', 'orange'], class_assignment: ['flag', 'orange'], class_graded: ['check', 'green'],
+  class_feedback: ['chat', 'green'], class_session: ['calendar', 'orange'], class_session_changed: ['calendar', 'gray'], class_invite: ['users', 'orange'],
+  class_nudge: ['bell', 'orange'], class_private: ['lock', 'orange'], class_turned_in: ['send', 'green'], sound_layered: ['wave', 'purple'],
+  friend_request: ['users', 'pink'], friend_accepted: ['users', 'green'], dm: ['chat', 'pink'], duel: ['trophy', 'yellow'], duel_answered: ['trophy', 'yellow'],
+  class_challenge: ['trophy', 'orange'], moment: ['chat', 'purple'], repost: ['loop', 'pink'],
+  teacher_verified: ['check', 'green'], teacher_rejected: ['info', 'red'], staff_message: ['info', 'blue'], dev_access: ['shield', 'purple'], dev_access_ended: ['shield', 'gray'],
 };
+/** Where a notification goes when tapped (class notices open the class or the assignment, not a Stage post). */
+function openNote(n) {
+  const d = n.data || {};
+  if ((n.kind === 'duel' || n.kind === 'duel_answered' || n.kind === 'class_challenge') && d.duel) return push('duel', { id: d.duel }, 'community');
+  if (n.kind === 'friend_request') return push('friends', {}, 'community');
+  if (n.kind === 'dm' && n.actor?.handle) return push('chat', { handle: n.actor.handle }, 'community');
+  if ((n.kind === 'moment' || n.kind === 'repost') && d.sound) return push('soundPage', { id: d.sound }, 'community');
+  if (n.kind.startsWith('class_')) {
+    if (n.kind === 'class_invite' && d.code) return openSheet('joinLink', { code: d.code });
+    if (d.assignment) return push('assignment', { id: d.assignment }, 'academy');
+    if (d.class_id) return push('classView', { id: d.class_id, ...(n.kind.startsWith('class_session') ? { tab: 'classwork' } : {}) }, 'academy');
+    return null;
+  }
+  if (n.kind === 'sound_layered' && d.sound) return push('soundPage', { id: d.sound });
+  if (n.kind === 'dev_access') return push('admin', {}, 'me');
+  if (n.kind === 'lesson') return push('lessons');
+  if (n.kind === 'tutor') return push('tutorMe');
+  if (n.kind === 'nudge') return push('daily');
+  if (n.kind === 'paid_ok' || n.kind === 'paid_no') return openSheet('plans');
+  if (n.post_id) return push('post', { id: n.post_id });
+  if (n.actor?.handle) return push('profile', { handle: n.actor.handle });
+  if (n.kind === 'credits') return push('wallet');
+  return null;
+}
 
 export function NotificationsView({ active }) {
   const [items, setItems] = useState(null);
@@ -115,15 +147,15 @@ export function NotificationsView({ active }) {
     <div class="scroll">
       <NavBar title={t('notifications')} backLabel={t('community')} color="purple" />
       <div class="wrap">
-        {!items ? <div class="loading"><Mascot mood="think" size={70} /></div> : items.length ? (
+        {!items ? <Skeleton /> : items.length ? (
           <div class="notes">
             {items.map((n) => {
               const [icon, color] = NOTE_ICON[n.kind] || ['bell', 'gray'];
-              const open = () => (n.kind === 'lesson' ? push('lessons') : n.kind === 'tutor' ? push('tutorMe') : n.kind === 'nudge' ? push('daily') : n.kind === 'paid_ok' || n.kind === 'paid_no' ? openSheet('plans') : n.post_id ? push('post', { id: n.post_id }) : n.actor?.handle ? push('profile', { handle: n.actor.handle }) : n.kind === 'credits' ? push('wallet') : null);
+              const open = () => openNote(n);
               return (
                 <button type="button" key={n.id} class={`note-row${n.read ? '' : ' unread'}`} onClick={open}>
                   {n.actor ? <Person user={n.actor} size={38} /> : <span class={`note-ic c-${color}`}><Icon name={icon} size={18} stroke={2.2} /></span>}
-                  <span class="note-main"><span>{t(`n_${n.kind}`, { name: n.actor?.name || '', title: n.post_title || '', credits: n.data.credits ?? n.data.amount ?? '', place: n.data.place || '', tier: n.data.tier || '' })}</span>
+                  <span class="note-main"><span>{t(`n_${n.kind}`, { name: n.actor?.name || n.data.name || n.data.student || '', title: n.post_title || n.data.title || '', class: n.data.class_name || '', credits: n.data.credits ?? n.data.amount ?? '', place: n.data.place || '', tier: n.data.tier || '' })}{n.data.text ? <em class="note-quote"> “{String(n.data.text).slice(0, 140)}”</em> : null}</span>
                     <span class="sub">{timeAgo(n.at)}</span></span>
                 </button>
               );
@@ -233,7 +265,7 @@ export function ChallengeView({ active }) {
     <div class="scroll">
       <NavBar title={t('weeklyChallenge')} backLabel={t('community')} color="orange" />
       <div class="wrap">
-        {!ch ? <div class="loading"><Mascot mood="think" size={70} /></div> : <>
+        {!ch ? <Skeleton /> : <>
           <div class="challenge-card big">
             <div class="cc-top"><span class="cc-badge"><Icon name="trophy" size={18} />{t('weeklyChallenge')}</span><span class="cc-left">{timeLeft(ch.ends)}</span></div>
             <h3>{ch.title}</h3>

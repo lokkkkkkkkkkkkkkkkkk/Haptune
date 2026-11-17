@@ -7,7 +7,7 @@
 import { useState, useEffect, useRef } from 'preact/hooks';
 import { useApp, push, openSheet, closeSheet, setState, addSongbookSong, toast } from '../state.js';
 import { t, instrumentName } from '../../core/i18n.js';
-import { Icon, Chip, Button, Section, Card, Segmented, Empty, List, Row } from '../components.jsx';
+import { Icon, Chip, Button, Section, Card, Segmented, Empty, List, Row, Skeleton } from '../components.jsx';
 import { LargeTitle, NavBar, SheetFrame, Avatar } from './common.jsx';
 import { Feed } from './stagefeed.jsx';
 import { whenSignedIn } from './hub.jsx';
@@ -19,9 +19,10 @@ import { PostCard, Person, timeLeft } from './social.jsx';
 import { ScoreCard } from './home.jsx';
 import { local } from '../storage.js';
 import { flag } from '../analytics.js';
+import { FriendsFeed, DuelsPanel } from './friends.jsx';
 
 const SEGMENTS = [
-  { value: 'home', label: 'segForYou' }, { value: 'following', label: 'segFollowing' }, { value: 'requests', label: 'segRequests' },
+  { value: 'home', label: 'segForYou' }, { value: 'friends', label: 'segFriends' }, { value: 'following', label: 'segFollowing' }, { value: 'requests', label: 'segRequests' },
   { value: 'sounds', label: 'segSounds' }, { value: 'library', label: 'segScores' }, { value: 'play', label: 'segPlay' }, { value: 'questions', label: 'segQuestions' },
 ];
 
@@ -38,6 +39,7 @@ export function CommunityView({ active }) {
   const actions = online ? <>
     <button type="button" class="stage-plus" id="stage-plus" aria-label={t('stageWhatDo')} onClick={() => openSheet('stageNew')}><Icon name="plus" size={24} stroke={2.8} /></button>
     <button type="button" class="hm-pill nts" id="stage-notes" onClick={() => push('wallet')} aria-label={t('rewards')}><Icon name="gift" size={15} stroke={2.2} />{s.me?.credits ?? '·'}</button>
+    <button type="button" class="hm-pill" onClick={() => push('messages')} aria-label={t('messagesT')} id="stage-messages" style={{ padding: '0 9px' }}><Icon name="chat" size={17} /></button>
     <button type="button" class="hm-pill" onClick={() => push('notifications')} aria-label={t('notifications')} style={{ position: 'relative', padding: '0 9px' }}>
       <Icon name="bell" size={17} />{s.me?.unread > 0 && <span class="tab-dot" />}
     </button>
@@ -62,12 +64,13 @@ export function CommunityView({ active }) {
             {SEGMENTS.filter((o) => o.value !== 'sounds' || flag('sounds')).map((o) => <Chip key={o.value} on={seg === o.value} color="pink" onClick={() => setState({ communitySeg: o.value, stageMine: false })}>{t(o.label)}</Chip>)}
           </div>
           {seg === 'home' ? <ForYou active={active} />
+            : seg === 'friends' ? <FriendsFeed active={active} />
             : seg === 'following' ? <Feed active={active} following />
               : seg === 'requests' ? <><button type="button" class="sr-cta" onClick={helpWrite} id="st-help"><span class="hm-art sm"><Icon name="pencil" size={20} stroke={2.2} /></span><div><strong>{t('helpWrite')}</strong><span>{t('helpWriteSub')}</span></div><Icon name="chevronR" size={16} stroke={2.4} /></button>
                 <PostList key="r" type="request" active={active} mine={!!s.stageMine} /></>
                 : seg === 'sounds' ? <SoundsFeed active={active} />
                 : seg === 'library' ? <PostList key="l" type="share" active={active} />
-                  : seg === 'play' ? <Play active={active} />
+                  : seg === 'play' ? <><DuelsPanel active={active} /><Play active={active} /></>
                     : <PostList key="q" type="question" active={active} />}
         </>}
       </div>
@@ -133,7 +136,7 @@ function ForYou({ active }) {
   const load = async () => { try { setData(await C.stage()); setErr(''); } catch (e) { setErr(e.message); } };
   useEffect(() => { if (active) load(); }, [active, s.me?.id]);
   if (err && !data) return <Card><p class="sub">{err}</p><Button kind="secondary" onClick={load}>{t('tryAgain')}</Button></Card>;
-  if (!data) return <div class="loading"><Mascot mood="think" size={70} /></div>;
+  if (!data) return <Skeleton />;
   const mine = s.me?.instruments || [];
   const all = (v, extra = {}) => <button type="button" onClick={() => setState({ communitySeg: v, ...extra })}>{t('seeAll')}</button>;
   return (
@@ -272,7 +275,7 @@ export function DailyView({ active }) {
     <div class="scroll">
       <NavBar title={t('dailyChallenge')} backLabel="Stage" />
       <div class="wrap">
-        {!d ? <div class="loading"><Mascot mood="think" size={70} /></div> : <>
+        {!d ? <Skeleton /> : <>
           <div class="daily-card big">
             <div class="dc-top"><span class="dc-badge"><Icon name="bolt" size={15} stroke={2.4} />{t('todaysTune')}</span><span class="dc-n">{timeLeft(d.ends)}</span></div>
             <h3>{d.title}</h3>
@@ -344,7 +347,7 @@ export function ChallengeCard({ ch }) {
 function Play({ active }) {
   const [data, setData] = useState(null);
   useEffect(() => { if (active) C.stage().then(setData).catch(() => {}); }, [active]);
-  if (!data) return <div class="loading"><Mascot mood="think" size={70} /></div>;
+  if (!data) return <Skeleton />;
   return (
     <>
       <DailyCard d={data.daily} />
@@ -403,7 +406,7 @@ function PostList({ type, active, mine = false }) {
       </div>
       {type === 'share' && <p class="note-text">{t('libraryNote')}</p>}
       {type === 'request' && mineInst && <div class="banner"><Icon name="pencil" size={18} stroke={2.2} /><div class="sub">{t('helpWriteHint')} <button type="button" class="link" onClick={() => openSheet('stageGuide', { topic: 'help' })}>{t('howItWorks')}</button></div></div>}
-      {items === null ? <div class="loading"><Mascot mood="think" size={70} /></div>
+      {items === null ? <Skeleton />
         : items.length ? <div class="post-list">{items.map((p) => <PostCard key={p.id} p={p} />)}</div>
           : <Empty icon={type === 'share' ? 'staff' : type === 'question' ? 'quiz' : 'flag'} title={t(qtext ? 'noResults' : 'nothingHereYet', { q: qtext })} sub={t(`empty_${type}`)}>
             <Button icon="plus" onClick={() => openSheet('compose', { type })}>{t(newLabel)}</Button>

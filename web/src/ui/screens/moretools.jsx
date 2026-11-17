@@ -5,8 +5,6 @@ import { useState } from 'preact/hooks';
 import { useApp, push, openSheet, go, toast } from '../state.js';
 import { t } from '../../core/i18n.js';
 import { Icon, List, Row } from '../components.jsx';
-import { NavBar } from './common.jsx';
-import { VaryPanel } from './vary.jsx';
 import { local } from '../storage.js';
 import { tick } from '../native.js';
 
@@ -55,16 +53,6 @@ export function MoreTools({ scan }) {
         </div>
       )}
     </section>
-  );
-}
-
-/** Vary a song (the variation panel that used to live only inside Improvise), as its own small page. */
-export function VaryView({ active, src }) {
-  return (
-    <div class="scroll">
-      <NavBar title={t('mtVary')} color="pink" backLabel={t('back')} />
-      <div class="wrap c-pink" style={{ paddingTop: 12 }}><VaryPanel active={active} src={src} /></div>
-    </div>
   );
 }
 

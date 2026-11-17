@@ -43,7 +43,7 @@ EVENTS = {
     "session_start": "", "session_end": "seconds", "screen_view": "", "screen_time": "seconds",
     "piece_open": "", "play_along_start": "", "play_along_finish": "score %", "listen": "",
     "create_export": "", "post_created": "", "class_joined": "", "sound_made": "seconds", "sound_check": "",
-    "hapi_ask": "", "search": "", "error": "",
+    "hapi_ask": "", "search": "", "error": "", "next_step": "", "deep_link": "",
     # added by the server
     "sign_in": "", "sign_up": "", "server_error": "",
 }

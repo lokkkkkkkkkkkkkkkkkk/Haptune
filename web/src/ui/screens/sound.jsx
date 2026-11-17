@@ -8,6 +8,9 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { useApp, push, openSheet, closeSheet, toast, addScore, go } from '../state.js';
 import { t, getLang } from '../../core/i18n.js';
 import { Icon, Button, Chip, List, Row, Toggle, Keyboard } from '../components.jsx';
+import { NextChips, copyLink } from '../nextchips.jsx';
+import { fromSound } from '../../core/piece.js';
+import { MomentsPanel, RepostButton } from './friends.jsx';
 import { NavBar, SheetFrame } from './common.jsx';
 import * as S from '../../core/sound.js';
 import * as CB from '../../core/chordbars.js';
@@ -19,7 +22,7 @@ import { db } from '../storage.js';
 import { saveFile } from '../files.js';
 import { serverURL, hasServer, accountToken, deviceId } from '../api.js';
 import { C } from '../account.js';
-import { saveToDrive } from '../google.js';
+import { saveToDrive, isDeclined } from '../google.js';
 import { whenSignedIn } from './hub.jsx';
 import { tick } from '../native.js';
 import * as E from '../soundengine.js';
@@ -300,7 +303,12 @@ export function SoundExportSheet({ sound }) {
         const wav = E.wavOf(await E.mixdown(sound));
         globalThis.__lastMixdownMs = Math.round(performance.now() - t0);
         if (kind === 'wav') await saveFile(`${name}.wav`, wav);
-        else if (kind === 'drive') { const r = await saveToDrive(`${name}.wav`, 'audio/wav', wav); toast(t('savedToDrive')); void r; }
+        else if (kind === 'drive') {
+          try { await saveToDrive(`${name}.wav`, 'audio/wav', wav); toast(t('savedToDrive')); } catch (e) {
+            if (!isDeclined(e)) throw e;
+            await saveFile(`${name}.wav`, new Blob([wav], { type: 'audio/wav' })); toast(t('declined_drive'));
+          }
+        }
         else if (navigator.canShare?.({ files: [new File([wav], `${name}.wav`, { type: 'audio/wav' })] })) await navigator.share({ files: [new File([wav], `${name}.wav`, { type: 'audio/wav' })], title: name });
         else await saveFile(`${name}.wav`, wav);
       } else if (kind === 'stems') {
@@ -350,6 +358,7 @@ export function SoundPostSheet({ sound }) {
       track('sound_made', { value: S.soundSeconds(sound), props: { tracks: sound.tracks.length } });
       closeSheet();
       go('community');
+      if (j.id) push('soundPage', { id: j.id, justPosted: true }, 'community');
     } catch (e) { toast(e.message || String(e), 'err'); setBusy(false); }
   };
   return (
@@ -375,6 +384,29 @@ export function SoundsFeed({ active }) {
   if (!items) return <div class="loading"><div class="spinner" /></div>;
   if (!items.length) return <div class="empty3 card"><h3>{t('stShareSound')}</h3><p>{t('stShareSoundSub')}</p><Button icon="wave" onClick={() => whenSignedIn(() => push('sound', {}, 'write'))}>{t('wizSound')}</Button></div>;
   return <div class="sound-feed" id="sound-feed">{items.map((x) => <SoundCard key={x.id} x={x} />)}</div>;
+}
+
+/** One Sound on its own page (#sound/ID, links from Home, Find and notifications). */
+export function SoundPageView({ id, justPosted = false }) {
+  const [x, setX] = useState(null);
+  const [err, setErr] = useState('');
+  useEffect(() => { C.sounds.get(id).then(setX).catch((e) => setErr(e.message || String(e))); }, [id]);
+  return (
+    <div class="scroll" id="sound-page">
+      <NavBar title={x?.title || t('segSounds')} backLabel={t('back')} color="violet" />
+      <div class="wrap" style={{ paddingTop: 12 }}>
+        {err ? <p class="note-text err">{err}</p> : !x ? <div class="loading"><div class="spinner" /></div> : <>
+          {justPosted && <NextChips flow="sound" id="sound-next" on={{ copyLink: () => copyLink(fromSound(x)), newSound: () => push('sound', {}, 'write') }} />}
+          <SoundCard x={x} />
+          <div class="row-gap" style={{ gap: 8, margin: '8px 0' }}><RepostButton target={`s:${x.id}`} /></div>
+          <MomentsPanel sid={x.id} />
+          {x.versions && (x.versions.before.length > 0 || x.versions.layers.length > 0) && <List>
+            {[...x.versions.before, ...x.versions.layers].map((v) => <Row key={v.id} icon="wave" color="violet" title={v.title} subtitle={v.author?.name || ''} onClick={() => push('soundPage', { id: v.id })} />)}
+          </List>}
+        </>}
+      </div>
+    </div>
+  );
 }
 
 export function SoundCard({ x }) {
