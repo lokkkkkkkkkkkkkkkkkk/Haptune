@@ -334,6 +334,16 @@ async function person(browser, base, api, { name, role, handle }) {
       await esc(s); await s.evaluate(() => { for (const k of ['library', 'community']) window.__haptune.popToRoot(k); });
       await tab(s, 'hub');
     });
+    await step('Sign-in ways: the username is listed and cannot be removed; Google permissions explain themselves', async () => {
+      await esc(t); await t.evaluate(() => window.__haptune.openSheet('connections'));
+      await t.waitForSelector('#signin-methods #signin-password', { timeout: 15000 });
+      const txt = await t.locator('#signin-password').innerText();
+      if (!/@ms_tan/.test(txt)) throw new Error('the username sign-in is not listed: ' + txt);
+      if (await t.locator('#signin-methods button').filter({ hasText: /Remove/ }).count()) throw new Error('the only way to sign in can be removed');
+      if (await t.locator('#apple-btn').count()) throw new Error('Apple shows although it is not set up');
+      await t.screenshot({ path: path.join(SHOTS, 'signin-ways.png') });
+      await esc(t);
+    });
     await step('Hapi: ask from the sparkle button, get an answer with buttons, tap one', async () => {
       // the model is mocked here (no API key in tests); the server side is tested in server/test_aichat.py
       let sent = null;

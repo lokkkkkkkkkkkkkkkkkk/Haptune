@@ -8,13 +8,14 @@ import { V5 } from './i18n-v5.js';
 import { V6 } from './i18n-v6.js';
 import { V7 } from './i18n-v7.js';
 import { V8 } from './i18n-v8.js';
+import { V9 } from './i18n-v9.js';
 export const LANGS = [
   { id: 'en', name: 'English' }, { id: 'ms', name: 'Bahasa Melayu' }, { id: 'zh-Hans', name: '简体中文' }, { id: 'zh-Hant', name: '繁體中文' },
 ];
 const I = { en: 0, ms: 1, 'zh-Hans': 2, 'zh-Hant': 3 };
 
 const S = { ...BASE };
-Object.assign(S, MORE, V2, V3, V4, V5, V6, V7, V8);                // community, accounts, plans and help (i18n-community.js)
+Object.assign(S, MORE, V2, V3, V4, V5, V6, V7, V8, V9);                // community, accounts, plans and help (i18n-community.js)
 
 let lang = 'en';
 export function setLang(l) { lang = I[l] !== undefined ? l : 'en'; }

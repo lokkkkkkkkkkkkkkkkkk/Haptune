@@ -507,3 +507,18 @@ def import_roster(cid: str, body: RosterIn, me: dict = Depends(current_user)):
         res["link"] = r["link"]
     res["people"] = people[:50]
     return res
+
+
+# -------------------------------------------------------------------------------------------- your data
+def forget(c, uid: str) -> None:
+    """Deleting an account removes its parents' addresses, its private comments and its nudges."""
+    c.execute(delete(guardians).where(guardians.c.student_id == uid))
+    c.execute(delete(private_notes).where((private_notes.c.student_id == uid) | (private_notes.c.author_id == uid)))
+    c.execute(delete(nudges).where(nudges.c.user_id == uid))
+
+
+def export(c, uid: str) -> dict:
+    rows = lambda q: [dict(r) for r in c.execute(q).mappings().all()]  # noqa: E731
+    return {"guardians": rows(select(guardians.c.email, guardians.c.name, guardians.c.created, guardians.c.last_sent).where(guardians.c.student_id == uid)),
+            "private_comments": rows(select(private_notes.c.assignment_id, private_notes.c.text, private_notes.c.created).where(
+                (private_notes.c.student_id == uid) | (private_notes.c.author_id == uid)))}

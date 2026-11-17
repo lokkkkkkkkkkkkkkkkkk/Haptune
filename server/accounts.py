@@ -67,6 +67,7 @@ accounts = Table("accounts", meta,
                  Column("stripe_customer", String(40), nullable=True),
                  Column("stripe_sub", String(40), nullable=True),
                  Column("google_sub", String(64), nullable=True, index=True),   # Sign in with Google (the Google account id)
+                 Column("apple_sub", String(64), nullable=True, index=True),    # Sign in with Apple (signin.py)
                  Column("email", String(200), nullable=True),                    # from Google, shown only to the person
                  Column("hub_role", String(10), nullable=False, default=""),     # teacher | student | "" (Learn asks once)
                  Column("totp_secret", String(300), nullable=True),             # 2-step verification (encrypted when HAPTUNE_TOKEN_KEY is set)
@@ -737,7 +738,7 @@ def logout(authorization: str = Header("")):
 # ----------------------------------------------------------------------------------------------- signing in
 def is_registered(acc: dict | None) -> bool:
     """Signed in with Google, or has a username and password: an account that can come back on any device."""
-    return bool(acc and (acc.get("pw_hash") or acc.get("google_sub")))
+    return bool(acc and (acc.get("pw_hash") or acc.get("google_sub") or acc.get("apple_sub")))
 
 
 def signin_required() -> bool:
@@ -883,6 +884,11 @@ def delete_me(me: Me = Depends(current)):
 def delete_account(c, uid: str) -> None:
     from community import forget_user
     forget_user(c, uid)
+    for mod in ("friends", "learn"):                                    # Part 2: friends, messages, guardians, ...
+        try:
+            __import__(mod).forget(c, uid)
+        except ImportError:
+            pass
     for t in (notifications, practice_log, usage, ledger, elevations, dev_grants):
         c.execute(delete(t).where(t.c.user_id == uid))
     try:
@@ -1125,6 +1131,11 @@ def export_user(c, uid: str) -> dict:
            "class_memberships": rows(academy.members),
            "takes": rows(academy.takes, cols=[academy.takes.c.id, academy.takes.c.class_id, academy.takes.c.piece_title, academy.takes.c.accuracy, academy.takes.c.created]),
            "feedback_sent": rows(app_feedback)}
+    for mod in ("friends", "learn"):
+        try:
+            out.update(__import__(mod).export(c, uid))
+        except ImportError:
+            pass
     try:
         import sounds
         out["sounds"] = rows(sounds.sounds, cols=[sounds.sounds.c.id, sounds.sounds.c.title, sounds.sounds.c.seconds, sounds.sounds.c.created])

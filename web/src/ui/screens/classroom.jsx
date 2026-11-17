@@ -8,7 +8,7 @@ import { Icon, Card, List, Row, Button, Chip, Toggle } from '../components.jsx';
 import { SheetFrame } from './common.jsx';
 import { academy } from '../api.js';
 import { C } from '../account.js';
-import { connectGoogle, toBase64, withGoogle } from '../google.js';
+import { connectGoogle, toBase64, withGoogle, isDeclined } from '../google.js';
 import { saveFile } from '../files.js';
 import { openExternal } from '../native.js';
 import { Person, useLoad, Loading, relTime, refreshClasses, MissionCard, TeacherMission } from './classes.jsx';
@@ -188,7 +188,7 @@ export function SessionSheet({ cid }) {
       {cal && (linked
         ? <Row icon="video" color="green" title="Google Meet" right={<Toggle id="session-meet" checked={meet} onChange={setMeet} label="Google Meet" />} chevron={false} />
         : <div class="banner"><Icon name="calendar" size={18} /><div style={{ flex: 1 }}>{t('crCalendarHint')}</div>
-          {cal.available && <Button small onClick={async () => { try { setCal(await connectGoogle('calendar')); } catch (e) { toast(e.message, 'err'); } }}>{t('connect')}</Button>}</div>)}
+          {cal.available && <Button small onClick={async () => { try { setCal(await connectGoogle('calendar')); } catch (e) { toast(e.message, isDeclined(e) ? 'ok' : 'err'); } }}>{t('connect')}</Button>}</div>)}
       <Button full icon="calendar" disabled={busy} onClick={save} id="session-save">{t('crNewSession')}</Button>
     </SheetFrame>
   );
@@ -229,7 +229,7 @@ export function InviteSheet({ cid }) {
   const emails = text.split(/[\s,;]+/).map((x) => x.trim()).filter((x) => /.+@.+\..+/.test(x));
   const send = async () => { setBusy(true); try { setRes(await academy.invite(cid, emails)); refreshClasses(); } catch (e) { toast(e.message, 'err'); } setBusy(false); };
   const fromContacts = async () => {
-    try { const r = await withGoogle('contacts', () => C.gconn.contacts()); setText((x) => [x, ...r.contacts.map((c) => c.email)].filter(Boolean).join('\n')); } catch (e) { toast(e.message, 'err'); }
+    try { const r = await withGoogle('contacts', () => C.gconn.contacts()); setText((x) => [x, ...r.contacts.map((c) => c.email)].filter(Boolean).join('\n')); } catch (e) { toast(e.message, isDeclined(e) ? 'ok' : 'err'); }
   };
   return (
     <SheetFrame title={t('crInvite')}>

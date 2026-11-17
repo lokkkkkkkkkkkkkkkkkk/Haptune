@@ -89,6 +89,13 @@ export const C = {
     local.set('academyToken', r.token); local.set('academyUser', null); setMe(r.me);
     return r.me;
   },
+  appleSignIn: async (idToken, name = '') => {
+    const r = await call('/c/auth/apple', { method: 'POST', json: { id_token: idToken, name, device: navigator.userAgent.slice(0, 60) } });
+    local.set('academyToken', r.token); local.set('academyUser', null); setMe(r.me);
+    return r.me;
+  },
+  signinMethods: () => call('/c/me/signin'),
+  removeSignin: (method) => call(`/c/me/signin/${method}`, { method: 'DELETE' }),
   pairStart: () => call('/c/auth/pair', { method: 'POST', token: '' }),
   pairPoll: (code) => call(`/c/auth/pair/${code}`, { token: '' }),
   pairApprove: (code) => call(`/c/auth/pair/${code}/approve`, { method: 'POST' }),

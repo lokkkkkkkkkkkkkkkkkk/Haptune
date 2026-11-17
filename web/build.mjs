@@ -71,7 +71,9 @@ const SITE = (process.env.HAPTUNE_SITE_URL || 'https://haptune.name.my').trim().
 const PLAY = (process.env.HAPTUNE_PLAY_URL || '').trim();           // the Google Play page, once the app is published
 // Sign in with Google: the OAuth client ID (public by design) from Google Cloud Console, GitHub variable GOOGLE_CLIENT_ID.
 const GOOGLE = (process.env.HAPTUNE_GOOGLE_CLIENT_ID || '').trim();
-const CONFIG = (extra) => JSON.stringify({ version: VERSION, build: BUILD, server: SERVER, site: SITE, play: PLAY, google: GOOGLE, ...extra });
+// Sign in with Apple on the web: the Services ID from the Apple Developer account (GitHub variable APPLE_SERVICES_ID).
+const APPLE = (process.env.HAPTUNE_APPLE_SERVICES_ID || '').trim();
+const CONFIG = (extra) => JSON.stringify({ version: VERSION, build: BUILD, server: SERVER, site: SITE, play: PLAY, google: GOOGLE, apple: APPLE, ...extra });
 
 // ---- artifact page (the publish skeleton adds doctype/head/body) ----
 const artifact = `<title>Melovyn</title>

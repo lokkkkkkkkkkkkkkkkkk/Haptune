@@ -24,14 +24,25 @@ export async function connectGoogle(feature) {
       client_id: info.client_id, scope: GOOGLE_SCOPES[feature], ux_mode: 'popup', include_granted_scopes: true,
       hint: info.email || undefined,
       callback: (resp) => {
+        if (resp.error === 'access_denied' || (!resp.error && !resp.code)) { reject(declined(feature)); return; }
         if (resp.error || !resp.code) { reject(new Error(resp.error_description || resp.error || 'Google did not connect')); return; }
         C.gconn.connect(resp.code, feature).then(resolve, reject);
       },
-      error_callback: (e) => reject(new Error(e?.message || 'Google did not connect')),
+      // the person closed Google's window or said no: not an error, a choice (the caller offers another way)
+      error_callback: (e) => reject(e?.type === 'popup_closed' || e?.type === 'popup_failed_to_open' ? declined(feature) : new Error(e?.message || 'Google did not connect')),
     });
     client.requestCode();
   });
 }
+
+/** Saying no to a Google permission: `code: 'google_declined'`, with a friendly message for that feature. */
+export function declined(feature) {
+  const e = new Error(t(`declined_${feature}`));
+  e.code = 'google_declined';
+  e.feature = feature;
+  return e;
+}
+export const isDeclined = (e) => e?.code === 'google_declined';
 
 /** Runs a Google call; when the server says the permission is missing, asks for it once and tries again. */
 export async function withGoogle(feature, fn) {

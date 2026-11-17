@@ -259,9 +259,33 @@ export function GoogleButton({ onDone }) {
     }).catch((e) => alive && setErr(e.message));
     return () => { alive = false; };
   }, [id]);
-  if (isNative()) return <Button full kind="secondary" icon="globe" onClick={() => openSheet('pair', { then: onDone })} id="google-native">{t('signInGoogle')}</Button>;
+  if (isNative()) {
+    // Google's own sheet when the app has the plugin; otherwise sign in on the website and pair this device
+    const native = async () => {
+      try {
+        const S = await import('../signin.js');
+        if (!S.nativeGoogleAvailable()) { openSheet('pair', { then: onDone }); return; }
+        const me = await S.nativeGoogleSignIn();
+        if (me) onDone?.(me);
+      } catch (e) { setErr(e.message || String(e)); }
+    };
+    return <><Button full kind="secondary" icon="globe" onClick={native} id="google-native">{t('signInGoogle')}</Button>{err && <p class="t-red tiny">{err}</p>}</>;
+  }
   if (!id) return null;
   return <div class="gsi-wrap"><div ref={ref} class="gsi" id="google-btn" />{err && <p class="t-red tiny">{err}</p>}</div>;
+}
+
+/** Sign in with Apple (web: Apple's popup when set up; iPhone app: the native sheet). */
+export function AppleButton({ onDone }) {
+  const [err, setErr] = useState('');
+  const [ok, setOk] = useState(false);
+  useEffect(() => { import('../signin.js').then((S) => setOk(S.appleAvailable())).catch(() => {}); }, []);
+  if (!ok) return null;
+  const go = async () => {
+    setErr('');
+    try { const S = await import('../signin.js'); const me = await S.appleSignIn(); if (me) onDone?.(me); } catch (e) { setErr(e.message || String(e)); }
+  };
+  return <div class="apple-wrap"><button type="button" class="apple-btn" onClick={go} id="apple-btn"><svg width="16" height="18" viewBox="0 0 17 20" aria-hidden="true"><path fill="currentColor" d="M14.1 10.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8 1.6 0 2 .8 3.4.8 1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9 0 0-2.7-1-2.7-4.1zM11.6 3.1c.7-.9 1.2-2.1 1.1-3.1-1 0-2.3.7-3 1.6-.7.8-1.3 2-1.1 3.1 1.1.1 2.3-.6 3-1.6z" /></svg>{t('signInApple')}</button>{err && <p class="t-red tiny">{err}</p>}</div>;
 }
 
 export function HubRoleSheet({ need = false, role = '', then = null }) {
@@ -301,6 +325,7 @@ export function HubRoleSheet({ need = false, role = '', then = null }) {
       <p class="note-text center">{need ? t('hubSignNeed') : t('hubSignWhy')}</p>
       {mode === 'choose' && <>
         <GoogleButton onDone={done} />
+        <AppleButton onDone={done} />
         {!CFG().google && !isNative() && <p class="tiny center">{t('googleNotSetUp')}</p>}
         <div class="or-line"><span>{t('orT')}</span></div>
         <Button full kind="secondary" icon="person" onClick={() => setMode('password')} id="hub-use-password">{t('useUsername')}</Button>

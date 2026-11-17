@@ -381,6 +381,8 @@ function App() {
       loadFlags().then(() => setState({ flagsRev: Date.now() }));
       if (!local.get('welcomed', false)) openSheet('welcome');
       if (hasServer()) ensureAccount().then(backFromCheckout);
+      // Google One Tap on the website for someone not signed in, after the tour and the first frame
+      if (hasServer() && local.get('welcomed', false)) setTimeout(() => import('./signin.js').then((S) => S.startOneTap(() => setState({ signedInAt: Date.now() }))).catch(() => {}), 4000);
       openHash();
       // the sheet engraver (2.3 MB) downloads once Home is on screen and the phone is idle, not before
       setTimeout(() => (globalThis.requestIdleCallback || setTimeout)(() => warmVerovio(), { timeout: 5000 }), 2500);
@@ -449,5 +451,5 @@ export function mount() {
   if (!root) { root = document.createElement('div'); root.id = 'haptune'; document.body.appendChild(root); }
   root.style.height = '100%';
   render(<App />, root);
-  globalThis.__haptune = { getState, push, go, popToRoot };
+  globalThis.__haptune = { getState, push, go, popToRoot, openSheet };
 }

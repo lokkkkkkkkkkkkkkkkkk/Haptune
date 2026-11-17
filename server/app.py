@@ -640,3 +640,5 @@ def ai_fetch(request: Request, url: str = Query(..., max_length=2000)):
                              "Access-Control-Expose-Headers": "Content-Disposition, X-Haptune-Format"})
 import friends  # noqa: E402  (Part 2 D: friends, messages, challenges, Sound moments, reposts, Friends feed)
 app.include_router(friends.router)
+import signin  # noqa: E402  (Part 2 E: Sign in with Apple, sign-in methods)
+app.include_router(signin.router)

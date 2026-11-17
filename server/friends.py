@@ -456,3 +456,29 @@ def friends_feed(me: A.Me = Depends(A.current)):
     for x in items:
         x["at"] = _iso(x["at"])
     return {"items": items[:50]}
+
+
+# -------------------------------------------------------------------------------------------- your data
+def forget(c, uid: str) -> None:
+    """Deleting an account removes its friendships, requests, messages (both sides of each conversation it was
+    in), challenges, moments and reposts."""
+    c.execute(delete(friendships).where(or_(friendships.c.a == uid, friendships.c.b == uid)))
+    c.execute(delete(friend_requests).where(or_(friend_requests.c.sender == uid, friend_requests.c.receiver == uid)))
+    c.execute(delete(messages).where(or_(messages.c.pair.like(f"{uid}:%"), messages.c.pair.like(f"%:{uid}"))))
+    mine = [r[0] for r in c.execute(select(duels.c.id).where(or_(duels.c.sender == uid, duels.c.receiver == uid))).all()]
+    c.execute(delete(duel_entries).where(or_(duel_entries.c.user_id == uid, duel_entries.c.duel_id.in_(mine or ["-"]))))
+    c.execute(delete(duels).where(duels.c.id.in_(mine or ["-"])))
+    c.execute(delete(moments).where(moments.c.user_id == uid))
+    c.execute(delete(reposts).where(reposts.c.user_id == uid))
+
+
+def export(c, uid: str) -> dict:
+    rows = lambda q: [dict(r) for r in c.execute(q).mappings().all()]  # noqa: E731
+    return {"friends": friend_ids(c, uid),
+            "friend_requests": rows(select(friend_requests).where(or_(friend_requests.c.sender == uid, friend_requests.c.receiver == uid))),
+            "messages": rows(select(messages.c.id, messages.c.sender, messages.c.text, messages.c.created).where(
+                or_(messages.c.pair.like(f"{uid}:%"), messages.c.pair.like(f"%:{uid}")))),
+            "challenges": rows(select(duels).where(or_(duels.c.sender == uid, duels.c.receiver == uid))),
+            "challenge_scores": rows(select(duel_entries).where(duel_entries.c.user_id == uid)),
+            "sound_moments": rows(select(moments).where(moments.c.user_id == uid)),
+            "reposts": rows(select(reposts).where(reposts.c.user_id == uid))}

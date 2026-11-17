@@ -22,7 +22,7 @@ import { db } from '../storage.js';
 import { saveFile } from '../files.js';
 import { serverURL, hasServer, accountToken, deviceId } from '../api.js';
 import { C } from '../account.js';
-import { saveToDrive } from '../google.js';
+import { saveToDrive, isDeclined } from '../google.js';
 import { whenSignedIn } from './hub.jsx';
 import { tick } from '../native.js';
 import * as E from '../soundengine.js';
@@ -303,7 +303,12 @@ export function SoundExportSheet({ sound }) {
         const wav = E.wavOf(await E.mixdown(sound));
         globalThis.__lastMixdownMs = Math.round(performance.now() - t0);
         if (kind === 'wav') await saveFile(`${name}.wav`, wav);
-        else if (kind === 'drive') { const r = await saveToDrive(`${name}.wav`, 'audio/wav', wav); toast(t('savedToDrive')); void r; }
+        else if (kind === 'drive') {
+          try { await saveToDrive(`${name}.wav`, 'audio/wav', wav); toast(t('savedToDrive')); } catch (e) {
+            if (!isDeclined(e)) throw e;
+            await saveFile(`${name}.wav`, new Blob([wav], { type: 'audio/wav' })); toast(t('declined_drive'));
+          }
+        }
         else if (navigator.canShare?.({ files: [new File([wav], `${name}.wav`, { type: 'audio/wav' })] })) await navigator.share({ files: [new File([wav], `${name}.wav`, { type: 'audio/wav' })], title: name });
         else await saveFile(`${name}.wav`, wav);
       } else if (kind === 'stems') {
