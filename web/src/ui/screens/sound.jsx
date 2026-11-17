@@ -377,6 +377,26 @@ export function SoundsFeed({ active }) {
   return <div class="sound-feed" id="sound-feed">{items.map((x) => <SoundCard key={x.id} x={x} />)}</div>;
 }
 
+/** One Sound on its own page (#sound/ID, links from Home, Find and notifications). */
+export function SoundPageView({ id }) {
+  const [x, setX] = useState(null);
+  const [err, setErr] = useState('');
+  useEffect(() => { C.sounds.get(id).then(setX).catch((e) => setErr(e.message || String(e))); }, [id]);
+  return (
+    <div class="scroll" id="sound-page">
+      <NavBar title={x?.title || t('segSounds')} backLabel={t('back')} color="violet" />
+      <div class="wrap" style={{ paddingTop: 12 }}>
+        {err ? <p class="note-text err">{err}</p> : !x ? <div class="loading"><div class="spinner" /></div> : <>
+          <SoundCard x={x} />
+          {x.versions && (x.versions.before.length > 0 || x.versions.layers.length > 0) && <List>
+            {[...x.versions.before, ...x.versions.layers].map((v) => <Row key={v.id} icon="wave" color="violet" title={v.title} subtitle={v.author?.name || ''} onClick={() => push('soundPage', { id: v.id })} />)}
+          </List>}
+        </>}
+      </div>
+    </div>
+  );
+}
+
 export function SoundCard({ x }) {
   const [liked, setLiked] = useState({ on: x.liked, n: x.likes });
   const like = () => whenSignedIn(async () => { try { const r = await C.sounds.like(x.id); setLiked({ on: r.liked, n: r.likes }); } catch (e) { toast(e.message, 'err'); } });

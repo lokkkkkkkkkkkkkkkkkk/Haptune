@@ -83,7 +83,7 @@ const idle = (fn) => (globalThis.requestIdleCallback ? requestIdleCallback(fn, {
 
 // ---------- the piece screen ----------
 
-export function PieceView({ id, active, start, assignment, challenge, daily }) {
+export function PieceView({ id, active, start, assignment, challenge, daily, bar: resumeBar = 0 }) {
   const s = useApp();
   const meta = s.pieces.find((p) => p.id === id);
   const [data, setData] = useState(null);
@@ -104,10 +104,10 @@ export function PieceView({ id, active, start, assignment, challenge, daily }) {
   if (!meta) return <div class="scroll"><NavBar title="" backLabel={t('library')} /></div>;
   if (!data) return <div class="scroll"><NavBar title={meta.title} backLabel={t('library')} /><div class="loading"><Mascot mood="think" size={80} /></div></div>;
   return <PieceBody meta={meta} data={data} semis={semis} setSemis={(v) => { setSemis(v); updatePiece(id, { transpose: v }); if (v) awardBadge('transposer'); }}
-    view={view} setView={setView} active={active} start={start} assignment={assignment} challenge={challenge} daily={daily} reload={reload} />;
+    view={view} setView={setView} active={active} start={start} assignment={assignment} challenge={challenge} daily={daily} reload={reload} resumeBar={resumeBar} />;
 }
 
-function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, assignment, challenge, daily, reload }) {
+function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, assignment, challenge, daily, reload, resumeBar = 0 }) {
   const s = useApp();
   useEffect(() => { track('piece_open', { label: meta.title }); }, [meta.id]);
   const { score, sheet: baseSheet, rec } = data;
@@ -217,8 +217,41 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
   };
   const latest = useRef({});
   latest.current.stop = stop;
-  useEffect(() => () => { latest.current.stop(true); micStop.current?.(); }, []);
-  useEffect(() => { if (!active) { stop(true); endWait(true); } }, [active]);
+  latest.current.spanAt = spanAt; latest.current.barNo = barNo; latest.current.tempos = perf?.tempos; latest.current.sp = speed;
+  latest.current.lastQ = () => lastQ.current;
+  latest.current.mode = player.mode;
+  // Leaving the piece while listening hands the music to the mini-player (Spotify-style): it keeps playing, the
+  // mini-player pauses it, and Play there opens the piece again at the same bar.
+  useEffect(() => () => {
+    const tr = transport.current;
+    micStop.current?.();
+    if (!(tr?.playing && latest.current.mode === 'listen')) { latest.current.stop(true); return; }
+    const id = meta.id, t0 = playStart.current;
+    const bar = () => { const sp = latest.current.spanAt?.(latest.current.lastQ?.() || 0); return sp ? latest.current.barNo(sp.mi) : 0; };
+    const finish = () => { logMinutes((performance.now() - t0) / 1000); const b = bar(); if (b) updatePiece(id, { lastBar: b, opened: Date.now() }).catch(() => {}); };
+    const reopen = (listen) => { const b = bar(); hooks.player = null; setState({ nowPlaying: null }); push('piece', { id, ...(listen ? { start: 'listen' } : {}), ...(b > 1 ? { bar: b } : {}) }, 'library'); };
+    const resume = () => reopen(true);
+    const open = () => { const was = tr.playing; if (was) { tr.stop(); finish(); } reopen(was); };
+    tr.onTime = (sec) => { latest.current.bgSec = sec; latest.current.lastQ = () => quartersAt(latest.current.tempos, sec, latest.current.sp); };
+    tr.onEnd = () => { finish(); hooks.player = null; if (getState().nowPlaying?.id === id) setState({ nowPlaying: null }); };
+    hooks.player = { id, bg: true, open, toggle: () => { tr.stop(); finish(); const np = getState().nowPlaying; if (np?.id === id) setState({ nowPlaying: { ...np, playing: false } }); hooks.player = { id, bg: true, open, toggle: resume }; } };
+  }, []);
+  // Leaving the screen (another tab, another screen on top): plain listening carries on (the mini-player shows it);
+  // Play Along and anything else stops.
+  useEffect(() => { if (!active && !(transport.current?.playing && player.mode === 'listen')) { stop(true); endWait(true); } }, [active]);
+  // where you stopped: Home's "Continue" opens the piece at that bar
+  const saveBar = () => { const sp = perf ? spanAt(lastQ.current || cursorQ) : null; if (sp) updatePiece(meta.id, { lastBar: barNo(sp.mi), opened: Date.now() }).catch(() => {}); };
+  latest.current.saveBar = saveBar;
+  useEffect(() => () => latest.current.saveBar?.(), []);
+  // the mini-player: what is playing, and how to pause / resume it from any tab
+  useEffect(() => {
+    const np = getState().nowPlaying;
+    if (player.playing && player.mode === 'listen') {
+      hooks.player = { id: meta.id, toggle: () => latest.current.toggleListen?.() };
+      if (!np || np.id !== meta.id || !np.playing) setState({ nowPlaying: { kind: 'piece', id: meta.id, title: meta.title, sub: meta.composer || meta.keyText || '', instrument: meta.instrument, keyText: meta.keyText, playing: true } });
+    } else if (np?.id === meta.id && np.playing) { setState({ nowPlaying: { ...np, playing: false } }); saveBar(); }
+  }, [player.playing, player.mode]);
+  useEffect(() => () => { if (hooks.player?.id === meta.id && !hooks.player.bg) { hooks.player = null; if (getState().nowPlaying?.id === meta.id) setState({ nowPlaying: null }); } }, []);
 
   /** Every note (plus chords and metronome clicks) of the piece, in seconds from the start at speed `sp`.
    *  Built once per setting, so starting and jumping to a bar are instant. `mute` = the part the player plays. */
@@ -338,6 +371,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
     setResult(null);
     play(null, { mode: 'listen' });
   };
+  latest.current.toggleListen = toggleListen;
   const goToBar = (mi) => {
     mi = clamp(mi, 0, lastMi);
     const sp = spanOfBar(mi);
@@ -576,10 +610,15 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
 
   // start straight away when opened from Home ("Play Along" / "Listen")
   const started = useRef(false);
+  // Continue from Home: the cursor waits at the bar you stopped on
   useEffect(() => {
-    if (started.current || !perf || !start) return;
-    started.current = true;
-    setTimeout(() => (start === 'listen' ? play(null, { mode: 'listen' }) : openPlayAlong()), 350);
+    if (!perf) return;
+    const mi = resumeBar ? (tScore?.measures || []).findIndex((m, i) => barNo(i) === Number(resumeBar)) : -1;
+    if (start && !started.current) {
+      started.current = true;
+      const from = mi > 0 ? spanOfBar(mi)?.t.num() ?? null : null;
+      setTimeout(() => (start === 'listen' ? play(from, { mode: 'listen' }) : openPlayAlong()), 350);
+    } else if (mi > 0 && !start) setTimeout(() => goToBar(mi), 300);
   }, [perf]);
 
   const playSheetChords = () => {

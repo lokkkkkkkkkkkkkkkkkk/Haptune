@@ -93,6 +93,8 @@ import analytics  # noqa: E402  (usage events, roll-ups, feature flags: the owne
 app.include_router(analytics.router)
 import admin  # noqa: E402  (Developer mode: users, access, audit log)
 app.include_router(admin.router)
+import home  # noqa: E402  (Home in one call)
+app.include_router(home.router)
 
 
 @app.middleware("http")

@@ -100,7 +100,7 @@ const WIZ_LABEL = { lead: 'wizLead', melody: 'wizMelody', full: 'wizFull', impro
 
 /** New song: first what kind (lead sheet, melody + chords, full notation, improvisation, chord/rhythm song,
  *  a Sound, an exercise), then just the few settings that kind needs. */
-export function NewSongSheet({ kind: kind0 = null }) {
+export function NewSongSheet({ kind: kind0 = null, quick = false }) {
   const s = useApp();
   const [kind, setKind] = useState(kind0);
   const [title, setTitle] = useState('');
@@ -136,6 +136,11 @@ export function NewSongSheet({ kind: kind0 = null }) {
   if (!kind) {
     return (
       <SheetFrame title={t('createWhat')}>
+        {quick && <button type="button" class="quick-start" id="wiz-quick" onClick={() => { closeSheet(); push('chordEditor', { title: t('mySong'), fresh: true, init: { key: { fifths: 0, mode: 'major' }, time: { beats: 4, beatType: 4 }, tempo: 90, style: 'pop', keyGiven: true } }, 'write'); }}>
+          <span class="badge c-teal solid" style={{ width: 40, height: 40, borderRadius: 12 }}><Icon name="sparkles" size={22} stroke={2.1} /></span>
+          <span class="row-main"><span class="row-title">{t('quickStart')}</span><span class="row-sub">{t('quickStartSub')}</span></span>
+          <Icon name="play" size={18} fill />
+        </button>}
         <div class="list inset" id="wiz-kinds">
           {kinds.map((k) => (
             <button type="button" class="row" key={k.id} id={`wiz-${k.id}`} onClick={() => choose(k.id)}>

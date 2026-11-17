@@ -84,7 +84,7 @@ async function run(mode, base, browser) {
   // "No screen shows more than 6 primary actions above the fold": big buttons (tiles, big play buttons, tool
   // buttons, brand buttons) fully inside the first screenful.
   const primaries = (where) => p.evaluate(() => {
-    const sel = '.home-tile, .act, .ftile, .tile, .tile3, .hm-way, .big-play, .tool-btn, .btn.brand, .stage-plus, .wiz-opt';
+    const sel = '.home-tile, .hero-tile, .act, .ftile, .tile, .tile3, .hm-way, .big-play, .tool-btn, .btn.brand, .stage-plus, .wiz-opt';
     return [...document.querySelectorAll(sel)].filter((el) => {
       if (!el.closest('.tab-pane:not([hidden]) .view:not([hidden]), .sheet')) return false;
       const r = el.getBoundingClientRect();
@@ -94,7 +94,8 @@ async function run(mode, base, browser) {
   await step('first-run tour (3 cards)', async () => {
     for (let i = 0; i < 2; i++) { await p.locator('.welcome .btn.brand:visible').click(); await p.waitForTimeout(250); }
     await p.locator('#tour-start').click(); await p.waitForTimeout(500);
-    if ((await p.inputValue('#home-search')) !== 'ode to joy') throw new Error('the song typed on the website did not arrive in the app');
+    await p.waitForSelector('#find-q');
+    if ((await p.inputValue('#find-q')) !== 'ode to joy') throw new Error('the song typed on the website did not arrive in Find songs');
     await shot('01-search'); await overflow('search');
   });
   await step('open the song and listen', async () => {
@@ -113,6 +114,19 @@ async function run(mode, base, browser) {
     const after = await p.locator('.bar-pos strong').innerText();
     if (a.rebuilds < 1 || a.state !== 'running' || before === after) throw new Error(`did not recover: ${JSON.stringify({ rebuilds: a.rebuilds, state: a.state, before, after })}`);
     await p.locator('#play-btn').click();
+  });
+  await step('mini-player: listening carries on after leaving the piece, pause, open it again at the same bar', async () => {
+    await p.locator('#play-btn').click(); await p.waitForTimeout(1500);
+    await back(); await p.waitForSelector('#mini-player', { timeout: 5000 });
+    await p.waitForTimeout(1200);
+    const a = await p.evaluate(() => window.__haptuneAudio());
+    if (a.state !== 'running' || !a.scheduled) throw new Error('listening stopped when the piece closed: ' + JSON.stringify(a));
+    if (!/Playing/.test(await p.locator('#mini-player').innerText())) throw new Error('the mini-player does not say Playing');
+    await shot('01c-miniplayer'); await overflow('mini-player');
+    await p.locator('#mp-toggle').click(); await p.waitForTimeout(400);
+    if (!/Paused/.test(await p.locator('#mini-player').innerText())) throw new Error('the mini-player did not pause');
+    await p.locator('#mp-open').click(); await p.waitForSelector('.vrv-page svg', { timeout: 30000 }); await p.waitForTimeout(600);
+    if (await p.locator('#mini-player').count()) throw new Error('the mini-player stayed after opening the piece');
   });
   await step('簡譜 and another instrument', async () => {
     await p.locator('#piece-views button').filter({ hasText: '簡譜' }).click(); await p.waitForSelector('.jp-svg .jn');
@@ -178,22 +192,45 @@ async function run(mode, base, browser) {
     await p.locator('.list .row:visible').first().click(); await p.waitForSelector('.vrv-page svg', { timeout: 60000 });
     await back(); await back();
   });
-  await step('Home: three tiles, a playable sheet in two taps, More tools remembered', async () => {
-    await tab('home'); await p.fill('#home-search', ''); await p.waitForTimeout(200);
-    if (await p.locator('.home-tile:visible').count() !== 3) throw new Error('Home should show exactly three tiles');
+  await step('Home: hero row, chips, band, shelves; a playable sheet in two taps from each hero tile', async () => {
+    const home = async () => { await p.evaluate(() => { for (const k of ['summary', 'library', 'write']) window.__haptune.popToRoot(k); }); await p.waitForTimeout(300); await tab('home'); await p.waitForSelector('#home-hero:visible'); };
+    await home();
+    if (await p.locator('.hero-tile:visible').count() !== 3) throw new Error('Home should show exactly three hero tiles');
+    const order = await p.evaluate(() => [...document.querySelectorAll('#home > .wrap > *')].map((el) => el.id || el.className.split(' ')[0]).filter((x) => x && x !== 'hidden-input'));
+    const want = ['home-hero', 'home-chips', 'home-band', 'shelf-', 'more-tools'];
+    let at = -1;
+    for (const w of want) { const i = order.findIndex((x, j) => j > at && x.startsWith(w)); if (i < 0) throw new Error(`Home is missing ${w} (or it is out of order): ${order.join(', ')}`); at = i; }
     await shot('01-home'); await overflow('home'); await primaries('home');
-    // tap 1: Practice, tap 2: a suggested piece -> the song screen with Play Along
-    await p.locator('#tile-practice').click(); await p.waitForSelector('#practice-suggest');
-    await shot('01b-practice'); await overflow('practice'); await primaries('practice');
-    await p.locator('#practice-suggest').click(); await p.waitForSelector('#play-along', { timeout: 60000 });
-    await p.waitForSelector('.vrv-page svg', { timeout: 60000 });
-    await back(); await back();
+    await p.evaluate(() => document.querySelector('#home').scrollTo(0, 99999)); await shot('01-home-lower'); await overflow('home (lower)');
+    await p.evaluate(() => document.querySelector('#home').scrollTo(0, 0));
+    // the chips re-sort the shelves
+    const first = () => p.locator('#shelf-level .shelf-item strong').first().innerText().catch(() => '');
+    const before = await first();
+    await p.locator('#chip-hymn').click(); await p.waitForTimeout(250);
+    if (!(await p.locator('#chip-hymn.on').count())) throw new Error('the Hymns chip did not turn on');
+    await shot('01d-home-chip');
+    await p.locator('#chip-hymn').click(); await p.waitForTimeout(150);
+    const after = await first();
+    if (before && after !== before) throw new Error(`turning the chip off did not restore the order (${before} -> ${after})`);
+    // New songs: tap 1 the tile, tap 2 a song -> the sheet with Play Along
+    await p.locator('#hero-new').click(); await p.waitForSelector('#new-first', { timeout: 20000 }); await shot('01e-new-songs'); await overflow('new songs');
+    await p.locator('#new-first').click(); await p.waitForSelector('#play-along', { timeout: 60000 }); await p.waitForSelector('.vrv-page svg', { timeout: 60000 });
+    await home();
+    // Find songs
+    await p.locator('#hero-find').click(); await p.waitForSelector('#find-first', { timeout: 20000 }); await shot('01f-find'); await overflow('find');
+    await p.locator('#find-first').click(); await p.waitForSelector('#play-along', { timeout: 60000 }); await p.waitForSelector('.vrv-page svg', { timeout: 60000 });
+    await home();
+    // Create: tap 1 the tile, tap 2 "Start a song now" -> 8 bars of chords with Play
+    await p.locator('#hero-create').click(); await p.waitForSelector('#wiz-quick');
+    await p.locator('#wiz-quick').click(); await p.waitForSelector('#ce-beat-0', { timeout: 20000 }); await p.waitForSelector('#ce-play:visible');
+    if (!(await p.locator('#ce-beat-0 .ce-chord').count())) throw new Error('the quick-start song has no chords to play');
+    await home();
     if (await p.locator('#more-tools.open').count()) await p.locator('#more-tools-toggle').click();
     await p.locator('#more-tools-toggle').click(); await p.waitForSelector('#mt-jianpu');
   });
   if (mode === 'phone') {
     await step('reload: tour shown once, More tools stays open', async () => {
-      await p.reload({ waitUntil: 'networkidle' }); await p.waitForSelector('#home-tiles');
+      await p.reload({ waitUntil: 'networkidle' }); await p.waitForSelector('#home-hero');
       if (await p.locator('.welcome').count()) throw new Error('the tour came back after it was finished');
       if (!(await p.locator('#more-tools.open').count())) throw new Error('More tools forgot that it was open');
     });
@@ -212,7 +249,7 @@ async function run(mode, base, browser) {
     });
   }
   await step('type 簡譜', async () => {
-    await tab('home'); await p.fill('#home-search', '');
+    await tab('home');
     if (!(await p.locator('#more-tools.open').count())) await p.locator('#more-tools-toggle').click();
     await p.locator('#mt-jianpu').click();
     await p.locator('.sheet .chip').filter({ hasText: '簡譜' }).click(); await p.waitForTimeout(250);

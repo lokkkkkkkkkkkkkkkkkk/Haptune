@@ -4,55 +4,189 @@ import { useApp, loadAll, go, pop, popToRoot, push, closeSheet, openSheet, getSt
 import { t } from '../core/i18n.js';
 import { Icon } from './components.jsx';
 import { Logo } from './screens/common.jsx';
-import { HistoryView } from './screens/summary.jsx';
 import { HomeView } from './screens/home.jsx';
-import { MeView } from './screens/me.jsx';
-import { WriteView, StudioView, NewSongSheet } from './screens/write.jsx';
-import { HubRoleSheet, ClassQRSheet, PairSheet, JoinLinkSheet } from './screens/hub.jsx';
-import { StudentView, TakeSheet } from './screens/progress.jsx';
-import { MomentSheet } from './screens/stagefeed.jsx';
-import { LearnView } from './screens/hub.jsx';
-import { LibraryView, SongbookView, PasteSheet, FindSongSheet, ScaleSheet, ImportReportSheet, CatalogView, InstallHelpSheet } from './screens/library.jsx';
-import { AddSheet, ImportWizardSheet, FinderSheet } from './screens/addmusic.jsx';
-import { WelcomeSheet } from './screens/welcome.jsx';
-import { PracticeView } from './screens/practice.jsx';
-import { SoundCheckView } from './screens/soundcheck.jsx';
-import { ReportView } from './screens/report.jsx';
+import { Cover } from './cover.jsx';
 import { AIChatSheet, AIFab } from './screens/aichat.jsx';
 import { Boundary } from './boundary.jsx';
 import { startTracking, loadFlags, screenShown, flag } from './analytics.js';
-import { TwoStepSheet, DevModeSheet, SessionsSheet } from './screens/staff.jsx';
-import { SoundView, SoundAddSheet, SoundTrackSheet, SoundSettingsSheet, SoundExportSheet, SoundPostSheet } from './screens/sound.jsx';
-import { VaryView } from './screens/moretools.jsx';
-import { LearnView as LearnMoreView } from './screens/learn.jsx';
-import { PieceMoreSheet } from './screens/piecemore.jsx';
-import { ConnectionsSheet, TeacherVerifySheet } from './screens/connections.jsx';
-import { AsgMetaSheet, SessionSheet, InviteSheet, GradeSheet } from './screens/classroom.jsx';
-import { ChordEditorView, ChordPickSheet, ChordSongSheet, ChordSectionSheet, ChordExportSheet } from './screens/chordeditor.jsx';
 import { tick } from './native.js';
 import { local } from './storage.js';
-import { PieceView, ChordSheet, FindKeySheet, ExportSheet, PlayAlongSheet, KeySheet, DetailsSheet, MixerSheet, InstrumentPickSheet } from './screens/piece.jsx';
-import { EditorView } from './screens/editor.jsx';
-import { TutorsView, TutorView, TutorMeView, LessonsView, LessonAskSheet, LessonRateSheet } from './screens/tutors.jsx';
-import { ImproviseView } from './screens/improvise.jsx';
-import { AcademyView, CourseView, LessonSheet, ChallengeSheet } from './screens/academy.jsx';
-import { ClassView, AssignmentView, JoinClassSheet, NewClassSheet, NewAssignmentSheet, ReviewSheet } from './screens/classes.jsx';
-import { ToolsView, ToolView } from './screens/tools.jsx';
-import { AccountSheet, PaywallSheet, SetPasswordSheet, SignInSheet, DeleteAccountSheet, DevCodeSheet } from './screens/account.jsx';
-import { CommunityView, DailyView, StageGuideSheet, StageNewSheet } from './screens/community.jsx';
-import { PostView, AcceptSheet, ChangesSheet, AddCreditsSheet, SubmitScoreSheet, ImageSheet } from './screens/post.jsx';
-import { ComposeSheet } from './screens/compose.jsx';
-import { ProfileView, LeaderboardView, NotificationsView, WalletView, ChallengeView, EditProfileView } from './screens/people.jsx';
-import { PlansSheet, ManualPaySheet } from './screens/plans.jsx';
 import { HelpView, FeedbackSheet, GuidelinesSheet, AboutSheet, captureErrors } from './screens/help.jsx';
-import { AdminView, AdminUserView, DeleteUserSheet } from './screens/dashboard.jsx';
-import { ReportSheet, MoreSheet } from './screens/social.jsx';
 import { hasServer } from './api.js';
 import { ensureAccount, C } from './account.js';
 import { initNative } from './native.js';
 import { warmVerovio } from './verovio.js';
 import { setSyncOffset, onAudioProblem } from './audio.js';
 
+
+// Screens load the first time they are opened (esbuild splits them into chunks/), so the first screen appears sooner.
+function lazy(load, name) {
+  let Comp = null, failed = null;
+  const get = () => load().then((m) => { Comp = m[name]; });
+  function Lazy(props) {
+    const [, setV] = useState(0);
+    useEffect(() => {
+      if (Comp) return undefined;
+      let on = true;
+      get().then(() => on && setV(1)).catch((e) => { failed = e; if (on) setV(2); });
+      return () => { on = false; };
+    }, []);
+    if (Comp) return <Comp {...props} />;
+    if (failed) return <div class="loading"><p class="note-text">{t('offlineChunk')}</p><button type="button" class="btn" onClick={() => location.reload()}>{t('tryAgain')}</button></div>;
+    return <div class="loading"><div class="spinner" /></div>;
+  }
+  Lazy.preload = () => get().catch(() => {});
+  return Lazy;
+}
+const m_summary = () => import('./screens/summary.jsx');
+const HistoryView = lazy(m_summary, 'HistoryView');
+const m_find = () => import('./screens/find.jsx');
+const FindView = lazy(m_find, 'FindView');
+const NewSongsView = lazy(m_find, 'NewSongsView');
+const m_me = () => import('./screens/me.jsx');
+const MeView = lazy(m_me, 'MeView');
+const m_write = () => import('./screens/write.jsx');
+const WriteView = lazy(m_write, 'WriteView');
+const StudioView = lazy(m_write, 'StudioView');
+const NewSongSheet = lazy(m_write, 'NewSongSheet');
+const m_hub = () => import('./screens/hub.jsx');
+const HubRoleSheet = lazy(m_hub, 'HubRoleSheet');
+const ClassQRSheet = lazy(m_hub, 'ClassQRSheet');
+const PairSheet = lazy(m_hub, 'PairSheet');
+const JoinLinkSheet = lazy(m_hub, 'JoinLinkSheet');
+const m_progress = () => import('./screens/progress.jsx');
+const StudentView = lazy(m_progress, 'StudentView');
+const TakeSheet = lazy(m_progress, 'TakeSheet');
+const m_stagefeed = () => import('./screens/stagefeed.jsx');
+const MomentSheet = lazy(m_stagefeed, 'MomentSheet');
+const LearnView = lazy(m_hub, 'LearnView');
+const m_library = () => import('./screens/library.jsx');
+const LibraryView = lazy(m_library, 'LibraryView');
+const SongbookView = lazy(m_library, 'SongbookView');
+const PasteSheet = lazy(m_library, 'PasteSheet');
+const FindSongSheet = lazy(m_library, 'FindSongSheet');
+const ScaleSheet = lazy(m_library, 'ScaleSheet');
+const ImportReportSheet = lazy(m_library, 'ImportReportSheet');
+const CatalogView = lazy(m_library, 'CatalogView');
+const InstallHelpSheet = lazy(m_library, 'InstallHelpSheet');
+const m_addmusic = () => import('./screens/addmusic.jsx');
+const AddSheet = lazy(m_addmusic, 'AddSheet');
+const ImportWizardSheet = lazy(m_addmusic, 'ImportWizardSheet');
+const FinderSheet = lazy(m_addmusic, 'FinderSheet');
+const m_welcome = () => import('./screens/welcome.jsx');
+const WelcomeSheet = lazy(m_welcome, 'WelcomeSheet');
+const m_practice = () => import('./screens/practice.jsx');
+const PracticeView = lazy(m_practice, 'PracticeView');
+const m_soundcheck = () => import('./screens/soundcheck.jsx');
+const SoundCheckView = lazy(m_soundcheck, 'SoundCheckView');
+const m_report = () => import('./screens/report.jsx');
+const ReportView = lazy(m_report, 'ReportView');
+const m_staff = () => import('./screens/staff.jsx');
+const TwoStepSheet = lazy(m_staff, 'TwoStepSheet');
+const DevModeSheet = lazy(m_staff, 'DevModeSheet');
+const SessionsSheet = lazy(m_staff, 'SessionsSheet');
+const m_sound = () => import('./screens/sound.jsx');
+const SoundView = lazy(m_sound, 'SoundView');
+const SoundPageView = lazy(m_sound, 'SoundPageView');
+const SoundAddSheet = lazy(m_sound, 'SoundAddSheet');
+const SoundTrackSheet = lazy(m_sound, 'SoundTrackSheet');
+const SoundSettingsSheet = lazy(m_sound, 'SoundSettingsSheet');
+const SoundExportSheet = lazy(m_sound, 'SoundExportSheet');
+const SoundPostSheet = lazy(m_sound, 'SoundPostSheet');
+const m_vary = () => import('./screens/vary.jsx');
+const VaryView = lazy(m_vary, 'VaryView');
+const m_learn = () => import('./screens/learn.jsx');
+const LearnMoreView = lazy(m_learn, 'LearnView');
+const m_piecemore = () => import('./screens/piecemore.jsx');
+const PieceMoreSheet = lazy(m_piecemore, 'PieceMoreSheet');
+const m_connections = () => import('./screens/connections.jsx');
+const ConnectionsSheet = lazy(m_connections, 'ConnectionsSheet');
+const TeacherVerifySheet = lazy(m_connections, 'TeacherVerifySheet');
+const m_classroom = () => import('./screens/classroom.jsx');
+const AsgMetaSheet = lazy(m_classroom, 'AsgMetaSheet');
+const SessionSheet = lazy(m_classroom, 'SessionSheet');
+const InviteSheet = lazy(m_classroom, 'InviteSheet');
+const GradeSheet = lazy(m_classroom, 'GradeSheet');
+const m_chordeditor = () => import('./screens/chordeditor.jsx');
+const ChordEditorView = lazy(m_chordeditor, 'ChordEditorView');
+const ChordPickSheet = lazy(m_chordeditor, 'ChordPickSheet');
+const ChordSongSheet = lazy(m_chordeditor, 'ChordSongSheet');
+const ChordSectionSheet = lazy(m_chordeditor, 'ChordSectionSheet');
+const ChordExportSheet = lazy(m_chordeditor, 'ChordExportSheet');
+const m_piece = () => import('./screens/piece.jsx');
+const PieceView = lazy(m_piece, 'PieceView');
+const ChordSheet = lazy(m_piece, 'ChordSheet');
+const FindKeySheet = lazy(m_piece, 'FindKeySheet');
+const ExportSheet = lazy(m_piece, 'ExportSheet');
+const PlayAlongSheet = lazy(m_piece, 'PlayAlongSheet');
+const KeySheet = lazy(m_piece, 'KeySheet');
+const DetailsSheet = lazy(m_piece, 'DetailsSheet');
+const MixerSheet = lazy(m_piece, 'MixerSheet');
+const InstrumentPickSheet = lazy(m_piece, 'InstrumentPickSheet');
+const m_editor = () => import('./screens/editor.jsx');
+const EditorView = lazy(m_editor, 'EditorView');
+const m_tutors = () => import('./screens/tutors.jsx');
+const TutorsView = lazy(m_tutors, 'TutorsView');
+const TutorView = lazy(m_tutors, 'TutorView');
+const TutorMeView = lazy(m_tutors, 'TutorMeView');
+const LessonsView = lazy(m_tutors, 'LessonsView');
+const LessonAskSheet = lazy(m_tutors, 'LessonAskSheet');
+const LessonRateSheet = lazy(m_tutors, 'LessonRateSheet');
+const m_improvise = () => import('./screens/improvise.jsx');
+const ImproviseView = lazy(m_improvise, 'ImproviseView');
+const m_academy = () => import('./screens/academy.jsx');
+const AcademyView = lazy(m_academy, 'AcademyView');
+const CourseView = lazy(m_academy, 'CourseView');
+const LessonSheet = lazy(m_academy, 'LessonSheet');
+const ChallengeSheet = lazy(m_academy, 'ChallengeSheet');
+const m_classes = () => import('./screens/classes.jsx');
+const ClassView = lazy(m_classes, 'ClassView');
+const AssignmentView = lazy(m_classes, 'AssignmentView');
+const JoinClassSheet = lazy(m_classes, 'JoinClassSheet');
+const NewClassSheet = lazy(m_classes, 'NewClassSheet');
+const NewAssignmentSheet = lazy(m_classes, 'NewAssignmentSheet');
+const ReviewSheet = lazy(m_classes, 'ReviewSheet');
+const m_tools = () => import('./screens/tools.jsx');
+const ToolsView = lazy(m_tools, 'ToolsView');
+const ToolView = lazy(m_tools, 'ToolView');
+const m_account = () => import('./screens/account.jsx');
+const AccountSheet = lazy(m_account, 'AccountSheet');
+const PaywallSheet = lazy(m_account, 'PaywallSheet');
+const SetPasswordSheet = lazy(m_account, 'SetPasswordSheet');
+const SignInSheet = lazy(m_account, 'SignInSheet');
+const DeleteAccountSheet = lazy(m_account, 'DeleteAccountSheet');
+const DevCodeSheet = lazy(m_account, 'DevCodeSheet');
+const m_community = () => import('./screens/community.jsx');
+const CommunityView = lazy(m_community, 'CommunityView');
+const DailyView = lazy(m_community, 'DailyView');
+const StageGuideSheet = lazy(m_community, 'StageGuideSheet');
+const StageNewSheet = lazy(m_community, 'StageNewSheet');
+const m_post = () => import('./screens/post.jsx');
+const PostView = lazy(m_post, 'PostView');
+const AcceptSheet = lazy(m_post, 'AcceptSheet');
+const ChangesSheet = lazy(m_post, 'ChangesSheet');
+const AddCreditsSheet = lazy(m_post, 'AddCreditsSheet');
+const SubmitScoreSheet = lazy(m_post, 'SubmitScoreSheet');
+const ImageSheet = lazy(m_post, 'ImageSheet');
+const m_compose = () => import('./screens/compose.jsx');
+const ComposeSheet = lazy(m_compose, 'ComposeSheet');
+const m_people = () => import('./screens/people.jsx');
+const ProfileView = lazy(m_people, 'ProfileView');
+const LeaderboardView = lazy(m_people, 'LeaderboardView');
+const NotificationsView = lazy(m_people, 'NotificationsView');
+const WalletView = lazy(m_people, 'WalletView');
+const ChallengeView = lazy(m_people, 'ChallengeView');
+const EditProfileView = lazy(m_people, 'EditProfileView');
+const m_plans = () => import('./screens/plans.jsx');
+const PlansSheet = lazy(m_plans, 'PlansSheet');
+const ManualPaySheet = lazy(m_plans, 'ManualPaySheet');
+const m_dashboard = () => import('./screens/dashboard.jsx');
+const AdminView = lazy(m_dashboard, 'AdminView');
+const AdminUserView = lazy(m_dashboard, 'AdminUserView');
+const DeleteUserSheet = lazy(m_dashboard, 'DeleteUserSheet');
+const m_social = () => import('./screens/social.jsx');
+const ReportSheet = lazy(m_social, 'ReportSheet');
+const MoreSheet = lazy(m_social, 'MoreSheet');
 // The places. Practice (getting a score and playing it with the microphone), Learn (the teaching hub: classes,
 // teachers, students), Write (making and fixing scores), Stage (the community) and Library (your scores).
 // Me holds your account, plan and settings. On a computer they sit in a sidebar; on a phone four of them are
@@ -70,7 +204,7 @@ const VIEWS = {
   improvise: (p) => <ImproviseView {...p} pushed />, tools: (p) => <ToolsView {...p} pushed />, courses: (p) => <AcademyView {...p} pushed />,
   piece: PieceView, editor: EditorView, studio: StudioView, student: StudentView, tutors: TutorsView, tutor: TutorView, tutorMe: TutorMeView, lessons: LessonsView, songbook: SongbookView, catalog: CatalogView, course: CourseView, tool: ToolView, history: HistoryView, classView: ClassView, assignment: AssignmentView,
   post: PostView, daily: DailyView, profile: ProfileView, leaderboard: LeaderboardView, notifications: NotificationsView, wallet: WalletView, challenge: ChallengeView,
-  editProfile: EditProfileView, help: HelpView, admin: AdminView, adminUser: AdminUserView,
+  editProfile: EditProfileView, help: HelpView, admin: AdminView, adminUser: AdminUserView, find: FindView, newSongs: NewSongsView, soundPage: SoundPageView,
   __crash: () => { throw new Error('test crash'); },           // the click-through test checks the error boundary with it
   practice: PracticeView, soundCheck: SoundCheckView, report: ReportView, sound: SoundView, vary: VaryView, chordEditor: ChordEditorView, learnMore: (p) => <LearnMoreView {...p} pushed />,
 };
@@ -163,6 +297,28 @@ function Stack({ tab, active }) {
   );
 }
 
+/** The mini-player: what is playing (a piece's Listen, a Sound), on every tab above the tab bar; tap to open it. */
+function MiniPlayer({ s, immersive }) {
+  const np = s.nowPlaying;
+  if (!np || immersive) return null;
+  const open = () => {
+    if (hooks.player?.open) return hooks.player.open();
+    const stack = s.stacks.library || [];
+    const top = stack[stack.length - 1];
+    if (np.kind === 'piece') { if (top?.view === 'piece' && top.props?.id === np.id) go('library'); else push('piece', { id: np.id }, 'library'); }
+  };
+  return (
+    <div class="mini-player" id="mini-player" role="region" aria-label={t('nowPlaying')}>
+      <button type="button" class="mp-open" onClick={open} id="mp-open">
+        <Cover title={np.title} instrument={np.instrument} keyText={np.keyText} size="xs" />
+        <span class="mp-t"><strong>{np.title}</strong><span>{np.playing ? t('nowPlaying') : t('paused')}{np.sub ? ` · ${np.sub}` : ''}</span></span>
+      </button>
+      <button type="button" class="mp-btn" onClick={() => hooks.player?.toggle()} aria-label={np.playing ? t('pause') : t('listen')} id="mp-toggle"><Icon name={np.playing ? 'pause' : 'play'} size={22} fill={!np.playing} /></button>
+      <button type="button" class="mp-btn sm" onClick={() => { if (np.playing) hooks.player?.toggle(); setState({ nowPlaying: null }); }} aria-label={t('close')}><Icon name="close" size={16} stroke={2.4} /></button>
+    </div>
+  );
+}
+
 function SheetHost({ sheet }) {
   const S = SHEETS[sheet.type];
   if (!S) return null;
@@ -191,13 +347,15 @@ function App() {
       if (!local.get('welcomed', false)) openSheet('welcome');
       if (hasServer()) ensureAccount().then(backFromCheckout);
       openHash();
-      warmVerovio();
+      // the sheet engraver (2.3 MB) downloads once Home is on screen and the phone is idle, not before
+      setTimeout(() => (globalThis.requestIdleCallback || setTimeout)(() => warmVerovio(), { timeout: 5000 }), 2500);
     });
     initNative({ onBack, onResume: () => { if (hasServer()) ensureAccount({ fresh: true }); } });
     addEventListener('hashchange', openHash);
     return () => removeEventListener('hashchange', openHash);
   }, []);
   useEffect(() => { setSyncOffset(s.settings.syncMs || 0); }, [s.settings.syncMs]);
+  const visited = useRef(new Set());                    // a tab is built the first time it is opened (faster start)
   const [soundTap, setSoundTap] = useState(null);       // the phone paused the sound and wants a tap to carry on
   useEffect(() => onAudioProblem(setSoundTap), []);
   const shown = s.stacks[s.tab]?.[s.stacks[s.tab].length - 1]?.view || s.tab;
@@ -220,7 +378,7 @@ function App() {
   const name = (s.me?.name && s.me.name !== 'Musician' ? s.me.name : s.settings.name || '').trim();
   const sec = TABS.find((x) => x.id === s.tab)?.color || 'violet';
   return (
-    <div class={`app v3 sec-${sec}${immersive ? ' immersive' : ''}`}>
+    <div class={`app v3 sec-${sec}${immersive ? ' immersive' : ''}${s.nowPlaying && !immersive ? ' has-mini' : ''}`}>
       <aside class="side" aria-label="Sections">
         <button type="button" class="brand" onClick={() => { popToRoot('summary'); go('summary'); }}><Logo /><span>Melovyn</span></button>
         <button type="button" class="side-create" onClick={() => openSheet('newSong')} id="side-newsong"><Icon name="plus" size={18} stroke={2.6} />{t('newSongT')}</button>
@@ -239,9 +397,10 @@ function App() {
         </div>
       </aside>
       <main class="content">
-        {TABS.map((tab) => <div class="tab-pane" hidden={s.tab !== tab.id} key={tab.id}><Stack tab={tab.id} active={s.tab === tab.id} /></div>)}
+        {TABS.map((tab) => <div class="tab-pane" hidden={s.tab !== tab.id} key={tab.id}>{(visited.current.has(tab.id) || s.tab === tab.id || s.stacks[tab.id].length > 0) && (visited.current.add(tab.id), <Stack tab={tab.id} active={s.tab === tab.id} />)}</div>)}
       </main>
       <nav class="tabbar" aria-label="Sections">{TABS.filter((x) => x.side !== false).map((tab) => tabBtn(tab, 'bar'))}</nav>
+      <MiniPlayer s={s} immersive={immersive} />
       {!immersive && !s.sheet && hasServer() && flag('hapi') && <AIFab />}
       {s.sheet && <SheetHost sheet={s.sheet} />}
       {soundTap && <button type="button" class="sound-pill" id="sound-pill"><Icon name="speaker" size={18} stroke={2.3} />{t('tapForSound')}</button>}

@@ -7,7 +7,7 @@ import { parseChordSheet, toChordPro } from '../core/chordsheet.js';
 import { SONGS, songTitle } from '../data/songs.js';
 import { concertKey } from '../core/score.js';
 import { keyName } from '../core/pitch.js';
-import { setLang, detectLang } from '../core/i18n.js';
+import { setLang, detectLang, loadLang } from '../core/i18n.js';
 import { levelFor } from '../core/academy.js';
 import { estimateKey, difficulty } from '../core/analysis.js';
 
@@ -68,7 +68,7 @@ export function toast(text, kind = 'ok') {
 // ---------- settings ----------
 export function updateSettings(patch) {
   const settings = { ...state.settings, ...patch };
-  if (patch.lang) setLang(patch.lang);
+  if (patch.lang) { setLang(patch.lang); loadLang(patch.lang).then(() => setState({ langReady: patch.lang })).catch(() => toast('Could not load that language. Check the connection.', 'err')); }
   local.set('settings', settings);
   setState({ settings });
   applyTheme(settings.theme);
@@ -98,6 +98,7 @@ export async function loadAll() {
   if (settings.name === 'Alex' && !local.get('nameFixed', false)) settings.name = '';   // the old placeholder, not a real name
   local.set('nameFixed', true);
   setLang(settings.lang);
+  await loadLang(settings.lang).catch(() => {});        // English until the language file arrives
   applyTheme(settings.theme);
   globalThis.__melovynHaptics = settings.haptics !== false;
   const progress = { ...state.progress, ...local.get('progress', {}) };
@@ -106,15 +107,20 @@ export async function loadAll() {
   const firstRun = !local.get('started', false);
   let pieces = await db.all('pieces');
   let history = await db.all('history');
+  const byRecent = (list) => list.map(metaOf).sort((a, b) => (b.opened || b.created) - (a.opened || a.created));
+  setState({ ready: true, settings, progress, plus, me, pieces: byRecent(pieces), history: history.sort((a, b) => a.date - b.date), examples: history.some((h) => h.example) });
   if (firstRun && !pieces.length) {
-    for (const id of ['twinkle', 'odetojoy', 'amazinggrace', 'canon']) await addSongbookSong(id, { silent: true });
-    await addExampleSheet();
-    await seedExamples();
-    pieces = await db.all('pieces');
-    history = await db.all('history');
-    local.set('started', true);
+    // the very first start: Home is on screen at once and the starter songs arrive a moment later
+    (async () => {
+      for (const id of ['twinkle', 'odetojoy', 'amazinggrace', 'canon']) await addSongbookSong(id, { silent: true });
+      await addExampleSheet();
+      await seedExamples();
+      pieces = await db.all('pieces');
+      history = await db.all('history');
+      local.set('started', true);
+      setState({ pieces: byRecent(pieces), history: history.sort((a, b) => a.date - b.date), examples: history.some((h) => h.example) });
+    })().catch((e) => console.warn('starter songs', e));
   }
-  setState({ ready: true, settings, progress, plus, me, pieces: pieces.map(metaOf).sort((a, b) => (b.opened || b.created) - (a.opened || a.created)), history: history.sort((a, b) => a.date - b.date), examples: history.some((h) => h.example) });
 }
 
 async function savePiece(rec) {

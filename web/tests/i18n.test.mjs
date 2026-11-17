@@ -31,3 +31,27 @@ test('every t() key used in the app has a translation', async () => {
   const { missingKeys } = await import('../tools/i18n-check.mjs');
   assert.deepEqual(missingKeys, []);
 });
+
+test('v6 text: four languages, same placeholders, and no older key overwritten', async () => {
+  const { V6 } = await import('../src/core/i18n-v6.js');
+  const { V5 } = await import('../src/core/i18n-v5.js');
+  const { BASE } = await import('../src/core/i18n-base.js');
+  const older = new Set([...Object.keys(BASE), ...Object.keys(MORE), ...Object.keys(V2), ...Object.keys(V3), ...Object.keys(V4), ...Object.keys(V5)]);
+  for (const [k, v] of Object.entries(V6)) {
+    assert.equal(v.length, 4, k);
+    assert.ok(v.every((x) => typeof x === 'string' && x.trim().length), `empty text in ${k}`);
+    assert.equal(new Set(v.map(ph)).size, 1, `placeholders differ in ${k}`);
+    assert.ok(!older.has(k), `v6 overwrites ${k}`);
+  }
+});
+
+test('language files: an English-only table filled in from a pack', async () => {
+  const { loadLang, allRows } = await import('../src/core/i18n.js');
+  const { S } = allRows();
+  // source tables already hold every language: loading is a no-op and never fetches
+  globalThis.fetch = () => { throw new Error('should not fetch'); };
+  await loadLang('zh-Hans');
+  assert.equal(S.done.length, 4);
+  delete globalThis.fetch;
+});
+

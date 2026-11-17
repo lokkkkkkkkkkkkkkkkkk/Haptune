@@ -55,7 +55,7 @@ async function person(browser, base, api, { name, role, handle }) {
   p.on('pageerror', (e) => errors.push('page: ' + e.message));
   p.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|favicon|ERR_/.test(m.text())) errors.push('console: ' + m.text()); });
   await p.goto(base + '/app/', { waitUntil: 'networkidle' });
-  await p.waitForSelector('#home-tiles');
+  await p.waitForSelector('#home-hero');
   // a real account: username and password (Google sign-in needs Google)
   await p.waitForFunction(() => !!localStorage.getItem('haptune.academyToken'), null, { timeout: 30000 });
   const ok = await p.evaluate(async ([server, h, nm]) => {
@@ -137,6 +137,23 @@ async function person(browser, base, api, { name, role, handle }) {
         return (await fetch(`${server}/academy/assignments/${aid}/submissions`, { method: 'POST', headers: H, body: JSON.stringify({ accuracy: 0.86, seconds: 60, bars: [1, 0.9, 0.7], bar_numbers: [1, 2, 3] }) })).ok;
       }, api);
       if (!ok) throw new Error('the submission was refused');
+    });
+    await step('Home: the Learn band and the class shelf (student), takes to review (teacher)', async () => {
+      for (const [pg, who] of [[s, 'student'], [t, 'teacher']]) {
+        await tab(pg, 'practice'); await pg.evaluate(() => window.__haptune.popToRoot('summary'));
+        await pg.waitForSelector('#home-band');
+        if (who === 'teacher') await pg.waitForFunction(() => /to review/i.test(document.querySelector('#band-learn')?.innerText || ''), null, { timeout: 15000 });
+        else await pg.waitForSelector('#shelf-class .shelf-item', { timeout: 15000 });
+        const band = await pg.locator('#band-learn').innerText();
+        if (who === 'teacher' && !/1 takes? to review/i.test(band)) throw new Error(`the teacher's band does not count the take to review: ${band}`);
+        if (who === 'student' && !(await pg.locator('#shelf-class .shelf-item').count())) throw new Error('the student has no "Pieces your class is playing" shelf');
+        await pg.screenshot({ path: path.join(SHOTS, `home-${who}.png`), fullPage: false });
+        await pg.evaluate(() => document.querySelector('#home').scrollTo(0, 99999)); await pg.waitForTimeout(300);
+        await pg.screenshot({ path: path.join(SHOTS, `home-${who}-lower.png`) });
+        await pg.evaluate(() => document.querySelector('#home').scrollTo(0, 0));
+      }
+      await s.locator('#band-learn').click(); await s.waitForSelector('#class-tabs:visible', { timeout: 10000 });
+      await tab(t, 'hub'); await t.waitForSelector('#class-tabs:visible');
     });
     await step('teacher sees it in Grades, grades it and downloads the CSV', async () => {
       await t.locator('#class-tabs button').filter({ hasText: /Grades/ }).click(); await t.waitForSelector('#cr-grades td button');

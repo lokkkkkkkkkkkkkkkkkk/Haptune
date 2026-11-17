@@ -266,6 +266,10 @@ def today() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 
+def today_minus(days: int) -> str:
+    return (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
+
+
 def new_id(n: int = 12) -> str:
     return uuid.uuid4().hex[:n]
 
