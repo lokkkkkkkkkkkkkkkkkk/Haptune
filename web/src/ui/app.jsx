@@ -8,7 +8,9 @@ import { HomeView } from './screens/home.jsx';
 import { Cover } from './cover.jsx';
 import { AIChatSheet, AIFab } from './screens/aichat.jsx';
 import { Boundary } from './boundary.jsx';
-import { startTracking, loadFlags, screenShown, flag } from './analytics.js';
+import { startTracking, loadFlags, screenShown, flag, track } from './analytics.js';
+import { parseLink } from '../core/piece.js';
+import { loadCatalog, addCatalogPiece } from './catalog.js';
 import { tick } from './native.js';
 import { local } from './storage.js';
 import { HelpView, FeedbackSheet, GuidelinesSheet, AboutSheet, captureErrors } from './screens/help.jsx';
@@ -254,6 +256,28 @@ async function backFromCheckout() {
 }
 
 /** Links like …/#post/<id> (shared from the community) open that post. */
+/** The app's own links (core/piece.js parseLink): a piece (practise / create), a class or assignment, a Stage post,
+ *  a Sound, a person. A piece link works on any device when it names a free-library piece. */
+async function openLink(l) {
+  const st = getState();
+  if (l.route === 'piece') {
+    let p = st.pieces.find((x) => x.id === l.id) || st.pieces.find((x) => x.catalogId === l.id);
+    if (!p) {
+      const entry = (await loadCatalog().catch(() => [])).find((r) => r.id === l.id);
+      if (entry) p = await addCatalogPiece(entry).catch(() => null);
+    }
+    if (!p) { toast(t('linkNotFound'), 'err'); return; }
+    if (l.action === 'create') { go('write'); push(p.chordSong ? 'chordEditor' : 'studio', { id: p.id }, 'write'); return; }
+    push('piece', { id: p.id, ...(l.action === 'practise' ? { start: 'playAlong' } : l.action === 'listen' ? { start: 'listen' } : {}) }, 'library');
+    return;
+  }
+  if (l.route === 'assignment') { go('academy'); push('assignment', { id: l.id }, 'academy'); return; }
+  if (l.route === 'class') { go('academy'); push('classView', { id: l.id }, 'academy'); return; }
+  if (l.route === 'post') { go('community'); push('post', { id: l.id }, 'community'); return; }
+  if (l.route === 'sound') { go('community'); push('soundPage', { id: l.id }, 'community'); return; }
+  if (l.route === 'person') { go('community'); push('profile', { handle: l.id }, 'community'); }
+}
+
 function openHash() {
   const h = location.hash.replace('#', '');
   // a class link or QR code: …/app/#join/ABC123
@@ -263,10 +287,8 @@ function openHash() {
   const pr = /^pair=([A-Za-z0-9]{8})$/.exec(h);
   if (pr) { openSheet('pair', { approve: true, code: pr[1].toUpperCase() }); history.replaceState(null, '', location.pathname); return; }
   if (h === 'write') { go('write'); return; }
-  const m = /^post\/([0-9a-f]{6,16})$/.exec(h);
-  if (m) { go('community'); push('post', { id: m[1] }, 'community'); return; }
-  const u = /^u\/([a-z0-9_.]{3,20})$/.exec(h);
-  if (u) { go('community'); push('profile', { handle: u[1] }, 'community'); return; }
+  const link = parseLink(h);
+  if (link) { history.replaceState(null, '', location.pathname); track('deep_link', { label: link.route + (link.action ? `:${link.action}` : '') }); openLink(link); return; }
   const sq = /^q=(.+)$/.exec(h);
   if (sq) { go('summary'); setState({ homeQuery: decodeURIComponent(sq[1]).slice(0, 120) }); history.replaceState(null, '', location.pathname); return; }
   if (h === 'tutors') { go('academy'); push('tutors', {}, 'academy'); return; }

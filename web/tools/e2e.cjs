@@ -174,6 +174,8 @@ async function run(mode, base, browser) {
       await p.locator('.mode-card').nth(1).click();                       // keep the beat: ends with the music
       await p.locator('.sheet .btn.brand').filter({ hasText: /Start/ }).click();
       await p.waitForSelector('#take-report', { timeout: 120000 });
+      await p.waitForSelector('#take-report #next-chips #nx-similar');
+      if (!(await p.locator('#take-report #next-chips .nx.primary').count())) throw new Error('the take has no first choice for what next');
       await shot('11-take'); 
       await p.locator('#view-details').click(); await p.waitForSelector('#report');
       await p.waitForSelector('#rep-next');
@@ -288,7 +290,7 @@ async function run(mode, base, browser) {
     if ((await p.locator('#ce-beat-2 .ce-chord').innerText()) !== 'D/F#') throw new Error('a typed chord was not placed on beat 3');
     await p.locator('#ce-undo').click(); await p.waitForTimeout(200);
     if (await p.locator('#ce-beat-2 .ce-chord').count()) throw new Error('undo did not remove the chord');
-    await p.locator('#ce-playalong').click(); await p.waitForSelector('.sheet', { timeout: 30000 });
+    await p.locator('#nx-playAlong').click(); await p.waitForSelector('.sheet', { timeout: 30000 });
     await p.waitForTimeout(300); await p.keyboard.press('Escape');
     await p.waitForSelector('.vrv-page svg', { timeout: 60000 });
     if (!/Grace/.test(await p.locator('.piece-head h1').innerText())) throw new Error('Play Along did not open the chord song');

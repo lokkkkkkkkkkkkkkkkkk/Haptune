@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'preact/hooks';
 import { useApp, getPiece, updatePiece, deletePiece, markOpened, pop, push, openSheet, closeSheet, toast, logMinutes, recordTake, go, awardBadge, getState, setState, addXP, addScore, hooks } from '../state.js';
+import { NextChips } from '../nextchips.jsx';
 import { t, getLang, instrumentName, INSTRUMENTS } from '../../core/i18n.js';
 import { Icon, Card, Section, List, Row, Segmented, Stepper, Button, Chip, Stars, FretDiagram, PianoChord, Keyboard, Badge, Toggle } from '../components.jsx';
 import { NavBar, SheetFrame } from './common.jsx';
@@ -23,7 +24,7 @@ import { suggestChords, difficulty, bestKeys, VOICE_RANGES } from '../../core/an
 import { expectedNotes, Follower, trickyBars } from '../../core/follow.js';
 import { q, Q, ZERO } from '../../core/q.js';
 import { Mascot, Confetti } from '../mascot.jsx';
-import { academy, hasServer } from '../api.js';
+import { academy, academyMe, hasServer } from '../api.js';
 import { C, attempt } from '../account.js';
 import { dueText } from './classes.jsx';
 import { track } from '../analytics.js';
@@ -909,14 +910,38 @@ function ResultCard({ result, barNo, onPractise, onAgain, assignment, onSend, ch
       )}
       <div class="btn-row">
         <Button small kind="brand" icon="doc" onClick={() => push('report', { result, pieceId: result.pieceId, title: result.title, keySig: result.keySig, onPractise, onShowBar, onSend, onClass, onShare, assignment })} id="view-details">{t('viewDetails')}</Button>
-        <Button small icon="mic" onClick={onAgain}>{good && next > Math.round(result.speed * 100) ? t('tryAt', { p: next }) : t('tryAgain')}</Button>
-        {assignment && <Button small icon="send" kind="brand" onClick={onSend} disabled={result.sent}>{result.sent ? t('sentToTeacher') : t('submitToTeacher')}</Button>}
-        {!assignment && hasServer() && <Button small icon="academy" kind="secondary" onClick={onClass} id="share-class">{result.shared ? t('sharedWithClass') : t('shareWithClass')}</Button>}
         {challenge && <Button small icon="trophy" color="orange" onClick={onChallenge} disabled={result.entered}>{result.entered ? t('challengeEntered') : t('enterChallenge')}</Button>}
-        {hasServer() && <Button small icon="share" kind="secondary" onClick={onShare}>{t('shareWin')}</Button>}
+        {result.sent && <span class="pill-ok" id="sent-ok"><Icon name="check" size={14} stroke={2.6} />{t('sentToTeacher')}</span>}
       </div>
+      <TakeNext result={result} assignment={assignment} onAgain={onAgain} onSend={onSend} onClass={onClass} onShare={onShare} onPractise={onPractise} />
     </Card>
   );
+}
+
+/** What next after a take: hand it in, go faster or loop the hard bar, share it; after handing in, the next assignment. */
+function TakeNext({ result, assignment, onAgain, onSend, onClass, onShare, onPractise }) {
+  const [nextAsg, setNextAsg] = useState(null);
+  const online = hasServer();
+  useEffect(() => {
+    if (!result.sent || !online) return;
+    academyMe().then((r) => setNextAsg((r.todo || []).find((a) => a.id !== assignment?.id) || null)).catch(() => {});
+  }, [result.sent]);
+  const pct = Math.max(40, Math.round((result.speed || 1) * 100) - 20);
+  if (result.sent) {
+    return <NextChips flow="handIn" ctx={{ nextAssignment: nextAsg }} on={{
+      nextAssignment: nextAsg ? () => push('assignment', { id: nextAsg.id }, 'academy') : null,
+      again: onAgain,
+      classPage: assignment?.class_id ? () => push('classView', { id: assignment.class_id }, 'academy') : null,
+    }} />;
+  }
+  return <NextChips flow="take" ctx={{ assignment: !!assignment, accuracy: result.accuracy, speed: result.speed, tricky: result.tricky?.length > 0, online, inClass: online }} on={{
+    handIn: assignment ? onSend : null,
+    faster: onAgain, again: onAgain,
+    loopTricky: result.tricky?.length ? () => onPractise(result.tricky[0].mi, pct) : null,
+    shareClass: !assignment && online && !result.shared ? onClass : null,
+    shareStage: online ? onShare : null,
+    similar: () => push('find', {}),
+  }} />;
 }
 
 const fmtSecs = (n) => `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`;

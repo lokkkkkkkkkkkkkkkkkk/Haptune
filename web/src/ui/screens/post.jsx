@@ -1,7 +1,7 @@
 // One post: a request (and the scores people made for it), a question (and its answers), a shared score or
 // a practice win. Everything you can do with it is here.
 import { useState, useEffect } from 'preact/hooks';
-import { useApp, push, pop, openSheet, closeSheet, toast, getPiece, addScore, getState } from '../state.js';
+import { useApp, push, pop, go, openSheet, closeSheet, toast, getPiece, addScore, getState } from '../state.js';
 import { t } from '../../core/i18n.js';
 import { Icon, Button, Card, Section, List, Row, Chip } from '../components.jsx';
 import { NavBar, SheetFrame } from './common.jsx';
@@ -10,12 +10,14 @@ import { parseMusicXML, writeMusicXML } from '../../core/musicxml.js';
 import { C, attempt, ensureAccount } from '../account.js';
 import { youtubeId } from '../api.js';
 import { openExternal } from '../native.js';
+import { NextChips, copyLink as copyItemLink } from '../nextchips.jsx';
+import { fromPost } from '../../core/piece.js';
 import { Reactions, TYPE, PersonLine, Person, Coins, StatusPill, RequestSteps, InstrumentChips, StarsInput, timeAgo, timeLeft, openReport } from './social.jsx';
 
 const live = { reload: null };            // the open post refreshes itself after a sheet changes it
 export const reloadPost = () => live.reload?.();
 
-export function PostView({ id, active }) {
+export function PostView({ id, active, justPosted = null }) {
   const s = useApp();
   const [p, setP] = useState(null);
   const [err, setErr] = useState('');
@@ -57,6 +59,9 @@ export function PostView({ id, active }) {
       {party && <Confetti />}
       <NavBar title={t(ty.label)} backLabel={t('community')} color={ty.color} actions={<button type="button" class="nav-btn" onClick={more} aria-label={t('more')}><Icon name="more" size={22} /></button>} />
       <div class="wrap post-view">
+        {justPosted && <NextChips flow={justPosted === 'request' ? 'request' : 'post'} id="post-next" on={{
+          copyLink: () => copyItemLink(fromPost(p)), findMore: () => push('find', {}, 'summary'), openRequests: () => { pop(); go('community'); },
+        }} />}
         <div class="pv-head">
           <div class="pc-top"><span class={`pill ${ty.color}`}><Icon name={ty.icon} size={13} stroke={2.6} />{t(ty.label)}</span><StatusPill p={p} /></div>
           <div><RequestSteps p={p} />
@@ -105,7 +110,7 @@ export function PostView({ id, active }) {
 
 function copyLink(p) {
   const base = (globalThis.HAPTUNE_CONFIG?.native ? `${globalThis.HAPTUNE_CONFIG?.site || 'https://haptune.name.my'}/app/` : location.href.split('#')[0]);
-  const url = `${base}#post/${p.id}`;
+  const url = `${base}#stage/post/${p.id}`;
   try { navigator.clipboard.writeText(url); toast(t('copied')); } catch { toast(url); }
 }
 

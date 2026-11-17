@@ -859,3 +859,15 @@ body.ce-dragging, body.ce-dragging * { cursor: grabbing !important; }
 /* the first frame, in index.html before any script runs */
 .splash.boot > div { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .splash.boot strong { font-weight: 800; font-size: 22px; letter-spacing: -.03em; color: var(--ink); }
+
+/* what next: the chips that end every flow */
+.next-chips { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.next-chips .nx-k { font-size: 11.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--ink2); }
+.next-chips .nx-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.next-chips .nx { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: 999px; font-size: 14px; font-weight: 700;
+  background: var(--fill2); color: var(--ink); transition: transform .25s var(--spring); }
+.next-chips .nx:active { transform: scale(.95); }
+.next-chips .nx.primary { background: var(--c, var(--violet)); color: #fff; box-shadow: 0 6px 16px color-mix(in srgb, var(--c, var(--violet)) 30%, transparent); }
+.next-chips.card { padding: 14px 16px; border-radius: var(--r); background: var(--card); border: 1px solid var(--line); }
+.pill-ok { display: inline-flex; align-items: center; gap: 5px; height: 32px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 750;
+  color: var(--s-teal); background: color-mix(in srgb, var(--s-teal) 12%, var(--card)); }

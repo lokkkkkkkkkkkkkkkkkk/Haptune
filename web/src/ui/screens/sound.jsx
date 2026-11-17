@@ -8,6 +8,8 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { useApp, push, openSheet, closeSheet, toast, addScore, go } from '../state.js';
 import { t, getLang } from '../../core/i18n.js';
 import { Icon, Button, Chip, List, Row, Toggle, Keyboard } from '../components.jsx';
+import { NextChips, copyLink } from '../nextchips.jsx';
+import { fromSound } from '../../core/piece.js';
 import { NavBar, SheetFrame } from './common.jsx';
 import * as S from '../../core/sound.js';
 import * as CB from '../../core/chordbars.js';
@@ -350,6 +352,7 @@ export function SoundPostSheet({ sound }) {
       track('sound_made', { value: S.soundSeconds(sound), props: { tracks: sound.tracks.length } });
       closeSheet();
       go('community');
+      if (j.id) push('soundPage', { id: j.id, justPosted: true }, 'community');
     } catch (e) { toast(e.message || String(e), 'err'); setBusy(false); }
   };
   return (
@@ -378,7 +381,7 @@ export function SoundsFeed({ active }) {
 }
 
 /** One Sound on its own page (#sound/ID, links from Home, Find and notifications). */
-export function SoundPageView({ id }) {
+export function SoundPageView({ id, justPosted = false }) {
   const [x, setX] = useState(null);
   const [err, setErr] = useState('');
   useEffect(() => { C.sounds.get(id).then(setX).catch((e) => setErr(e.message || String(e))); }, [id]);
@@ -387,6 +390,7 @@ export function SoundPageView({ id }) {
       <NavBar title={x?.title || t('segSounds')} backLabel={t('back')} color="violet" />
       <div class="wrap" style={{ paddingTop: 12 }}>
         {err ? <p class="note-text err">{err}</p> : !x ? <div class="loading"><div class="spinner" /></div> : <>
+          {justPosted && <NextChips flow="sound" id="sound-next" on={{ copyLink: () => copyLink(fromSound(x)), newSound: () => push('sound', {}, 'write') }} />}
           <SoundCard x={x} />
           {x.versions && (x.versions.before.length > 0 || x.versions.layers.length > 0) && <List>
             {[...x.versions.before, ...x.versions.layers].map((v) => <Row key={v.id} icon="wave" color="violet" title={v.title} subtitle={v.author?.name || ''} onClick={() => push('soundPage', { id: v.id })} />)}

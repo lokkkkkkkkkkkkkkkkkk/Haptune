@@ -84,7 +84,7 @@ export function FeedCard({ p }) {
   };
   const share = async (e) => {
     e.stopPropagation();
-    const url = `${(globalThis.HAPTUNE_CONFIG?.site || location.origin).replace(/\/+$/, '')}/app/#post/${p.id}`;
+    const url = `${(globalThis.HAPTUNE_CONFIG?.site || location.origin).replace(/\/+$/, '')}/app/#stage/post/${p.id}`;
     try { if (navigator.share) { await navigator.share({ title: p.title, url }); return; } } catch (er) { if (er?.name === 'AbortError') return; }
     try { await navigator.clipboard.writeText(url); toast(t('copied')); } catch { toast(url); }
   };

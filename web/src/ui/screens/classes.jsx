@@ -5,6 +5,7 @@ import { useState, useEffect } from 'preact/hooks';
 import { useApp, push, pop, go, openSheet, closeSheet, toast, getPiece, addScore, addXP, setState, updateSettings, goLearn } from '../state.js';
 import { t, getLang, instrumentName } from '../../core/i18n.js';
 import { Icon, Card, Section, List, Row, Button, Badge, Segmented, Chip, Stepper, Rings } from '../components.jsx';
+import { NextChips } from '../nextchips.jsx';
 import { NavBar, SheetFrame } from './common.jsx';
 import { Mascot, Confetti } from '../mascot.jsx';
 import { hasServer, academyMe, academy } from '../api.js';
@@ -165,7 +166,7 @@ export function MissionCard({ a, color, onClick }) {
 }
 
 // ---------------------------------------------------------------- one class
-export function ClassView({ id, tab: tab0 }) {
+export function ClassView({ id, tab: tab0, joined = false }) {
   const s = useApp();
   const [tab, setTab] = useState(tab0 || 'stream');
   const cls = useLoad(() => academy.classDetail(id), [id, s.academyRev]);
@@ -218,6 +219,8 @@ export function ClassView({ id, tab: tab0 }) {
                 {c.instrument && <span class="pill3 on-dark">{instrumentName(c.instrument)}</span>}</div>
               <span class="mascot-peek"><Mascot mood={teacher ? 'cheer' : 'wave'} size={78} /></span>
             </div>
+
+            {joined && !teacher && <JoinNext classId={id} />}
 
             <Segmented id="class-tabs" value={tab} onChange={(v) => (v === 'mine' ? push('student', { classId: id, uid: myId(), name: t('myProgress') }) : setTab(v))}
               options={(teacher ? [['stream', t('crStream')], ['classwork', t('crClasswork')], ['people', t('crPeople')], ['grades', t('crGrades')]]
@@ -345,7 +348,7 @@ export function AssignmentView({ id }) {
     try {
       const pid = await pieceFor(a);
       if (!pid) { toast(t('engineFailedShort'), 'err'); return; }
-      const asg = { id: a.id, part: a.part, mode: a.mode, tempo_pct: a.tempo_pct, goal: a.goal, title: a.title, due_at: a.due_at,
+      const asg = { id: a.id, class_id: a.class_id, part: a.part, mode: a.mode, tempo_pct: a.tempo_pct, goal: a.goal, title: a.title, due_at: a.due_at,
         bars_from: range ? range.from : a.bars_from, bars_to: range ? range.to : a.bars_to };
       push('piece', { id: pid, assignment: asg, start: 'playAlong' });
     } catch (e) { toast(e.message, 'err'); } finally { setBusy(false); }
@@ -372,7 +375,7 @@ export function AssignmentView({ id }) {
   return (
     <div class="scroll">
       <NavBar title={a.title} color="orange" backLabel={t('back')} />
-      <div class="wrap" style={{ paddingTop: 14 }}>
+      <div class="wrap" style={{ paddingTop: 14 }} id="asg-view">
         {a.status === 'done' && <Confetti />}
         <div class="hero class-hero c-orange">
           <div class="m-top">{!teacher && <StatusChip status={a.status} />}<span class="due">{dueText(a)}</span></div>
@@ -489,7 +492,7 @@ export function JoinClassSheet() {
       toast(t('joinedClass', { name: r.class.name }));
       addXP(10);
       goLearn();
-      push('classView', { id: r.class.id }, 'academy');
+      push('classView', { id: r.class.id, joined: true }, 'academy');
     } catch (e) { setErr(e.message); setBusy(false); }
   };
   return (
@@ -750,4 +753,15 @@ export function ReviewSheet({ a, subs }) {
       )}
     </SheetFrame>
   );
+}
+
+/** Just joined: the first assignment, the class page, more songs. */
+function JoinNext({ classId }) {
+  const [next, setNext] = useState(null);
+  useEffect(() => { academyMe().then((r) => setNext((r.todo || []).find((a) => a.class_id === classId) || null)).catch(() => {}); }, [classId]);
+  return <NextChips flow="join" ctx={{ nextAssignment: next }} id="join-next" on={{
+    nextAssignment: next ? () => push('assignment', { id: next.id }) : null,
+    classPage: () => document.getElementById('class-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+    findSongs: () => push('find', {}, 'summary'),
+  }} />;
 }

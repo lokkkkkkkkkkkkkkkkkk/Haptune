@@ -78,7 +78,7 @@ async function person(browser, base, api, { name, role, handle }) {
   const browser = await chromium.launch({ args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', '--autoplay-policy=no-user-gesture-required'] });
   const problems = [];
   const step = async (name, fn) => { try { await fn(); } catch (e) { problems.push(`${name}: ${e.message.split('\n')[0]}`); for (const [k, x] of [['t', T], ['s', S]]) await x?.p.screenshot({ path: path.join(SHOTS, `fail-${k}-${name.slice(0, 12).replace(/\W/g, '')}.png`) }).catch(() => {}); } };
-  let T, S, code = '';
+  let T, S, code = '', requestId = '';
   try {
     T = await person(browser, base, api, { name: 'Ms Tan', role: 'teacher', handle: 'ms_tan' });
     S = await person(browser, base, api, { name: 'Ben', role: 'student', handle: 'ben_violin' });
@@ -193,7 +193,9 @@ async function person(browser, base, api, { name, role, handle }) {
       await s.screenshot({ path: path.join(SHOTS, 'stage-compose.png') });
       await s.locator('.sheet .sheet-head .r').click();                              // tap 2
       await s.waitForSelector('.rq-steps', { timeout: 20000 });                      // the new request, with where it stands
+      await s.waitForSelector('#post-next #nx-copyLink');                            // ...and what next
       await s.screenshot({ path: path.join(SHOTS, 'stage-request-posted.png') });
+      requestId = await s.evaluate(() => { const st = window.__haptune.getState().stacks.community; return st[st.length - 1]?.props?.id; });
       await esc(s);
       await tab(s, 'stage'); await tab(s, 'stage'); await s.waitForSelector('#stage-purpose');
       await s.locator('#stage-how-ok').click({ timeout: 3000 }).catch(() => {});
@@ -202,6 +204,45 @@ async function person(browser, base, api, { name, role, handle }) {
       if (await s.locator('#stage-new .row').count() < 4) throw new Error('the + sheet should offer the post types');
       await esc(s);
       await s.screenshot({ path: path.join(SHOTS, 'stage-requests.png') });
+    });
+    await step('Golden path: one search finds the class and the person; links open the assignment, a Stage post and a piece in Play Along', async () => {
+      const go = async (pg, hash) => { await esc(pg); await pg.evaluate((h) => { location.hash = h; }, hash); await pg.waitForTimeout(600); };
+      // one search: classes and people with type chips
+      await esc(s); await tab(s, 'practice'); await s.evaluate(() => window.__haptune.popToRoot('summary'));
+      await s.locator('#hero-find').click(); await s.waitForSelector('#find-q');
+      await s.fill('#find-q', 'violin'); await s.waitForSelector('#ft-classes', { timeout: 15000 });
+      await s.locator('#ft-classes').click(); await s.waitForSelector('#find-classes-first');
+      if (await s.locator('#find-free').count()) throw new Error('the Classes chip still shows pieces');
+      await s.screenshot({ path: path.join(SHOTS, 'golden-search-classes.png') });
+      await s.locator('#find-classes-first').click(); await s.waitForSelector('#class-tabs:visible', { timeout: 10000 });
+      await tab(s, 'practice'); await s.waitForSelector('#find-q:visible');
+      await s.fill('#find-q', 'ms tan'); await s.waitForSelector('#find-people-first', { timeout: 15000 });
+      // the assignment link a teacher shares
+      const asg = await s.evaluate(async (server) => {
+        const tok = JSON.parse(localStorage.getItem('haptune.academyToken'));
+        const H = { headers: { Authorization: `Bearer ${tok}` } };
+        const me = await (await fetch(server + '/academy/me', H)).json();
+        const cid = me.classes?.[0]?.id;
+        const cl = cid && await (await fetch(`${server}/academy/classes/${cid}`, H)).json();
+        const a = cl?.assignments?.[0];
+        return a ? { id: a.id, cid } : null;
+      }, api);
+      if (!asg) throw new Error('no assignment to link to');
+      await go(s, `#class/${asg.cid}/assignment/${asg.id}`);
+      await s.waitForSelector('#asg-view:visible', { timeout: 15000 });
+      if (!/Ode to Joy/.test(await s.locator('#asg-view:visible').innerText())) throw new Error('the assignment link opened the wrong assignment');
+      // a Stage post link, opened by someone else
+      if (!requestId) throw new Error('no request id from the Stage step');
+      await go(t, `#stage/post/${requestId}`);
+      await t.waitForSelector('.rq-steps', { timeout: 15000 });
+      if (!/Yesterday/.test(await t.locator('.post-view').innerText())) throw new Error('the post link opened the wrong post');
+      // a free-library piece, straight into Play Along, on a device that never had it
+      const entry = await t.evaluate(async () => (await (await fetch('catalog/index.json')).json()).items.find((r) => /mutopia/.test(r[0]))?.[0]);
+      await go(t, `#piece/${entry}/practise`);
+      await t.waitForSelector('.mode-cards, .sheet .mode-card', { timeout: 60000 });
+      await t.screenshot({ path: path.join(SHOTS, 'golden-piece-practise.png') });
+      await esc(t); await t.locator('.navbar .back:visible, .back-btn:visible').first().click().catch(() => {});
+      await esc(t); await tab(t, 'hub');
     });
     await step('Hapi: ask from the sparkle button, get an answer with buttons, tap one', async () => {
       // the model is mocked here (no API key in tests); the server side is tested in server/test_aichat.py
@@ -329,7 +370,8 @@ async function person(browser, base, api, { name, role, handle }) {
       await esc(s);
       await s.locator('#sd-keys-done').click(); await s.locator('#sd-post').click(); await s.waitForSelector('#sd-rights');
       await s.fill('#sd-post-title', 'Morning riff'); await s.locator('#sd-rights .chip').first().click();
-      await s.locator('#sd-post-send').click(); await s.waitForSelector('#stage-purpose', { timeout: 60000 });
+      await s.locator('#sd-post-send').click(); await s.waitForSelector('#sound-next #nx-copyLink', { timeout: 60000 });   // the new Sound, with what next
+      await s.screenshot({ path: path.join(SHOTS, 'sound-posted.png') });
       soundId = await s.evaluate(async (server) => (await (await fetch(server + '/c/sounds')).json()).items[0]?.id, api);
       if (!soundId) throw new Error('the Sound is not on Stage');
     });
@@ -340,7 +382,7 @@ async function person(browser, base, api, { name, role, handle }) {
       await t.locator('.sound-card .btn').filter({ hasText: /Layer/ }).first().click(); await t.waitForSelector('.sd-track', { timeout: 30000 });
       await t.locator('#sd-add').click(); await t.locator('#sd-add-inst').click(); await t.waitForTimeout(300);
       await t.locator('#sd-keys-done').click(); await t.locator('#sd-post').click(); await t.waitForSelector('#sd-rights'); await t.locator('#sd-rights .chip').first().click();
-      await t.locator('#sd-post-send').click(); await t.waitForSelector('#stage-purpose', { timeout: 60000 });
+      await t.locator('#sd-post-send').click(); await t.waitForSelector('#sound-next', { timeout: 60000 });
       const v = await t.evaluate(async ([server, id]) => (await (await fetch(`${server}/c/sounds/${id}`)).json()).versions, [api, soundId]);
       if (!v || v.layers.length !== 1) throw new Error('no layer: ' + JSON.stringify(v));
     });
