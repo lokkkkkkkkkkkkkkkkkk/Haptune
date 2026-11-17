@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'preact/hooks';
 import { useApp, push, pop, go, openSheet, closeSheet, toast, getPiece, addScore, getState } from '../state.js';
 import { t } from '../../core/i18n.js';
-import { Icon, Button, Card, Section, List, Row, Chip } from '../components.jsx';
+import { Icon, Button, Card, Section, List, Row, Chip, Skeleton } from '../components.jsx';
 import { NavBar, SheetFrame } from './common.jsx';
 import { Mascot, Confetti } from '../mascot.jsx';
 import { parseMusicXML, writeMusicXML } from '../../core/musicxml.js';
@@ -30,7 +30,7 @@ export function PostView({ id, active, justPosted = null }) {
   };
   useEffect(() => { if (active) { live.reload = load; load(); } }, [active, id]);
   if (err && !p) return <div class="scroll"><NavBar title="" backLabel={t('community')} /><div class="wrap"><p class="sub">{err}</p></div></div>;
-  if (!p) return <div class="scroll"><NavBar title="" backLabel={t('community')} /><div class="loading"><Mascot mood="think" size={80} /></div></div>;
+  if (!p) return <div class="scroll"><NavBar title="" backLabel={t('community')} /><Skeleton /></div>;
   const ty = TYPE[p.type];
   const me = s.me;
   const isAuthor = p.me.is_author;

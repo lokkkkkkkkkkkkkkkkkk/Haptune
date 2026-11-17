@@ -26,6 +26,7 @@ import { hasServer } from '../api.js';
 import { addPart, removePart, setPartInstrument, setKeySig, addDynamic, toggleArticulation, DYNAMICS, barChords, chordsForKey, stripOf, mixEvents } from '../../core/studio.js';
 import { NextChips } from '../nextchips.jsx';
 import { track } from '../analytics.js';
+import { INSTRUMENT_HUE } from '../cover.jsx';
 
 const ADDABLE = ['piano', 'violin', 'viola', 'cello', 'flute', 'clarinet', 'sax', 'trumpet', 'guitar', 'bassguitar', 'voice', 'erhu'];
 const SOUNDS = ['piano', 'epiano', 'organ', 'strings', 'guitar', 'bass', 'flute', 'clarinet', 'brass', 'voice'];
@@ -273,7 +274,7 @@ export function StudioView({ id, active, fresh = false }) {
   const instruments = score && (
     <div class="ms-ins" id="st-instruments">
       {score.parts.map((p, pi) => (
-        <div class={`ms-part${cur.pi === pi ? ' on' : ''}`} key={p.id}>
+        <div class={`ms-part${cur.pi === pi ? ' on' : ''}`} key={p.id} style={{ '--ih': INSTRUMENT_HUE[p.instrument] ?? 200 }}>
           <button type="button" class="mp-name" onClick={() => goPart(pi)} id={`part-${pi}`}><Icon name="staff" size={16} />{instrumentName(p.instrument) || p.name}</button>
           <select aria-label={t('instrument')} value={p.instrument} onChange={(e) => commit(setPartInstrument(score, pi, e.currentTarget.value))}>
             {Object.keys(INSTRUMENT_DEFS).map((k) => <option key={k} value={k}>{instrumentName(k)}</option>)}
@@ -388,7 +389,7 @@ export function StudioView({ id, active, fresh = false }) {
           {score.parts.map((p) => {
             const st = stripOf(mix, p);
             return (
-              <div class={`strip${st.mute ? ' muted' : ''}${st.solo ? ' solo' : ''}`} key={p.id} id={`strip-${p.id}`}>
+              <div class={`strip${st.mute ? ' muted' : ''}${st.solo ? ' solo' : ''}`} key={p.id} id={`strip-${p.id}`} style={{ '--ih': INSTRUMENT_HUE[p.instrument] ?? 200 }}>
                 <strong class="sn">{instrumentName(p.instrument)}</strong>
                 <select aria-label={t('soundT')} value={st.sound || soundOf(p.instrument)} onChange={(e) => setStrip(p, { sound: e.currentTarget.value })}>
                   {SOUNDS.map((x) => <option key={x} value={x}>{t(`snd_${x}`)}</option>)}

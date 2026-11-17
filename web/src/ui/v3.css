@@ -1028,3 +1028,44 @@ blockquote.teacher-note { margin: 0 0 8px; padding: 10px 14px; border-left: 3px 
 .ms-side .chips, .ms-dock-panel .chips { display: flex; flex-wrap: wrap; gap: 6px; overflow: visible; margin: 0; padding: 0; }
 .ms-side .chip, .ms-dock-panel .chip { width: auto; flex: 0 0 auto; }
 @media (min-width: 900px) { .ms-side { max-height: calc(100vh - 300px); } }
+
+/* ================= Part 2 · G: the finishing touches ================= */
+/* each instrument has its colour (cover.jsx INSTRUMENT_HUE): chips, mixer strips, studio parts */
+.inst-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: hsl(var(--ih) 70% 52%); vertical-align: 1px; }
+.strip { border-top: 4px solid hsl(var(--ih, 200) 65% 55%); }
+.ms-part { border-left: 4px solid hsl(var(--ih, 200) 65% 55%); }
+/* library cards and song tiles carry their cover */
+.lib-card .lc-main .cover-art { flex-shrink: 0; }
+.song-tile .st-main .cover-art { margin-right: 2px; }
+/* things arrive with a little lift, one after another (not for people who turn motion off) */
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.sr-group > .sr-item, .pshelf .shelf-item, .mission-list > *, .duel-row, .glance, .lib-card, .song-tile, .ff-item, .path-step { animation: rise .42s cubic-bezier(.2, .8, .2, 1) both; }
+.sr-group > .sr-item:nth-child(2), .pshelf .shelf-item:nth-child(2), .mission-list > :nth-child(2), .lib-card:nth-child(2), .path-step:nth-child(2) { animation-delay: .03s; }
+.sr-group > .sr-item:nth-child(3), .pshelf .shelf-item:nth-child(3), .mission-list > :nth-child(3), .lib-card:nth-child(3), .path-step:nth-child(3) { animation-delay: .06s; }
+.sr-group > .sr-item:nth-child(4), .pshelf .shelf-item:nth-child(4), .mission-list > :nth-child(4), .lib-card:nth-child(4), .path-step:nth-child(4) { animation-delay: .09s; }
+.sr-group > .sr-item:nth-child(n+5), .pshelf .shelf-item:nth-child(n+5), .mission-list > :nth-child(n+5), .lib-card:nth-child(n+5), .path-step:nth-child(n+5) { animation-delay: .12s; }
+@keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.08); } 100% { transform: scale(1); } }
+.chip.on { animation: pop .28s var(--spring); }
+.nx.primary, .hero-tile, .resume-card .cc-play { transition: transform .3s var(--spring), box-shadow .2s; }
+.nx.primary:hover, .resume-card:hover .cc-play { transform: translateY(-1px) scale(1.03); }
+@media (prefers-reduced-motion: reduce) {
+  .sr-group > .sr-item, .pshelf .shelf-item, .mission-list > *, .duel-row, .glance, .lib-card, .song-tile, .ff-item, .path-step, .chip.on { animation: none; }
+}
+/* dark mode: the same app, not a negative: covers and cards keep their depth */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .hero-tile { box-shadow: 0 10px 26px rgba(0, 0, 0, .45); }
+  :root:not([data-theme="light"]) .cover-art { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06); }
+  :root:not([data-theme="light"]) .band-card { background: color-mix(in srgb, var(--c) 16%, var(--card)); }
+  :root:not([data-theme="light"]) .pill-btn.ghost { background: var(--fill2); }
+}
+:root[data-theme="dark"] .hero-tile { box-shadow: 0 10px 26px rgba(0, 0, 0, .45); }
+:root[data-theme="dark"] .band-card { background: color-mix(in srgb, var(--c) 16%, var(--card)); }
+/* small text stays readable (WCAG AA 4.5:1) in light and dark */
+.sr-label, .section-head > .tiny, .section-head .tiny { color: var(--ink2); }
+.large-title .eyebrow { color: color-mix(in srgb, var(--sec) 66%, var(--ink)); }
+.navbar .back { color: color-mix(in srgb, var(--c, var(--blue)) 78%, var(--ink)); }
+.navbar .back:hover { color: var(--c, var(--blue)); }
+.wkey span { color: #5f5f5f !important; }
+.ll-chips button.on, .ms-toolbar button.on { background: color-mix(in srgb, var(--s-teal) 64%, #003b35); color: #fff; }
+:root[data-theme="dark"] .ll-chips button.on { background: #0e7c71; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ll-chips button.on, :root:not([data-theme="light"]) .ms-toolbar button.on { background: #0e7c71; } }

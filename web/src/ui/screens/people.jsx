@@ -4,7 +4,7 @@ import { useState, useEffect } from 'preact/hooks';
 import { useApp, push, pop, openSheet, toast, addSongbookSong, updateSettings } from '../state.js';
 import { FriendButton } from './friends.jsx';
 import { t, instrumentName, INSTRUMENTS } from '../../core/i18n.js';
-import { Icon, Button, Section, Card, Segmented, Chip, Empty, List, Row } from '../components.jsx';
+import { Icon, Button, Section, Card, Segmented, Chip, Empty, List, Row, Skeleton } from '../components.jsx';
 import { NavBar, SheetFrame } from './common.jsx';
 import { Mascot } from '../mascot.jsx';
 import { C, attempt, ensureAccount } from '../account.js';
@@ -26,7 +26,7 @@ export function ProfileView({ handle, active }) {
     C.profile(handle).then(setU).catch((e) => setErr(e.message));
     C.posts({ author: handle, limit: 30 }).then((r) => setPosts(r.items)).catch(() => setPosts([]));
   }, [active, handle]);
-  if (!u) return <div class="scroll"><NavBar title="" backLabel={t('back')} /><div class="wrap">{err ? <p class="sub">{err}</p> : <div class="loading"><Mascot mood="think" size={70} /></div>}</div></div>;
+  if (!u) return <div class="scroll"><NavBar title="" backLabel={t('back')} /><div class="wrap">{err ? <p class="sub">{err}</p> : <Skeleton />}</div></div>;
   const toggle = async (fn) => { const r = await attempt(fn); if (r) setU(r); };
   const st = u.stats;
   return (
@@ -83,7 +83,7 @@ export function LeaderboardView({ active, board: b0 = 'helpers' }) {
         <Segmented value={board} onChange={setBoard} options={[{ value: 'helpers', label: t('lbHelpers') }, { value: 'practice', label: t('lbPractice') }, { value: 'challenge', label: t('lbChallenge') }]} />
         {board !== 'challenge' && <div class="chips">{[['week', 'thisWeek'], ['month', 'thisMonth'], ['all', 'allTime']].map(([v, l]) => <Chip key={v} on={period === v} onClick={() => setPeriod(v)}>{t(l)}</Chip>)}</div>}
         <p class="note-text">{t(`lbNote_${board}`)}</p>
-        {!data ? <div class="loading"><Mascot mood="think" size={70} /></div> : data.items.length ? (
+        {!data ? <Skeleton /> : data.items.length ? (
           <div class="lb">
             {data.items.map((x) => (
               <button type="button" key={x.user.id} class={`lb-row${data.me?.user.id === x.user.id ? ' me' : ''}`} onClick={() => x.user.handle && push('profile', { handle: x.user.handle })}>
@@ -147,7 +147,7 @@ export function NotificationsView({ active }) {
     <div class="scroll">
       <NavBar title={t('notifications')} backLabel={t('community')} color="purple" />
       <div class="wrap">
-        {!items ? <div class="loading"><Mascot mood="think" size={70} /></div> : items.length ? (
+        {!items ? <Skeleton /> : items.length ? (
           <div class="notes">
             {items.map((n) => {
               const [icon, color] = NOTE_ICON[n.kind] || ['bell', 'gray'];
@@ -265,7 +265,7 @@ export function ChallengeView({ active }) {
     <div class="scroll">
       <NavBar title={t('weeklyChallenge')} backLabel={t('community')} color="orange" />
       <div class="wrap">
-        {!ch ? <div class="loading"><Mascot mood="think" size={70} /></div> : <>
+        {!ch ? <Skeleton /> : <>
           <div class="challenge-card big">
             <div class="cc-top"><span class="cc-badge"><Icon name="trophy" size={18} />{t('weeklyChallenge')}</span><span class="cc-left">{timeLeft(ch.ends)}</span></div>
             <h3>{ch.title}</h3>

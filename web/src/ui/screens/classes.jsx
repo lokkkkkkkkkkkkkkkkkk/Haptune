@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'preact/hooks';
 import { useApp, push, pop, go, openSheet, closeSheet, toast, getPiece, addScore, addXP, setState, updateSettings, goLearn } from '../state.js';
 import { t, getLang, instrumentName } from '../../core/i18n.js';
-import { Icon, Card, Section, List, Row, Button, Badge, Segmented, Chip, Stepper, Rings } from '../components.jsx';
+import { Icon, Card, Section, List, Row, Button, Badge, Segmented, Chip, Stepper, Rings, Skeleton } from '../components.jsx';
 import { NextChips } from '../nextchips.jsx';
 import { PathPanel, TeacherGlance, PeopleTools, TurnInCard, PrivateThread, KindPill } from './learnwork.jsx';
 import { NavBar, SheetFrame } from './common.jsx';
@@ -80,7 +80,7 @@ export function useLoad(fn, deps) {
 
 export function Loading({ error }) {
   if (error) return <Card class="classes-hello"><Mascot mood="sad" size={70} /><p>{error}</p></Card>;
-  return <div class="loading"><Mascot mood="think" size={64} /></div>;
+  return <Skeleton />;
 }
 
 // ---------------------------------------------------------------- Academy home: classes + to-do

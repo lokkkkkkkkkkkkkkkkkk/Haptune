@@ -35,4 +35,7 @@ export const V10 = {
   sharePlaySub: ['Play it with the microphone listening', 'Mainkan dengan mikrofon mendengar', '开着麦克风来弹', '開著麥克風來彈'],
   shareStageSub: ['Let others play your song', 'Biar orang lain memainkan lagu anda', '让别人也弹你的歌', '讓別人也彈你的歌'],
   shareExportSub: ['PDF, MusicXML or MIDI', 'PDF, MusicXML atau MIDI', 'PDF、MusicXML 或 MIDI', 'PDF、MusicXML 或 MIDI'],
+  // G: empty states that say what to do next
+  emptyFindSub: ['Find it in the free library, on Stage, or ask for it.', 'Cari dalam pustaka percuma, di Pentas, atau minta.', '在免费曲库、舞台中找，或者发请求。', '在免費曲庫、舞台中找，或者發請求。'],
+  findPeopleBtn: ['Find people', 'Cari orang', '找人', '找人'],
 };

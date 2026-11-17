@@ -53,7 +53,7 @@ export function FriendsView({ active }) {
           <section class="sec3"><div class="section-head"><h2>{t('friendsT')} · {f.friends.length}</h2></div>
             {f.friends.length ? <div class="list inset" id="friend-list">{f.friends.map((p) => row(p, <>
               <button type="button" class="icon-btn" aria-label={t('message')} onClick={() => push('chat', { handle: p.handle })}><Icon name="chat" size={18} /></button>
-            </>))}</div> : <Empty icon="users" title={t('noFriends')} sub={t('noFriendsSub')} />}</section>
+            </>))}</div> : <Empty icon="users" title={t('noFriends')} sub={t('noFriendsSub')}><Button kind="brand" icon="search" onClick={() => push('find', {}, 'summary')}>{t('findPeopleBtn')}</Button></Empty>}</section>
           {f.outgoing.length > 0 && <section class="sec3"><div class="section-head"><h2>{t('friendWaiting')}</h2></div>
             <div class="list inset">{f.outgoing.map((p) => row(p, <button type="button" class="link-btn" onClick={() => answer(p.handle, false)}>{t('cancel')}</button>))}</div></section>}
         </>}
@@ -164,7 +164,7 @@ export function DuelsPanel({ active }) {
       <div class="duel-intro"><Icon name="trophy" size={18} /><span>{t('duelsIntro')}</span><button type="button" class="link-btn" onClick={() => push('daily')}>{t('dailyRiff')}</button></div>
       {d.open.length > 0 && <section class="sec3"><div class="section-head"><h2>{t('duelsOpen')}</h2></div>{d.open.map((x) => <DuelRow key={x.id} d={x} />)}</section>}
       {d.done.length > 0 && <section class="sec3"><div class="section-head"><h2>{t('duelsDone')}</h2></div>{d.done.map((x) => <DuelRow key={x.id} d={x} />)}</section>}
-      {!d.open.length && !d.done.length && <Empty icon="trophy" title={t('noDuels')} sub={t('noDuelsSub')} />}
+      {!d.open.length && !d.done.length && <Empty icon="trophy" title={t('noDuels')} sub={t('noDuelsSub')}><Button kind="brand" icon="mic" onClick={() => push('find', {}, 'summary')}>{t('findSongs')}</Button></Empty>}
     </div>
   );
 }

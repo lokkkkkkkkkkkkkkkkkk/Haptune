@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, push, openSheet, closeSheet, toast, goLearn } from '../state.js';
 import { t, instrumentName } from '../../core/i18n.js';
-import { Icon, Button } from '../components.jsx';
+import { Icon, Button, Skeleton } from '../components.jsx';
 import { MyWork, TeacherGlance } from './learnwork.jsx';
 import { LargeTitle, SheetFrame, Avatar } from './common.jsx';
 import { Mascot, Confetti } from '../mascot.jsx';
@@ -115,7 +115,7 @@ export function LearnView({ active }) {
 
         {teaching.length > 0 && <ClassGrid title={t('hubTeaching')} list={teaching} />}
         {learning.length > 0 && <ClassGrid title={t('myClasses')} list={learning} />}
-        {!overview && !err && <div class="loading"><Mascot mood="think" size={64} /></div>}
+        {!overview && !err && <Skeleton />}
 
         <OpenClasses mine={new Set(classes.map((c) => c.id))} />
 

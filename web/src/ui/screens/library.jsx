@@ -3,6 +3,7 @@ import { useState, useRef, useMemo, useEffect } from 'preact/hooks';
 import { useApp, push, go, openSheet, closeSheet, toast, addSongbookSong, addScore, getState } from '../state.js';
 import { t, getLang, instrumentName, INSTRUMENTS } from '../../core/i18n.js';
 import { Icon, Badge, List, Row, Chip, Button, Card, Section, Stars, Empty, Segmented } from '../components.jsx';
+import { Cover } from '../cover.jsx';
 import { LargeTitle, NavBar, SheetFrame, Avatar } from './common.jsx';
 import { Mascot } from '../mascot.jsx';
 import { importFile, importText, ACCEPT } from '../importer.js';
@@ -47,7 +48,7 @@ function PieceCard({ p }) {
   return (
     <div class={`lib-card c-${color}`}>
       <button type="button" class="lc-main" onClick={() => push('piece', { id: p.id }, 'library')}>
-        <span class="lc-ic"><Icon name={icon} size={20} stroke={2.2} /></span>
+        <Cover title={p.title} instrument={p.instrument} keyText={p.keyText} genre={(p.tags || [])[0]} size="sm" icon={p.kind === 'score' ? null : icon} />
         <span class="lc-txt"><strong>{p.title}</strong><span class="tiny">{[p.composer, p.keyText].filter(Boolean).join(' · ') || kind}</span></span>
         {p.favorite && <span class="t-yellow lc-star"><Icon name="star" size={14} fill stroke={1.5} /></span>}
       </button>
@@ -94,7 +95,7 @@ export function LibraryView() {
         <section class="sec3">
           <div class="section-head"><h2>{t(FILTERS.find((f) => f.id === filter).label)}</h2><span class="tiny">{list.length ? t('piecesCount', { n: list.length }) : ''}</span></div>
           {list.length ? <div class="grid3" id="lib-list">{list.map((p) => <PieceCard key={p.id} p={p} />)}</div>
-            : q ? <Empty icon="search" title={t('noResults', { q })} />
+            : q ? <Empty icon="search" title={t('noResults', { q })} sub={t('emptyFindSub')}><Button kind="brand" icon="search" onClick={() => push('find', { q }, 'summary')}>{t('findSongs')}</Button></Empty>
               : <Empty icon="library" title={t('emptyLibrary')} sub={t('emptyLibrarySub')}><Button onClick={() => openSheet('add')} icon="plus">{t('add')}</Button></Empty>}
         </section>
       </div>

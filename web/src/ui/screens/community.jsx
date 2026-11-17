@@ -7,7 +7,7 @@
 import { useState, useEffect, useRef } from 'preact/hooks';
 import { useApp, push, openSheet, closeSheet, setState, addSongbookSong, toast } from '../state.js';
 import { t, instrumentName } from '../../core/i18n.js';
-import { Icon, Chip, Button, Section, Card, Segmented, Empty, List, Row } from '../components.jsx';
+import { Icon, Chip, Button, Section, Card, Segmented, Empty, List, Row, Skeleton } from '../components.jsx';
 import { LargeTitle, NavBar, SheetFrame, Avatar } from './common.jsx';
 import { Feed } from './stagefeed.jsx';
 import { whenSignedIn } from './hub.jsx';
@@ -136,7 +136,7 @@ function ForYou({ active }) {
   const load = async () => { try { setData(await C.stage()); setErr(''); } catch (e) { setErr(e.message); } };
   useEffect(() => { if (active) load(); }, [active, s.me?.id]);
   if (err && !data) return <Card><p class="sub">{err}</p><Button kind="secondary" onClick={load}>{t('tryAgain')}</Button></Card>;
-  if (!data) return <div class="loading"><Mascot mood="think" size={70} /></div>;
+  if (!data) return <Skeleton />;
   const mine = s.me?.instruments || [];
   const all = (v, extra = {}) => <button type="button" onClick={() => setState({ communitySeg: v, ...extra })}>{t('seeAll')}</button>;
   return (
@@ -275,7 +275,7 @@ export function DailyView({ active }) {
     <div class="scroll">
       <NavBar title={t('dailyChallenge')} backLabel="Stage" />
       <div class="wrap">
-        {!d ? <div class="loading"><Mascot mood="think" size={70} /></div> : <>
+        {!d ? <Skeleton /> : <>
           <div class="daily-card big">
             <div class="dc-top"><span class="dc-badge"><Icon name="bolt" size={15} stroke={2.4} />{t('todaysTune')}</span><span class="dc-n">{timeLeft(d.ends)}</span></div>
             <h3>{d.title}</h3>
@@ -347,7 +347,7 @@ export function ChallengeCard({ ch }) {
 function Play({ active }) {
   const [data, setData] = useState(null);
   useEffect(() => { if (active) C.stage().then(setData).catch(() => {}); }, [active]);
-  if (!data) return <div class="loading"><Mascot mood="think" size={70} /></div>;
+  if (!data) return <Skeleton />;
   return (
     <>
       <DailyCard d={data.daily} />
@@ -406,7 +406,7 @@ function PostList({ type, active, mine = false }) {
       </div>
       {type === 'share' && <p class="note-text">{t('libraryNote')}</p>}
       {type === 'request' && mineInst && <div class="banner"><Icon name="pencil" size={18} stroke={2.2} /><div class="sub">{t('helpWriteHint')} <button type="button" class="link" onClick={() => openSheet('stageGuide', { topic: 'help' })}>{t('howItWorks')}</button></div></div>}
-      {items === null ? <div class="loading"><Mascot mood="think" size={70} /></div>
+      {items === null ? <Skeleton />
         : items.length ? <div class="post-list">{items.map((p) => <PostCard key={p.id} p={p} />)}</div>
           : <Empty icon={type === 'share' ? 'staff' : type === 'question' ? 'quiz' : 'flag'} title={t(qtext ? 'noResults' : 'nothingHereYet', { q: qtext })} sub={t(`empty_${type}`)}>
             <Button icon="plus" onClick={() => openSheet('compose', { type })}>{t(newLabel)}</Button>

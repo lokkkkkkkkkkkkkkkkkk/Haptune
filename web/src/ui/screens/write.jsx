@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { useApp, push, openSheet, closeSheet, toast, getPiece, updatePiece, addScore } from '../state.js';
 import { t, instrumentName } from '../../core/i18n.js';
 import { Icon, Button, Keyboard, Chip } from '../components.jsx';
+import { Cover } from '../cover.jsx';
 import { LargeTitle, NavBar, SheetFrame, Avatar } from './common.jsx';
 import { Mascot } from '../mascot.jsx';
 import { writeMusicXML } from '../../core/musicxml.js';
@@ -83,7 +84,7 @@ function SongTile({ p, fix = false }) {
   return (
     <div class="song-tile">
       <button type="button" class="st-main" onClick={() => (p.chordSong ? push('chordEditor', { id: p.id }) : push('studio', { id: p.id }))}>
-        <span class="st-ic"><Icon name={fix ? 'pencil' : 'note1'} size={20} stroke={2.2} /></span>
+        <Cover title={p.title} instrument={p.instrument} keyText={p.keyText} size="xs" icon={fix ? 'pencil' : null} />
         <span class="st-txt"><strong>{p.title}</strong><span class="tiny">{[p.keyText, p.measures ? t('barsN', { n: p.measures }) : '', p.instrument ? instrumentName(p.instrument) : ''].filter(Boolean).join(' · ')}</span></span>
       </button>
       <button type="button" class="st-play" onClick={() => push('piece', { id: p.id })} aria-label={t('practice')}><Icon name="play" size={16} fill stroke={1.5} /></button>

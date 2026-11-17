@@ -10,7 +10,7 @@ import { NavBar } from './common.jsx';
 import { hasServer, isLink } from '../api.js';
 import { C } from '../account.js';
 import { loadCatalog, searchCatalog, addCatalogPiece, catalogSources, norm, GENRES } from '../catalog.js';
-import { Cover } from '../cover.jsx';
+import { Cover, INSTRUMENT_HUE } from '../cover.jsx';
 import { track } from '../analytics.js';
 import { openFiles } from '../intake.js';
 import { call } from '../api.js';
@@ -92,7 +92,7 @@ export function FindView({ active, q: q0 = '' }) {
           <input ref={input} id="find-q" type="search" enterkeyhint="search" autocomplete="off" placeholder={t('findPh')} value={q} onInput={(e) => setQ(e.currentTarget.value)} aria-label={t('findPh')} />
           {q && <button type="button" class="ios-cancel" onClick={() => setQ('')}>{t('cancel')}</button>}
         </form>
-        <div class="chips find-chips" id="find-inst">{INST.map((k) => <Chip key={k} on={inst === k} onClick={() => setInst(inst === k ? '' : k)}>{t(`inst_${k}`)}</Chip>)}</div>
+        <div class="chips find-chips" id="find-inst">{INST.map((k) => <Chip key={k} on={inst === k} onClick={() => setInst(inst === k ? '' : k)}><i class="inst-dot" style={{ '--ih': INSTRUMENT_HUE[k] ?? 200 }} />{t(`inst_${k}`)}</Chip>)}</div>
         <div class="chips find-chips" id="find-level">{LEVELS.map((n) => <Chip key={n} on={level === n} onClick={() => setLevel(level === n ? 0 : n)}>{t(`lvl_${n}`)}</Chip>)}
           {GENRES.filter((g) => catalog?.some((r) => r.genre === g)).map((g) => <Chip key={g} on={genre === g} onClick={() => setGenre(genre === g ? '' : g)}>{t(`genre_${g}`)}</Chip>)}</div>
 
