@@ -95,6 +95,8 @@ import admin  # noqa: E402  (Developer mode: users, access, audit log)
 app.include_router(admin.router)
 import home  # noqa: E402  (Home in one call)
 app.include_router(home.router)
+import learn  # noqa: E402  (Part 2 C: kinds, my work, path, teacher overview, private comments, guardians, Drive, roster)
+app.include_router(learn.router)
 
 
 @app.middleware("http")

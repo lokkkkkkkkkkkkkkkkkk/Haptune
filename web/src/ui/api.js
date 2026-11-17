@@ -200,6 +200,21 @@ export const academy = {
   addSession: (cid, body) => call(`/academy/classes/${cid}/sessions`, { method: 'POST', json: body, token: academyToken() }),
   editSession: (sid, body) => call(`/academy/sessions/${sid}`, { method: 'PATCH', json: body, token: academyToken() }),
   sessionsIcs: (cid) => call(`/academy/classes/${cid}/sessions.ics`, { raw: true, token: academyToken() }),
+  // Learn (server/learn.py)
+  work: () => call('/academy/me/work', { token: academyToken() }),
+  turnIn: (aid, body) => call(`/academy/assignments/${aid}/turn-in`, { method: 'POST', json: body, token: academyToken() }),
+  path: (cid) => call(`/academy/classes/${cid}/path`, { token: academyToken() }),
+  teacherOverview: () => call('/academy/teacher/overview', { token: academyToken() }),
+  nudge: (cid, userIds, text = '') => call(`/academy/classes/${cid}/nudge`, { method: 'POST', json: { user_ids: userIds, text }, token: academyToken() }),
+  privateThread: (aid, student) => call(`/academy/assignments/${aid}/private${student ? `?student=${encodeURIComponent(student)}` : ''}`, { token: academyToken() }),
+  privatePost: (aid, text, student) => call(`/academy/assignments/${aid}/private`, { method: 'POST', json: { text, ...(student ? { student } : {}) }, token: academyToken() }),
+  guardians: (cid, uid) => call(cid ? `/academy/classes/${cid}/students/${uid}/guardians` : '/academy/me/guardians', { token: academyToken() }),
+  addGuardian: (cid, uid, body) => call(cid ? `/academy/classes/${cid}/students/${uid}/guardians` : '/academy/me/guardians', { method: 'POST', json: body, token: academyToken() }),
+  removeGuardian: (gid) => call(`/academy/me/guardians/${gid}`, { method: 'DELETE', token: academyToken() }),
+  sendSummaries: (cid) => call(`/academy/classes/${cid}/guardian-summaries`, { method: 'POST', token: academyToken() }),
+  guardianPage: (token) => call(`/academy/guardian/${encodeURIComponent(token)}`),
+  setDrive: (cid, url) => call(`/academy/classes/${cid}/drive`, { method: 'PUT', json: { url }, token: academyToken() }),
+  roster: (cid, text) => call(`/academy/classes/${cid}/roster`, { method: 'POST', json: { text }, token: academyToken() }),
   linkCode: () => call('/academy/me/link-code', { method: 'POST', token: academyToken() }),
   claim: async (code) => {
     const r = await call('/academy/me/claim', { method: 'POST', json: { code } });

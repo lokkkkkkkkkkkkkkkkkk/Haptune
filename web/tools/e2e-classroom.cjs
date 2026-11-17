@@ -156,7 +156,7 @@ async function person(browser, base, api, { name, role, handle }) {
       await tab(t, 'hub'); await t.waitForSelector('#class-tabs:visible');
     });
     await step('teacher sees it in Grades, grades it and downloads the CSV', async () => {
-      await t.locator('#class-tabs button').filter({ hasText: /Grades/ }).click(); await t.waitForSelector('#cr-grades td button');
+      await t.locator('#class-tabs button').filter({ hasText: /Progress/ }).click(); await t.waitForSelector('#cr-grades td button');
       const cell = await t.locator('#cr-grades td button').first().innerText();
       if (!/86%/.test(cell)) throw new Error(`grade cell shows "${cell}"`);
       await t.locator('#cr-grades td button').first().click(); await t.waitForSelector('#grade-value, .sheet .chip');
@@ -167,6 +167,63 @@ async function person(browser, base, api, { name, role, handle }) {
       const [dl] = await Promise.all([t.waitForEvent('download', { timeout: 20000 }), t.locator('#cr-csv').click()]);
       const csv = fs.readFileSync(await dl.path(), 'utf8');
       if (!/Ben/.test(csv) || !/86/.test(csv)) throw new Error('the CSV does not have the student\'s score');
+    });
+    await step('Learn: a theory question turned in, a private comment, the path, the teacher glance, roster, parents and their page, Drive', async () => {
+      const api2 = async (pg, pathname, method = 'GET', body) => pg.evaluate(async ([server, p, m, b]) => {
+        const tok = JSON.parse(localStorage.getItem('haptune.academyToken'));
+        const r = await fetch(server + p, { method: m, headers: { Authorization: `Bearer ${tok}`, 'Content-Type': 'application/json' }, body: b ? JSON.stringify(b) : undefined });
+        return r.json();
+      }, [api, pathname, method, body]);
+      const cid = (await api2(t, '/academy/me')).classes[0].id;
+      const due = new Date(Date.now() + 4 * 864e5).toISOString().slice(0, 19);
+      const made = await api2(t, `/academy/classes/${cid}/assignments`, 'POST', { title: 'Name the key', piece_title: '', due_at: due });
+      const qid = made.id || made.assignment?.id;
+      await api2(t, `/academy/assignments/${qid}/meta`, 'PUT', { kind: 'theory', prompt: 'Which key is Ode to Joy in?' });
+      // the student: My work, then the question
+      await esc(s); await tab(s, 'hub'); await s.evaluate(() => window.__haptune.popToRoot('academy'));
+      await s.waitForSelector('#my-work #work-tabs', { timeout: 15000 });
+      await s.locator('#my-work .mission').filter({ hasText: 'Name the key' }).click();
+      await s.waitForSelector('#turn-in .ti-prompt'); await s.fill('#ti-text', 'D major');
+      await s.locator('#ti-send').click(); await s.waitForSelector('.ti-answer', { timeout: 10000 });
+      await s.fill('#pt-text', 'Is it D or A?'); await s.locator('#pt-send').click(); await s.waitForSelector('.pt-msg.mine');
+      await s.screenshot({ path: path.join(SHOTS, 'learn-turned-in.png') });
+      await s.locator('.navbar .back:visible').first().click();
+      await s.locator('#work-tabs button').filter({ hasText: /Done/ }).click();
+      if (!(await s.locator('#my-work .mission').filter({ hasText: 'Name the key' }).count())) throw new Error('the turned-in question is not under Done');
+      await s.screenshot({ path: path.join(SHOTS, 'learn-my-work.png') });
+      // the class page: Progress shows the path
+      await s.locator('.class-card3').first().click(); await s.waitForSelector('#class-tabs:visible');
+      await s.locator('#class-tabs button').filter({ hasText: /Progress/ }).click(); await s.waitForSelector('#class-path .path-step.done');
+      await s.screenshot({ path: path.join(SHOTS, 'learn-path.png') });
+      // the teacher: glance, the private comment, roster, parents, Drive
+      await esc(t); await tab(t, 'hub'); await t.evaluate(() => window.__haptune.popToRoot('academy'));
+      await t.waitForSelector('#teacher-glance .glance', { timeout: 15000 });
+      const th = await api2(t, `/academy/assignments/${qid}/private?student=${(await api2(s, '/academy/me')).user.id}`);
+      if (!th.items?.length) throw new Error('the teacher cannot see the private comment');
+      await t.locator('.class-card3').first().click(); await t.waitForSelector('#class-tabs:visible');
+      await t.locator('#class-tabs button').filter({ hasText: /Classwork/ }).click(); await t.waitForSelector('#class-drive');
+      t.once('dialog', (d) => d.accept('https://drive.google.com/drive/folders/e2eFolder'));
+      await t.locator('#drive-set').click(); await t.waitForSelector('#drive-open', { timeout: 10000 });
+      await t.locator('#class-tabs button').filter({ hasText: /People/ }).click(); await t.waitForSelector('#people-tools');
+      await t.locator('#roster-open').click(); await t.fill('#roster-text', 'Aisha Rahman, aisha@school.test\nWei Lim, wei@school.test');
+      await t.locator('#roster-send').click(); await t.waitForSelector('#roster-done');
+      await t.screenshot({ path: path.join(SHOTS, 'learn-roster.png') }); await esc(t);
+      await t.locator('#cr-people .row').filter({ hasText: 'Ben' }).locator('.link-btn').filter({ hasText: /Parents/ }).click();
+      await t.fill('#g-email', 'ben.mum@family.test'); await t.locator('#g-add').click(); await t.waitForSelector('.sheet .row3');
+      await esc(t);
+      await t.locator('#send-summaries').click(); await t.waitForTimeout(800);
+      const g = (await api2(s, '/academy/me/guardians')).items[0];
+      if (!g) throw new Error('the parent was not added');
+      // the parent opens the link: no account
+      const pctx = await browser.newContext({ ...devices['iPhone 13'] });
+      await pctx.addInitScript((server) => { localStorage.setItem('haptune.settings', JSON.stringify({ server })); localStorage.setItem('haptune.welcomed', 'true'); }, api);
+      const pg = await pctx.newPage();
+      await pg.goto(base + '/app/' + g.link.slice(g.link.indexOf('#')), { waitUntil: 'networkidle' });
+      await pg.waitForSelector('#guardian-page .class-hero', { timeout: 20000 });
+      if (!/Ben/.test(await pg.locator('#guardian-page').innerText())) throw new Error('the parent page does not show the student');
+      await pg.screenshot({ path: path.join(SHOTS, 'learn-parent-page.png') });
+      await pctx.close();
+      await tab(t, 'hub'); await t.locator('.class-card3').first().click(); await t.waitForSelector('#class-tabs:visible');
     });
     await step('notifications reach the class, and the people list', async () => {
       await t.locator('#class-tabs button').filter({ hasText: /Stream/ }).click(); await t.waitForSelector('#cr-post-text');

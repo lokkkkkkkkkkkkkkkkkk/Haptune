@@ -6,6 +6,7 @@ import { useApp, push, pop, go, openSheet, closeSheet, toast, getPiece, addScore
 import { t, getLang, instrumentName } from '../../core/i18n.js';
 import { Icon, Card, Section, List, Row, Button, Badge, Segmented, Chip, Stepper, Rings } from '../components.jsx';
 import { NextChips } from '../nextchips.jsx';
+import { PathPanel, TeacherGlance, PeopleTools, TurnInCard, PrivateThread, KindPill } from './learnwork.jsx';
 import { NavBar, SheetFrame } from './common.jsx';
 import { Mascot, Confetti } from '../mascot.jsx';
 import { hasServer, academyMe, academy } from '../api.js';
@@ -222,9 +223,14 @@ export function ClassView({ id, tab: tab0, joined = false }) {
 
             {joined && !teacher && <JoinNext classId={id} />}
 
-            <Segmented id="class-tabs" value={tab} onChange={(v) => (v === 'mine' ? push('student', { classId: id, uid: myId(), name: t('myProgress') }) : setTab(v))}
-              options={(teacher ? [['stream', t('crStream')], ['classwork', t('crClasswork')], ['people', t('crPeople')], ['grades', t('crGrades')]]
-                : [['stream', t('crStream')], ['classwork', t('crClasswork')], ['people', t('crPeople')], ['mine', t('myProgress')]]).map(([value, label]) => ({ value, label }))} />
+            <Segmented id="class-tabs" value={tab} onChange={setTab}
+              options={(teacher ? [['stream', t('crStream')], ['classwork', t('crClasswork')], ['people', t('crPeople')], ['grades', t('crProgress')]]
+                : [['stream', t('crStream')], ['classwork', t('crClasswork')], ['people', t('crPeople')], ['progress', t('crProgress')]]).map(([value, label]) => ({ value, label }))} />
+            {tab === 'progress' && !teacher && <>
+              <PathPanel cid={id} />
+              <Button small kind="secondary" icon="stairs" onClick={() => push('student', { classId: id, uid: myId(), name: t('myProgress') })} id="my-details">{t('myProgress')}</Button>
+            </>}
+            {tab === 'grades' && teacher && <TeacherGlance cid={id} />}
 
             {tab === 'stream' && <StreamPanel cid={id} />}
             {tab === 'classwork' && <ClassworkPanel cid={id} c={c} teacher={teacher} />}
@@ -298,6 +304,7 @@ export function ClassView({ id, tab: tab0, joined = false }) {
                 <Button small kind="secondary" icon="loop" onClick={newCode}>{t('newCode')}</Button>
               </div>
             )}
+            {tab === 'people' && teacher && <PeopleTools cid={id} />}
             {tab === 'people' && <PeoplePanel cid={id} teacher={teacher} onRemove={remove} />}
 
             <List><Row icon={teacher ? 'close' : 'arrowDown'} color="red" title={teacher ? t('closeClass') : t('leaveClass')} danger onClick={leave} chevron={false} /></List>
@@ -381,6 +388,7 @@ export function AssignmentView({ id }) {
           <div class="m-top">{!teacher && <StatusChip status={a.status} />}<span class="due">{dueText(a)}</span></div>
           <h2>{a.title}</h2>
           {a.piece_title && <p>{a.piece_title}</p>}
+          <KindPill kind={a.kind} />
           <div class="facts">
             <span><small>{t('barsRange')}</small>{barsText(a)}</span>
             <span><small>{t('speed')}</small>{a.tempo_pct}%</span>
@@ -397,12 +405,16 @@ export function AssignmentView({ id }) {
         {!teacher && (
           <>
             {a.status === 'done' && <div class="goal-banner"><Mascot mood="cheer" size={54} /><strong>{t('goalReachedT')}</strong></div>}
-            <Button kind="brand" full icon="mic" onClick={() => practise()} disabled={busy || upcoming || !a.has_piece}>{upcoming ? dueText(a) : t('practiseNow')}</Button>
+            {(a.kind || 'play') === 'play'
+              ? <Button kind="brand" full icon="mic" onClick={() => practise()} disabled={busy || upcoming || !a.has_piece}>{upcoming ? dueText(a) : t('practiseNow')}</Button>
+              : <>{a.has_piece && <Button kind="secondary" full icon="staff" onClick={() => practise()} disabled={busy}>{t('openThePiece')}</Button>}
+                {upcoming ? <p class="note-text">{dueText(a)}</p> : <TurnInCard a={a} />}</>}
             {a.attempts ? <p class="note-text" style={{ textAlign: 'center' }}>{t('attemptsLeft', { n: Math.max(0, a.attempts - subs.length) })}</p> : null}
             <Section title={t('myTries')}>
               {!subs.length && <Card class="classes-hello"><Mascot mood="think" size={60} /><p>{t('noTriesYet')}</p></Card>}
               {subs.map((sub) => <TryCard key={sub.id} sub={sub} a={a} onPractise={practise} />)}
             </Section>
+            {hasServer() && <PrivateThread aid={a.id} />}
           </>
         )}
 
@@ -447,10 +459,12 @@ function TryCard({ sub, a, onPractise }) {
   const reached = sub.accuracy >= a.goal;
   return (
     <Card class="try-card">
-      <div class="try-top">
+      {sub.turned_in && <div class="try-top"><span class="try-pct ok"><Icon name="check" size={18} stroke={3} /></span><span class="try-meta">{t('turnedIn')} · {relTime(sub.created)}{sub.late ? ` · ${t('late')}` : ''}</span></div>}
+      {sub.turned_in && sub.note && <p class="ti-answer">{sub.note}</p>}
+      {!sub.turned_in && <div class="try-top">
         <span class={`try-pct${reached ? ' ok' : ''}`}>{sub.accuracy}%</span>
         <span class="try-meta">{relTime(sub.created)}{sub.late ? ` · ${t('late')}` : ''}{sub.points ? ` · +${sub.points}` : ''}{sub.tempo_pct ? ` · ${t('speed')} ${sub.tempo_pct}%` : ''}</span>
-      </div>
+      </div>}
       {bars.length > 1 && <div class="bar-strip">{bars.map((b) => <i key={b.bar} title={`${b.bar}`} style={{ '--a': b.acc }} class={b.acc >= 0.85 ? 'ok' : b.acc >= 0.6 ? 'mid' : 'low'} />)}</div>}
       {sub.feedback.map((f, i) => {
         const fb = [...(f.focus_bars || [])].sort((x, y) => x - y);

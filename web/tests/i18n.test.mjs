@@ -55,3 +55,15 @@ test('language files: an English-only table filled in from a pack', async () => 
   delete globalThis.fetch;
 });
 
+
+test('v7 text: four languages, same placeholders, and no older key overwritten', async () => {
+  const { V7 } = await import('../src/core/i18n-v7.js');
+  const older = new Set();
+  for (const f of ['base', 'community', 'v2', 'v3', 'v4', 'v5', 'v6']) for (const tb of Object.values(await import(`../src/core/i18n-${f}.js`))) for (const k of Object.keys(tb)) older.add(k);
+  for (const [k, v] of Object.entries(V7)) {
+    assert.equal(v.length, 4, k);
+    assert.ok(v.every((x) => typeof x === 'string' && x.trim().length), `empty text in ${k}`);
+    assert.equal(new Set(v.map(ph)).size, 1, `placeholders differ in ${k}`);
+    assert.ok(!older.has(k), `v7 overwrites ${k}`);
+  }
+});

@@ -871,3 +871,58 @@ body.ce-dragging, body.ce-dragging * { cursor: grabbing !important; }
 .next-chips.card { padding: 14px 16px; border-radius: var(--r); background: var(--card); border: 1px solid var(--line); }
 .pill-ok { display: inline-flex; align-items: center; gap: 5px; height: 32px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 750;
   color: var(--s-teal); background: color-mix(in srgb, var(--s-teal) 12%, var(--card)); }
+
+/* ================= Part 2 · Learn (screens/learnwork.jsx) ================= */
+.kind-pill { display: inline-flex; align-items: center; gap: 4px; }
+.work-row { display: flex; flex-direction: column; gap: 4px; }
+.work-row .kind-pill { align-self: flex-start; margin-left: 6px; }
+#work-tabs { margin-top: 4px; }
+/* the path: a line of steps, done ones ticked, the current one ringed */
+.path-sum { display: flex; align-items: center; gap: 12px; margin: 6px 0 14px; font-size: 13.5px; font-weight: 700; color: var(--ink2); }
+.path-bar { flex: 1; height: 8px; border-radius: 99px; background: var(--fill2); overflow: hidden; }
+.path-bar i { display: block; height: 100%; border-radius: 99px; background: var(--s-orange); transition: width .6s var(--spring); }
+.path-list { list-style: none; margin: 0 0 16px; padding: 0; position: relative; }
+.path-list::before { content: ""; position: absolute; left: 15px; top: 14px; bottom: 14px; width: 2px; background: var(--line); }
+.path-step button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 4px; text-align: left; position: relative; }
+.path-step .dot { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; font-weight: 800; background: var(--card);
+  border: 2px solid var(--line); color: var(--ink3); z-index: 1; }
+.path-step.done .dot { background: var(--s-teal); border-color: var(--s-teal); color: #fff; }
+.path-step.now .dot { border-color: var(--s-orange); box-shadow: 0 0 0 5px color-mix(in srgb, var(--s-orange) 20%, transparent); }
+.path-step.missing .dot { border-color: #e5484d; color: #e5484d; }
+.path-step .ps-t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.path-step .ps-t strong { font-size: 15px; }
+.path-step .ps-t span { font-size: 12.5px; color: var(--ink2); }
+.path-step.later .ps-t { opacity: .7; }
+.path-step .ps-best { font-weight: 800; font-size: 14px; color: var(--s-teal); }
+/* the teacher's glance */
+.glance-list { display: grid; gap: 10px; }
+@media (min-width: 900px) { .glance-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.glance { padding: 14px 16px; border-radius: var(--r); background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--c, var(--s-orange)); }
+.glance .gl-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.glance .gl-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0 4px; }
+.glance .gl-stats > * { display: flex; flex-direction: column; align-items: flex-start; padding: 8px 10px; border-radius: 12px; background: var(--fill); text-align: left; }
+.glance .gl-stats b { font-size: 20px; font-weight: 800; }
+.glance .gl-stats span span, .glance .gl-stats button span { font-size: 12px; color: var(--ink2); }
+.glance .gl-quiet { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+.gl-person { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 650; padding: 3px 10px 3px 3px; border-radius: 99px; background: var(--fill); }
+.gl-person small { color: var(--ink3); font-weight: 600; }
+/* turning in, private comments */
+.turnin { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: var(--r); background: var(--card); border: 1px solid var(--line); margin: 6px 0 12px; }
+.turnin .ti-prompt { display: flex; gap: 8px; align-items: flex-start; margin: 0; font-weight: 650; }
+.turnin textarea, .turnin input { width: 100%; }
+.ti-answer { white-space: pre-wrap; margin: 6px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--fill); }
+.private-thread { margin: 18px 0; padding: 14px; border-radius: var(--r); background: var(--card); border: 1px dashed var(--line); display: flex; flex-direction: column; gap: 8px; }
+.private-thread .pt-k { display: flex; align-items: center; gap: 6px; font-weight: 800; font-size: 14px; }
+.pt-msg { align-self: flex-start; max-width: 85%; padding: 8px 12px; border-radius: 14px 14px 14px 4px; background: var(--fill2); display: flex; flex-direction: column; }
+.pt-msg.mine { align-self: flex-end; border-radius: 14px 14px 4px 14px; background: color-mix(in srgb, var(--s-orange) 16%, var(--card)); }
+.pt-msg small { font-size: 11px; color: var(--ink3); }
+.pt-send { display: flex; gap: 6px; align-items: center; }
+.pt-send input { flex: 1; min-width: 0; height: 40px; border-radius: 12px; border: 1px solid var(--line); padding: 0 12px; background: var(--bg); color: var(--ink); font: inherit; }
+/* parents, Drive, notices */
+.row3 { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: .5px solid var(--sep); }
+.row3 .row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.drive-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--r); background: var(--card); border: 1px solid var(--line); margin-bottom: 10px; }
+.drive-row .dr-ic { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: color-mix(in srgb, var(--s-blue) 14%, var(--card)); color: var(--s-blue); }
+.drive-row .row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.note-quote { display: block; font-style: normal; color: var(--ink2); font-size: 13px; margin-top: 2px; }
+blockquote.teacher-note { margin: 0 0 8px; padding: 10px 14px; border-left: 3px solid var(--s-orange); background: var(--card); border-radius: 0 12px 12px 0; }

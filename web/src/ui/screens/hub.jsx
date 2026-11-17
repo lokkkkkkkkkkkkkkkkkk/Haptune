@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { useApp, push, openSheet, closeSheet, toast, goLearn } from '../state.js';
 import { t, instrumentName } from '../../core/i18n.js';
 import { Icon, Button } from '../components.jsx';
+import { MyWork, TeacherGlance } from './learnwork.jsx';
 import { LargeTitle, SheetFrame, Avatar } from './common.jsx';
 import { Mascot, Confetti } from '../mascot.jsx';
 import { hasServer, academy, academyMe, ApiError } from '../api.js';
@@ -104,12 +105,13 @@ export function LearnView({ active }) {
           </>}
         </div>
 
-        {todo.length > 0 && (
+        {learning.length > 0 ? <MyWork /> : todo.length > 0 && (
           <section class="sec3">
             <div class="section-head"><h2>{t('toDoT')}</h2></div>
             <div class="mission-list">{todo.slice(0, 6).map((a) => <MissionCard key={a.id} a={a} />)}</div>
           </section>
         )}
+        {teaching.length > 0 && <TeacherGlance />}
 
         {teaching.length > 0 && <ClassGrid title={t('hubTeaching')} list={teaching} />}
         {learning.length > 0 && <ClassGrid title={t('myClasses')} list={learning} />}

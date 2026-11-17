@@ -60,7 +60,9 @@ topics = Table("class_topics", meta,
 asg_meta = Table("assignment_meta", meta,
                  Column("assignment_id", String(36), primary_key=True),
                  Column("topic_id", String(36), nullable=True),
-                 Column("rubric", JSON, nullable=True))                  # [{"criterion": "Notes", "points": 4}, ...]
+                 Column("rubric", JSON, nullable=True),                  # [{"criterion": "Notes", "points": 4}, ...]
+                 Column("kind", String(12), nullable=True),               # play (default) | record | theory | compose | listen
+                 Column("prompt", Text, nullable=True))                   # the question / task for the kinds that are not Play Along
 grades = Table("class_grades", meta,
                Column("assignment_id", String(36), primary_key=True),
                Column("user_id", String(36), primary_key=True),
@@ -269,8 +271,11 @@ def classwork(cid: str, me: dict = Depends(current_user)):
                 best[r[0]] = {"best": round(r[1] * 100), "tries": r[2]}
     items = [{**{k: a[k] for k in ("id", "title", "piece_title", "goal", "tempo_pct", "points")}, "opens_at": _iso(a["opens_at"]), "due_at": _iso(a["due_at"]),
               "late": now > a["due_at"], "topic_id": am.get(a["id"], {}).get("topic_id"), "rubric": am.get(a["id"], {}).get("rubric") or [],
+              "kind": am.get(a["id"], {}).get("kind") or "play", "prompt": am.get(a["id"], {}).get("prompt") or "",
               **({"mine": best.get(a["id"])} if role != "teacher" else {})} for a in asg]
-    return {"role": role, "topics": [{"id": t["id"], "name": t["name"], "position": t["position"]} for t in tps], "assignments": items}
+    import learn
+    return {"role": role, "topics": [{"id": t["id"], "name": t["name"], "position": t["position"]} for t in tps], "assignments": items,
+            "drive_url": learn.drive_url(cid)}
 
 
 @router.post("/classes/{cid}/topics")
@@ -301,9 +306,14 @@ class Criterion(BaseModel):
     points: int = Field(..., ge=1, le=100)
 
 
+KINDS = ("play", "record", "theory", "compose", "listen")
+
+
 class MetaIn(BaseModel):
     topic_id: str | None = None
     rubric: list[Criterion] = Field(default_factory=list, max_length=12)
+    kind: str = Field("play", pattern="^(play|record|theory|compose|listen)$")
+    prompt: str = Field("", max_length=2000)
 
 
 @router.put("/assignments/{aid}/meta")
@@ -315,7 +325,7 @@ def set_meta(aid: str, body: MetaIn, me: dict = Depends(current_user)):
         _require(c, a, me["id"], "teacher")
         if body.topic_id and c.execute(select(topics.c.class_id).where(topics.c.id == body.topic_id)).scalar() != a:
             raise HTTPException(400, "That topic is in another class.")
-        vals = {"topic_id": body.topic_id, "rubric": [x.model_dump() for x in body.rubric]}
+        vals = {"topic_id": body.topic_id, "rubric": [x.model_dump() for x in body.rubric], "kind": body.kind, "prompt": body.prompt.strip()}
         if c.execute(select(asg_meta.c.assignment_id).where(asg_meta.c.assignment_id == aid)).first():
             c.execute(update(asg_meta).where(asg_meta.c.assignment_id == aid).values(**vals))
         else:

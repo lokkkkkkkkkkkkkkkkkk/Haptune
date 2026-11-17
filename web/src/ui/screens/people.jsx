@@ -103,7 +103,31 @@ const NOTE_ICON = {
   answer: ['quiz', 'blue'], want: ['users', 'purple'], follow: ['plus', 'purple'], ready: ['bell', 'green'], challenge: ['trophy', 'yellow'],
   credits: ['star', 'yellow'], mod: ['info', 'red'], claim: ['pencil', 'orange'], like: ['heart', 'pink'], new_post: ['bell', 'blue'], nudge: ['bolt', 'orange'], paid_ok: ['crown', 'purple'], paid_no: ['info', 'red'], lesson: ['calendar', 'green'], tutor: ['academy', 'orange'],
   expired: ['info', 'gray'], plan: ['crown', 'purple'], published: ['books', 'green'],
+  class_announcement: ['academy', 'orange'], class_comment: ['chat', 'orange'], class_assignment: ['flag', 'orange'], class_graded: ['check', 'green'],
+  class_feedback: ['chat', 'green'], class_session: ['calendar', 'orange'], class_session_changed: ['calendar', 'gray'], class_invite: ['users', 'orange'],
+  class_nudge: ['bell', 'orange'], class_private: ['lock', 'orange'], class_turned_in: ['send', 'green'], sound_layered: ['wave', 'purple'],
+  teacher_verified: ['check', 'green'], teacher_rejected: ['info', 'red'], staff_message: ['info', 'blue'], dev_access: ['shield', 'purple'], dev_access_ended: ['shield', 'gray'],
 };
+/** Where a notification goes when tapped (class notices open the class or the assignment, not a Stage post). */
+function openNote(n) {
+  const d = n.data || {};
+  if (n.kind.startsWith('class_')) {
+    if (n.kind === 'class_invite' && d.code) return openSheet('joinLink', { code: d.code });
+    if (d.assignment) return push('assignment', { id: d.assignment }, 'academy');
+    if (d.class_id) return push('classView', { id: d.class_id, ...(n.kind.startsWith('class_session') ? { tab: 'classwork' } : {}) }, 'academy');
+    return null;
+  }
+  if (n.kind === 'sound_layered' && d.sound) return push('soundPage', { id: d.sound });
+  if (n.kind === 'dev_access') return push('admin', {}, 'me');
+  if (n.kind === 'lesson') return push('lessons');
+  if (n.kind === 'tutor') return push('tutorMe');
+  if (n.kind === 'nudge') return push('daily');
+  if (n.kind === 'paid_ok' || n.kind === 'paid_no') return openSheet('plans');
+  if (n.post_id) return push('post', { id: n.post_id });
+  if (n.actor?.handle) return push('profile', { handle: n.actor.handle });
+  if (n.kind === 'credits') return push('wallet');
+  return null;
+}
 
 export function NotificationsView({ active }) {
   const [items, setItems] = useState(null);
@@ -119,11 +143,11 @@ export function NotificationsView({ active }) {
           <div class="notes">
             {items.map((n) => {
               const [icon, color] = NOTE_ICON[n.kind] || ['bell', 'gray'];
-              const open = () => (n.kind === 'lesson' ? push('lessons') : n.kind === 'tutor' ? push('tutorMe') : n.kind === 'nudge' ? push('daily') : n.kind === 'paid_ok' || n.kind === 'paid_no' ? openSheet('plans') : n.post_id ? push('post', { id: n.post_id }) : n.actor?.handle ? push('profile', { handle: n.actor.handle }) : n.kind === 'credits' ? push('wallet') : null);
+              const open = () => openNote(n);
               return (
                 <button type="button" key={n.id} class={`note-row${n.read ? '' : ' unread'}`} onClick={open}>
                   {n.actor ? <Person user={n.actor} size={38} /> : <span class={`note-ic c-${color}`}><Icon name={icon} size={18} stroke={2.2} /></span>}
-                  <span class="note-main"><span>{t(`n_${n.kind}`, { name: n.actor?.name || '', title: n.post_title || '', credits: n.data.credits ?? n.data.amount ?? '', place: n.data.place || '', tier: n.data.tier || '' })}</span>
+                  <span class="note-main"><span>{t(`n_${n.kind}`, { name: n.actor?.name || n.data.name || n.data.student || '', title: n.post_title || n.data.title || '', class: n.data.class_name || '', credits: n.data.credits ?? n.data.amount ?? '', place: n.data.place || '', tier: n.data.tier || '' })}{n.data.text ? <em class="note-quote"> “{String(n.data.text).slice(0, 140)}”</em> : null}</span>
                     <span class="sub">{timeAgo(n.at)}</span></span>
                 </button>
               );

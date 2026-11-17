@@ -95,6 +95,10 @@ const SoundTrackSheet = lazy(m_sound, 'SoundTrackSheet');
 const SoundSettingsSheet = lazy(m_sound, 'SoundSettingsSheet');
 const SoundExportSheet = lazy(m_sound, 'SoundExportSheet');
 const SoundPostSheet = lazy(m_sound, 'SoundPostSheet');
+const m_learnwork = () => import('./screens/learnwork.jsx');
+const GuardianView = lazy(m_learnwork, 'GuardianView');
+const GuardiansSheet = lazy(m_learnwork, 'GuardiansSheet');
+const RosterSheet = lazy(m_learnwork, 'RosterSheet');
 const m_vary = () => import('./screens/vary.jsx');
 const VaryView = lazy(m_vary, 'VaryView');
 const m_learn = () => import('./screens/learn.jsx');
@@ -206,7 +210,7 @@ const VIEWS = {
   improvise: (p) => <ImproviseView {...p} pushed />, tools: (p) => <ToolsView {...p} pushed />, courses: (p) => <AcademyView {...p} pushed />,
   piece: PieceView, editor: EditorView, studio: StudioView, student: StudentView, tutors: TutorsView, tutor: TutorView, tutorMe: TutorMeView, lessons: LessonsView, songbook: SongbookView, catalog: CatalogView, course: CourseView, tool: ToolView, history: HistoryView, classView: ClassView, assignment: AssignmentView,
   post: PostView, daily: DailyView, profile: ProfileView, leaderboard: LeaderboardView, notifications: NotificationsView, wallet: WalletView, challenge: ChallengeView,
-  editProfile: EditProfileView, help: HelpView, admin: AdminView, adminUser: AdminUserView, find: FindView, newSongs: NewSongsView, soundPage: SoundPageView,
+  editProfile: EditProfileView, help: HelpView, admin: AdminView, adminUser: AdminUserView, find: FindView, newSongs: NewSongsView, soundPage: SoundPageView, guardian: GuardianView,
   __crash: () => { throw new Error('test crash'); },           // the click-through test checks the error boundary with it
   practice: PracticeView, soundCheck: SoundCheckView, report: ReportView, sound: SoundView, vary: VaryView, chordEditor: ChordEditorView, learnMore: (p) => <LearnMoreView {...p} pushed />,
 };
@@ -220,7 +224,7 @@ const SHEETS = {
   newSong: NewSongSheet, hubRole: HubRoleSheet, classQR: ClassQRSheet, pair: PairSheet, take: TakeSheet, joinLink: JoinLinkSheet, moment: MomentSheet,
   setPassword: SetPasswordSheet, signIn: SignInSheet, deleteAccount: DeleteAccountSheet, devCode: DevCodeSheet,
   pieceMore: PieceMoreSheet, chordPick: ChordPickSheet, ceSong: ChordSongSheet, ceSection: ChordSectionSheet, ceExport: ChordExportSheet,
-  aiChat: AIChatSheet, deleteUser: DeleteUserSheet, twoStep: TwoStepSheet, devMode: DevModeSheet, sessions: SessionsSheet, stageNew: StageNewSheet, soundAdd: SoundAddSheet, soundTrack: SoundTrackSheet, soundSettings: SoundSettingsSheet, soundExport: SoundExportSheet, soundPost: SoundPostSheet, connections: ConnectionsSheet, teacherVerify: TeacherVerifySheet, asgMeta: AsgMetaSheet, session: SessionSheet, invite: InviteSheet, grade: GradeSheet,
+  aiChat: AIChatSheet, deleteUser: DeleteUserSheet, twoStep: TwoStepSheet, devMode: DevModeSheet, sessions: SessionsSheet, stageNew: StageNewSheet, soundAdd: SoundAddSheet, soundTrack: SoundTrackSheet, soundSettings: SoundSettingsSheet, soundExport: SoundExportSheet, soundPost: SoundPostSheet, connections: ConnectionsSheet, teacherVerify: TeacherVerifySheet, asgMeta: AsgMetaSheet, session: SessionSheet, invite: InviteSheet, grade: GradeSheet, guardians: GuardiansSheet, roster: RosterSheet,
 };
 
 /** Android back button: close a sheet, go back a screen, go Home, then leave the app. */
@@ -287,6 +291,9 @@ function openHash() {
   const pr = /^pair=([A-Za-z0-9]{8})$/.exec(h);
   if (pr) { openSheet('pair', { approve: true, code: pr[1].toUpperCase() }); history.replaceState(null, '', location.pathname); return; }
   if (h === 'write') { go('write'); return; }
+  // a parent's weekly page (…/app/#guardian/TOKEN, from the summary email): no account needed
+  const gd = /^guardian\/([A-Za-z0-9_-]{20,80})$/.exec(h);
+  if (gd) { go('academy'); push('guardian', { token: gd[1] }, 'academy'); return; }
   const link = parseLink(h);
   if (link) { history.replaceState(null, '', location.pathname); track('deep_link', { label: link.route + (link.action ? `:${link.action}` : '') }); openLink(link); return; }
   const sq = /^q=(.+)$/.exec(h);
