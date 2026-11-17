@@ -1069,3 +1069,5 @@ blockquote.teacher-note { margin: 0 0 8px; padding: 10px 14px; border-left: 3px 
 .ll-chips button.on, .ms-toolbar button.on { background: color-mix(in srgb, var(--s-teal) 64%, #003b35); color: #fff; }
 :root[data-theme="dark"] .ll-chips button.on { background: #0e7c71; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ll-chips button.on, :root:not([data-theme="light"]) .ms-toolbar button.on { background: #0e7c71; } }
+/* "chips wrap" is not the page .wrap: a row of chips that wraps */
+.chips.wrap { flex-direction: row; max-width: none; margin: 0; gap: 8px; }

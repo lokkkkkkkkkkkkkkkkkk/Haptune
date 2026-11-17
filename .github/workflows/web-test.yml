@@ -24,6 +24,7 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e
+      - run: npm run contrast            # WCAG AA text contrast, light and dark
       # the Classroom (teacher and student) against a real server on this machine
       - uses: actions/setup-python@v5
         with:
