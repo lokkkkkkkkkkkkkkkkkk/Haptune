@@ -197,6 +197,15 @@ def _add_missing_columns(eng) -> None:
                 if not col.nullable and "DEFAULT" in ddl:
                     ddl += " NOT NULL"
                 c.execute(text(ddl))
+        # text columns made longer in a newer version (SQLite ignores lengths; Postgres enforces them)
+        if eng.dialect.name == "postgresql":
+            for table in meta.sorted_tables:
+                have = {col["name"]: col for col in insp.get_columns(table.name)}
+                for col in table.columns:
+                    want = getattr(col.type, "length", None)
+                    now = getattr(have.get(col.name, {}).get("type"), "length", None)
+                    if want and now and now < want:
+                        c.execute(text(f'ALTER TABLE "{table.name}" ALTER COLUMN "{col.name}" TYPE VARCHAR({want})'))
 
 
 def reset_engine(url: str | None = None) -> None:
