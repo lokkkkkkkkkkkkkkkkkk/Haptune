@@ -38,4 +38,10 @@ test('what next: every flow has a first choice, and handing in comes first for h
   assert.equal(nextSteps('take', { accuracy: 0.5, tricky: true })[0].id, 'loopTricky');
   assert.ok(!nextSteps('take', { accuracy: 0.9, online: false }).some((x) => x.id === 'shareStage'));
   assert.equal(nextSteps('handIn', { nextAssignment: { id: 'a2' } })[0].id, 'nextAssignment');
+  // a friend's challenge: sending your score comes first, and once it is sent the usual first choice returns
+  const duel = nextSteps('take', { duel: true, accuracy: 0.9, online: true });
+  assert.equal(duel[0].id, 'sendDuel'); assert.equal(duel.filter((x) => x.primary).length, 1);
+  assert.ok(!duel.some((x) => x.id === 'challengeFriend'));
+  assert.equal(nextSteps('take', { duel: true, duelSent: true, accuracy: 0.9 }).find((x) => x.primary).id, 'faster');
+  assert.ok(nextSteps('take', { accuracy: 0.6, online: true }).some((x) => x.id === 'challengeFriend'));
 });

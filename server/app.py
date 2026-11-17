@@ -638,3 +638,5 @@ def ai_fetch(request: Request, url: str = Query(..., max_length=2000)):
     return Response(content=data, media_type=media,
                     headers={"Content-Disposition": f'attachment; filename="{name}"', "X-Haptune-Format": fmt,
                              "Access-Control-Expose-Headers": "Content-Disposition, X-Haptune-Format"})
+import friends  # noqa: E402  (Part 2 D: friends, messages, challenges, Sound moments, reposts, Friends feed)
+app.include_router(friends.router)

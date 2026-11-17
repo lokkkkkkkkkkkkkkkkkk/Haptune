@@ -67,3 +67,15 @@ test('v7 text: four languages, same placeholders, and no older key overwritten',
     assert.ok(!older.has(k), `v7 overwrites ${k}`);
   }
 });
+
+test('v8 text: four languages, same placeholders, and no older key overwritten', async () => {
+  const { V8 } = await import('../src/core/i18n-v8.js');
+  const older = new Set();
+  for (const f of ['base', 'community', 'v2', 'v3', 'v4', 'v5', 'v6', 'v7']) for (const tb of Object.values(await import(`../src/core/i18n-${f}.js`))) for (const k of Object.keys(tb)) older.add(k);
+  for (const [k, v] of Object.entries(V8)) {
+    assert.equal(v.length, 4, k);
+    assert.ok(v.every((x) => typeof x === 'string' && x.trim().length), `empty text in ${k}`);
+    assert.equal(new Set(v.map(ph)).size, 1, `placeholders differ in ${k}`);
+    assert.ok(!older.has(k), `v8 overwrites ${k}`);
+  }
+});

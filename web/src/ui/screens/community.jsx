@@ -19,9 +19,10 @@ import { PostCard, Person, timeLeft } from './social.jsx';
 import { ScoreCard } from './home.jsx';
 import { local } from '../storage.js';
 import { flag } from '../analytics.js';
+import { FriendsFeed, DuelsPanel } from './friends.jsx';
 
 const SEGMENTS = [
-  { value: 'home', label: 'segForYou' }, { value: 'following', label: 'segFollowing' }, { value: 'requests', label: 'segRequests' },
+  { value: 'home', label: 'segForYou' }, { value: 'friends', label: 'segFriends' }, { value: 'following', label: 'segFollowing' }, { value: 'requests', label: 'segRequests' },
   { value: 'sounds', label: 'segSounds' }, { value: 'library', label: 'segScores' }, { value: 'play', label: 'segPlay' }, { value: 'questions', label: 'segQuestions' },
 ];
 
@@ -38,6 +39,7 @@ export function CommunityView({ active }) {
   const actions = online ? <>
     <button type="button" class="stage-plus" id="stage-plus" aria-label={t('stageWhatDo')} onClick={() => openSheet('stageNew')}><Icon name="plus" size={24} stroke={2.8} /></button>
     <button type="button" class="hm-pill nts" id="stage-notes" onClick={() => push('wallet')} aria-label={t('rewards')}><Icon name="gift" size={15} stroke={2.2} />{s.me?.credits ?? '·'}</button>
+    <button type="button" class="hm-pill" onClick={() => push('messages')} aria-label={t('messagesT')} id="stage-messages" style={{ padding: '0 9px' }}><Icon name="chat" size={17} /></button>
     <button type="button" class="hm-pill" onClick={() => push('notifications')} aria-label={t('notifications')} style={{ position: 'relative', padding: '0 9px' }}>
       <Icon name="bell" size={17} />{s.me?.unread > 0 && <span class="tab-dot" />}
     </button>
@@ -62,12 +64,13 @@ export function CommunityView({ active }) {
             {SEGMENTS.filter((o) => o.value !== 'sounds' || flag('sounds')).map((o) => <Chip key={o.value} on={seg === o.value} color="pink" onClick={() => setState({ communitySeg: o.value, stageMine: false })}>{t(o.label)}</Chip>)}
           </div>
           {seg === 'home' ? <ForYou active={active} />
+            : seg === 'friends' ? <FriendsFeed active={active} />
             : seg === 'following' ? <Feed active={active} following />
               : seg === 'requests' ? <><button type="button" class="sr-cta" onClick={helpWrite} id="st-help"><span class="hm-art sm"><Icon name="pencil" size={20} stroke={2.2} /></span><div><strong>{t('helpWrite')}</strong><span>{t('helpWriteSub')}</span></div><Icon name="chevronR" size={16} stroke={2.4} /></button>
                 <PostList key="r" type="request" active={active} mine={!!s.stageMine} /></>
                 : seg === 'sounds' ? <SoundsFeed active={active} />
                 : seg === 'library' ? <PostList key="l" type="share" active={active} />
-                  : seg === 'play' ? <Play active={active} />
+                  : seg === 'play' ? <><DuelsPanel active={active} /><Play active={active} /></>
                     : <PostList key="q" type="question" active={active} />}
         </>}
       </div>

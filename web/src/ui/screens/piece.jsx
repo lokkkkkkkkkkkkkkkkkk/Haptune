@@ -84,7 +84,7 @@ const idle = (fn) => (globalThis.requestIdleCallback ? requestIdleCallback(fn, {
 
 // ---------- the piece screen ----------
 
-export function PieceView({ id, active, start, assignment, challenge, daily, bar: resumeBar = 0 }) {
+export function PieceView({ id, active, start, assignment, challenge, daily, duel = null, bar: resumeBar = 0 }) {
   const s = useApp();
   const meta = s.pieces.find((p) => p.id === id);
   const [data, setData] = useState(null);
@@ -105,10 +105,10 @@ export function PieceView({ id, active, start, assignment, challenge, daily, bar
   if (!meta) return <div class="scroll"><NavBar title="" backLabel={t('library')} /></div>;
   if (!data) return <div class="scroll"><NavBar title={meta.title} backLabel={t('library')} /><div class="loading"><Mascot mood="think" size={80} /></div></div>;
   return <PieceBody meta={meta} data={data} semis={semis} setSemis={(v) => { setSemis(v); updatePiece(id, { transpose: v }); if (v) awardBadge('transposer'); }}
-    view={view} setView={setView} active={active} start={start} assignment={assignment} challenge={challenge} daily={daily} reload={reload} resumeBar={resumeBar} />;
+    view={view} setView={setView} active={active} start={start} assignment={assignment} challenge={challenge} daily={daily} duel={duel} reload={reload} resumeBar={resumeBar} />;
 }
 
-function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, assignment, challenge, daily, reload, resumeBar = 0 }) {
+function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, assignment, challenge, daily, duel = null, reload, resumeBar = 0 }) {
   const s = useApp();
   useEffect(() => { track('piece_open', { label: meta.title }); }, [meta.id]);
   const { score, sheet: baseSheet, rec } = data;
@@ -735,7 +735,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
           </div>
         )}
 
-        {result && <ResultCard result={result} barNo={barNo} onPractise={practiseBars} onAgain={openPlayAlong} assignment={assignment} onSend={sendToTeacher}
+        {result && <ResultCard result={result} meta={meta} duel={duel} barNo={barNo} onPractise={practiseBars} onAgain={openPlayAlong} assignment={assignment} onSend={sendToTeacher}
           onClass={() => openSheet('take', { result })} onShowBar={(mi) => { setView('sheet'); goToBar(mi); }}
           challenge={challenge || (rec.songId && challengeSong.current === rec.songId ? rec.songId : null)} onChallenge={enterChallenge}
           onShare={() => openSheet('compose', { type: 'show', show: { piece: meta.title, accuracy: Math.round(result.accuracy * 1000) / 1000, minutes: Math.round((result.seconds || 0) / 6) / 10, mode: result.mode, tempo_pct: Math.round((result.speed || 1) * 100) } })} />}
@@ -855,7 +855,7 @@ function MiniKeys({ want, played }) {
   return <div class="kbd-wrap"><Keyboard lo={start} hi={start + 24} marks={marks} height={58} /></div>;
 }
 
-function ResultCard({ result, barNo, onPractise, onAgain, assignment, onSend, challenge, onChallenge, onShare, onClass, onShowBar }) {
+function ResultCard({ result, meta, duel, barNo, onPractise, onAgain, assignment, onSend, challenge, onChallenge, onShare, onClass, onShowBar }) {
   const acc = Math.round(result.accuracy * 100);
   const good = acc >= 85;
   const next = Math.min(150, Math.round(result.speed * 100) + 10);
@@ -913,14 +913,24 @@ function ResultCard({ result, barNo, onPractise, onAgain, assignment, onSend, ch
         {challenge && <Button small icon="trophy" color="orange" onClick={onChallenge} disabled={result.entered}>{result.entered ? t('challengeEntered') : t('enterChallenge')}</Button>}
         {result.sent && <span class="pill-ok" id="sent-ok"><Icon name="check" size={14} stroke={2.6} />{t('sentToTeacher')}</span>}
       </div>
-      <TakeNext result={result} assignment={assignment} onAgain={onAgain} onSend={onSend} onClass={onClass} onShare={onShare} onPractise={onPractise} />
+      <TakeNext result={result} meta={meta} duel={duel} assignment={assignment} onAgain={onAgain} onSend={onSend} onClass={onClass} onShare={onShare} onPractise={onPractise} />
     </Card>
   );
 }
 
 /** What next after a take: hand it in, go faster or loop the hard bar, share it; after handing in, the next assignment. */
-function TakeNext({ result, assignment, onAgain, onSend, onClass, onShare, onPractise }) {
+function TakeNext({ result, meta, duel, assignment, onAgain, onSend, onClass, onShare, onPractise }) {
   const [nextAsg, setNextAsg] = useState(null);
+  const [duelSent, setDuelSent] = useState(false);
+  const sendDuel = async () => {
+    try {
+      const r = await C.enterDuel(duel, { score: result.accuracy, tempo_pct: Math.round((result.speed || 1) * 100) });
+      setDuelSent(true);
+      toast(r.winner && r.over ? t('duelWinner', { name: r.winner.name }) : t('duelScoreSent', { n: r.mine }));
+      push('duel', { id: duel }, 'community');
+    } catch (e) { toast(e.message, 'err'); }
+  };
+  const challengeFriend = () => openSheet('duelPick', { piece_title: meta?.title || result.title, catalog_id: meta?.catalogId || '', score: result.accuracy, tempo_pct: Math.round((result.speed || 1) * 100) });
   const online = hasServer();
   useEffect(() => {
     if (!result.sent || !online) return;
@@ -934,7 +944,9 @@ function TakeNext({ result, assignment, onAgain, onSend, onClass, onShare, onPra
       classPage: assignment?.class_id ? () => push('classView', { id: assignment.class_id }, 'academy') : null,
     }} />;
   }
-  return <NextChips flow="take" ctx={{ assignment: !!assignment, accuracy: result.accuracy, speed: result.speed, tricky: result.tricky?.length > 0, online, inClass: online }} on={{
+  return <NextChips flow="take" ctx={{ assignment: !!assignment, accuracy: result.accuracy, speed: result.speed, tricky: result.tricky?.length > 0, online, inClass: online, duel: !!duel, duelSent }} on={{
+    sendDuel: duel && online ? sendDuel : null,
+    challengeFriend: online && !duel && !assignment ? challengeFriend : null,
     handIn: assignment ? onSend : null,
     faster: onAgain, again: onAgain,
     loopTricky: result.tricky?.length ? () => onPractise(result.tricky[0].mi, pct) : null,

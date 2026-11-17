@@ -926,3 +926,26 @@ body.ce-dragging, body.ce-dragging * { cursor: grabbing !important; }
 .drive-row .row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .note-quote { display: block; font-style: normal; color: var(--ink2); font-size: 13px; margin-top: 2px; }
 blockquote.teacher-note { margin: 0 0 8px; padding: 10px 14px; border-left: 3px solid var(--s-orange); background: var(--card); border-radius: 0 12px 12px 0; }
+
+/* ================= Part 2 · Stage with friends (screens/friends.jsx) ================= */
+.duel-intro { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 12px; margin: 10px 0; border-radius: 14px; background: color-mix(in srgb, var(--s-pink) 9%, var(--card)); font-size: 13.5px; }
+.duel-intro > span { flex: 1; min-width: 160px; }
+.duel-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px; margin-bottom: 8px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); text-align: left; }
+.duel-row .dr-ic { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: color-mix(in srgb, #f5b400 20%, var(--card)); color: #b88400; flex-shrink: 0; }
+.duel-row .dr-ic.over { filter: grayscale(.7); }
+.duel-row .row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.rank-n { width: 22px; text-align: center; font-weight: 800; color: var(--ink2); }
+.row-main.as-btn { display: flex; align-items: center; gap: 10px; text-align: left; flex: 1; min-width: 0; }
+.row-main.as-btn > span { display: flex; flex-direction: column; min-width: 0; }
+.chat-view { display: flex; flex-direction: column; }
+.chat-list { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; padding-bottom: 90px; }
+.chat-send { position: sticky; bottom: calc(var(--tabbar-h) + var(--sa-bottom) + 8px); margin: 0 var(--gutter-r, 16px) 0 var(--gutter-l, 16px); padding: 8px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow-up); }
+@media (min-width: 900px) { .chat-send { bottom: 16px; max-width: 760px; } }
+.chat-closed { text-align: center; padding: 12px; }
+.moments { margin: 14px 0; padding: 14px; border-radius: var(--r); background: var(--card); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.moment { display: flex; align-items: flex-start; gap: 10px; }
+.moment .m-at { font-variant-numeric: tabular-nums; font-weight: 800; font-size: 12.5px; color: var(--s-violet); background: color-mix(in srgb, var(--s-violet) 12%, var(--card)); border-radius: 8px; padding: 3px 7px; flex-shrink: 0; }
+.moment .m-text { flex: 1; min-width: 0; font-size: 14px; }
+.ff-item { margin-bottom: 10px; }
+.ff-by { display: flex; align-items: center; gap: 4px; margin: 0 0 4px 6px; }
+.row.unread .row-title { font-weight: 800; }

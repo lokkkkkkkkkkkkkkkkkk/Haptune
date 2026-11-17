@@ -12,6 +12,7 @@ import { youtubeId } from '../api.js';
 import { openExternal } from '../native.js';
 import { NextChips, copyLink as copyItemLink } from '../nextchips.jsx';
 import { fromPost } from '../../core/piece.js';
+import { RepostButton } from './friends.jsx';
 import { Reactions, TYPE, PersonLine, Person, Coins, StatusPill, RequestSteps, InstrumentChips, StarsInput, timeAgo, timeLeft, openReport } from './social.jsx';
 
 const live = { reload: null };            // the open post refreshes itself after a sheet changes it
@@ -88,7 +89,7 @@ export function PostView({ id, active, justPosted = null }) {
         {p.type === 'request' && <RequestBox p={p} busy={busy} run={run} />}
         {p.type === 'question' && p.pot > 0 && <Card><div class="report-line"><Coins n={p.pot} /><p class="sub">{t('bountyNote')}</p></div></Card>}
         {p.type === 'share' && <ShareBox p={p} run={run} />}
-        <Reactions target={`p:${p.id}`} />
+        <div class="row-gap" style={{ gap: 8, alignItems: 'center', flexWrap: 'wrap' }}><Reactions target={`p:${p.id}`} />{p.visibility !== 'class' && !isAuthor && <RepostButton target={`p:${p.id}`} />}</div>
 
         <Section title={p.type === 'request' ? t('scoresAndComments', { n: p.replies_list.length }) : p.type === 'question' ? t('answersN', { n: p.replies_list.length }) : t('commentsN', { n: p.replies_list.length })}>
           {p.replies_list.length === 0 && <p class="note-text">{t(p.type === 'request' ? 'noScoresYet' : p.type === 'question' ? 'noAnswersYet' : 'noCommentsYet')}</p>}

@@ -10,6 +10,7 @@ import { t, getLang } from '../../core/i18n.js';
 import { Icon, Button, Chip, List, Row, Toggle, Keyboard } from '../components.jsx';
 import { NextChips, copyLink } from '../nextchips.jsx';
 import { fromSound } from '../../core/piece.js';
+import { MomentsPanel, RepostButton } from './friends.jsx';
 import { NavBar, SheetFrame } from './common.jsx';
 import * as S from '../../core/sound.js';
 import * as CB from '../../core/chordbars.js';
@@ -392,6 +393,8 @@ export function SoundPageView({ id, justPosted = false }) {
         {err ? <p class="note-text err">{err}</p> : !x ? <div class="loading"><div class="spinner" /></div> : <>
           {justPosted && <NextChips flow="sound" id="sound-next" on={{ copyLink: () => copyLink(fromSound(x)), newSound: () => push('sound', {}, 'write') }} />}
           <SoundCard x={x} />
+          <div class="row-gap" style={{ gap: 8, margin: '8px 0' }}><RepostButton target={`s:${x.id}`} /></div>
+          <MomentsPanel sid={x.id} />
           {x.versions && (x.versions.before.length > 0 || x.versions.layers.length > 0) && <List>
             {[...x.versions.before, ...x.versions.layers].map((v) => <Row key={v.id} icon="wave" color="violet" title={v.title} subtitle={v.author?.name || ''} onClick={() => push('soundPage', { id: v.id })} />)}
           </List>}

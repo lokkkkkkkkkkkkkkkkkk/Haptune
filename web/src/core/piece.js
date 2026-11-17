@@ -81,11 +81,15 @@ export function nextSteps(flow, ctx = {}) {
   switch (flow) {
     case 'take': {
       const acc = ctx.accuracy ?? 0, speed = ctx.speed ?? 1;
-      if (ctx.assignment && !ctx.sent) add('handIn', 'send', 'nxHandIn', true);
-      if (acc >= 0.85 && speed < 1.5) add('faster', 'bolt', 'nxFaster', !ctx.assignment || ctx.sent);
-      else if (ctx.tricky) add('loopTricky', 'loop', 'nxLoopTricky', !ctx.assignment || ctx.sent);
-      else add('again', 'mic', 'nxAgain', !ctx.assignment || ctx.sent);
+      let used = false;
+      const first = () => (used ? false : (used = true));
+      if (ctx.duel && !ctx.duelSent) add('sendDuel', 'trophy', 'nxSendDuel', first());
+      if (ctx.assignment && !ctx.sent) add('handIn', 'send', 'nxHandIn', first());
+      if (acc >= 0.85 && speed < 1.5) add('faster', 'bolt', 'nxFaster', first());
+      else if (ctx.tricky) add('loopTricky', 'loop', 'nxLoopTricky', first());
+      else add('again', 'mic', 'nxAgain', first());
       if (ctx.online && !ctx.assignment && ctx.inClass) add('shareClass', 'academy', 'nxShareClass');
+      if (ctx.online && !ctx.duel && acc >= 0.5) add('challengeFriend', 'trophy', 'nxChallengeFriend');
       if (ctx.online && acc >= 0.7) add('shareStage', 'stage', 'nxShareStage');
       add('similar', 'sparkles', 'nxSimilar');
       break;

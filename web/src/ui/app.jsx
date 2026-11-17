@@ -99,6 +99,12 @@ const m_learnwork = () => import('./screens/learnwork.jsx');
 const GuardianView = lazy(m_learnwork, 'GuardianView');
 const GuardiansSheet = lazy(m_learnwork, 'GuardiansSheet');
 const RosterSheet = lazy(m_learnwork, 'RosterSheet');
+const m_friends = () => import('./screens/friends.jsx');
+const FriendsView = lazy(m_friends, 'FriendsView');
+const MessagesView = lazy(m_friends, 'MessagesView');
+const ChatView = lazy(m_friends, 'ChatView');
+const DuelView = lazy(m_friends, 'DuelView');
+const DuelPickSheet = lazy(m_friends, 'DuelPickSheet');
 const m_vary = () => import('./screens/vary.jsx');
 const VaryView = lazy(m_vary, 'VaryView');
 const m_learn = () => import('./screens/learn.jsx');
@@ -210,7 +216,7 @@ const VIEWS = {
   improvise: (p) => <ImproviseView {...p} pushed />, tools: (p) => <ToolsView {...p} pushed />, courses: (p) => <AcademyView {...p} pushed />,
   piece: PieceView, editor: EditorView, studio: StudioView, student: StudentView, tutors: TutorsView, tutor: TutorView, tutorMe: TutorMeView, lessons: LessonsView, songbook: SongbookView, catalog: CatalogView, course: CourseView, tool: ToolView, history: HistoryView, classView: ClassView, assignment: AssignmentView,
   post: PostView, daily: DailyView, profile: ProfileView, leaderboard: LeaderboardView, notifications: NotificationsView, wallet: WalletView, challenge: ChallengeView,
-  editProfile: EditProfileView, help: HelpView, admin: AdminView, adminUser: AdminUserView, find: FindView, newSongs: NewSongsView, soundPage: SoundPageView, guardian: GuardianView,
+  editProfile: EditProfileView, help: HelpView, admin: AdminView, adminUser: AdminUserView, find: FindView, newSongs: NewSongsView, soundPage: SoundPageView, guardian: GuardianView, friends: FriendsView, messages: MessagesView, chat: ChatView, duel: DuelView,
   __crash: () => { throw new Error('test crash'); },           // the click-through test checks the error boundary with it
   practice: PracticeView, soundCheck: SoundCheckView, report: ReportView, sound: SoundView, vary: VaryView, chordEditor: ChordEditorView, learnMore: (p) => <LearnMoreView {...p} pushed />,
 };
@@ -224,7 +230,7 @@ const SHEETS = {
   newSong: NewSongSheet, hubRole: HubRoleSheet, classQR: ClassQRSheet, pair: PairSheet, take: TakeSheet, joinLink: JoinLinkSheet, moment: MomentSheet,
   setPassword: SetPasswordSheet, signIn: SignInSheet, deleteAccount: DeleteAccountSheet, devCode: DevCodeSheet,
   pieceMore: PieceMoreSheet, chordPick: ChordPickSheet, ceSong: ChordSongSheet, ceSection: ChordSectionSheet, ceExport: ChordExportSheet,
-  aiChat: AIChatSheet, deleteUser: DeleteUserSheet, twoStep: TwoStepSheet, devMode: DevModeSheet, sessions: SessionsSheet, stageNew: StageNewSheet, soundAdd: SoundAddSheet, soundTrack: SoundTrackSheet, soundSettings: SoundSettingsSheet, soundExport: SoundExportSheet, soundPost: SoundPostSheet, connections: ConnectionsSheet, teacherVerify: TeacherVerifySheet, asgMeta: AsgMetaSheet, session: SessionSheet, invite: InviteSheet, grade: GradeSheet, guardians: GuardiansSheet, roster: RosterSheet,
+  aiChat: AIChatSheet, deleteUser: DeleteUserSheet, twoStep: TwoStepSheet, devMode: DevModeSheet, sessions: SessionsSheet, stageNew: StageNewSheet, soundAdd: SoundAddSheet, soundTrack: SoundTrackSheet, soundSettings: SoundSettingsSheet, soundExport: SoundExportSheet, soundPost: SoundPostSheet, connections: ConnectionsSheet, teacherVerify: TeacherVerifySheet, asgMeta: AsgMetaSheet, session: SessionSheet, invite: InviteSheet, grade: GradeSheet, guardians: GuardiansSheet, roster: RosterSheet, duelPick: DuelPickSheet,
 };
 
 /** Android back button: close a sheet, go back a screen, go Home, then leave the app. */

@@ -2,6 +2,7 @@
 // editing your own profile.
 import { useState, useEffect } from 'preact/hooks';
 import { useApp, push, pop, openSheet, toast, addSongbookSong, updateSettings } from '../state.js';
+import { FriendButton } from './friends.jsx';
 import { t, instrumentName, INSTRUMENTS } from '../../core/i18n.js';
 import { Icon, Button, Section, Card, Segmented, Chip, Empty, List, Row } from '../components.jsx';
 import { NavBar, SheetFrame } from './common.jsx';
@@ -44,6 +45,7 @@ export function ProfileView({ handle, active }) {
           <div class="follow-row"><span><strong class="num">{u.followers}</strong> {t('followers')}</span><span><strong class="num">{u.following}</strong> {t('following')}</span></div>
           {u.is_me ? <Button kind="secondary" icon="pencil" onClick={() => push('editProfile')}>{t('editProfile')}</Button>
             : <Button kind={u.is_following ? 'secondary' : 'primary'} icon={u.is_following ? 'check' : 'plus'} onClick={() => toggle(() => C.follow(u.handle, !u.is_following))}>{u.is_following ? t('followingBtn') : t('follow')}</Button>}
+          {!u.is_me && <FriendButton u={u} />}
         </div>
         <div class="stat-grid">
           <div><strong class="num">{st.helps}</strong><span>{t('scoresMade')}</span></div>
@@ -106,11 +108,17 @@ const NOTE_ICON = {
   class_announcement: ['academy', 'orange'], class_comment: ['chat', 'orange'], class_assignment: ['flag', 'orange'], class_graded: ['check', 'green'],
   class_feedback: ['chat', 'green'], class_session: ['calendar', 'orange'], class_session_changed: ['calendar', 'gray'], class_invite: ['users', 'orange'],
   class_nudge: ['bell', 'orange'], class_private: ['lock', 'orange'], class_turned_in: ['send', 'green'], sound_layered: ['wave', 'purple'],
+  friend_request: ['users', 'pink'], friend_accepted: ['users', 'green'], dm: ['chat', 'pink'], duel: ['trophy', 'yellow'], duel_answered: ['trophy', 'yellow'],
+  class_challenge: ['trophy', 'orange'], moment: ['chat', 'purple'], repost: ['loop', 'pink'],
   teacher_verified: ['check', 'green'], teacher_rejected: ['info', 'red'], staff_message: ['info', 'blue'], dev_access: ['shield', 'purple'], dev_access_ended: ['shield', 'gray'],
 };
 /** Where a notification goes when tapped (class notices open the class or the assignment, not a Stage post). */
 function openNote(n) {
   const d = n.data || {};
+  if ((n.kind === 'duel' || n.kind === 'duel_answered' || n.kind === 'class_challenge') && d.duel) return push('duel', { id: d.duel }, 'community');
+  if (n.kind === 'friend_request') return push('friends', {}, 'community');
+  if (n.kind === 'dm' && n.actor?.handle) return push('chat', { handle: n.actor.handle }, 'community');
+  if ((n.kind === 'moment' || n.kind === 'repost') && d.sound) return push('soundPage', { id: d.sound }, 'community');
   if (n.kind.startsWith('class_')) {
     if (n.kind === 'class_invite' && d.code) return openSheet('joinLink', { code: d.code });
     if (d.assignment) return push('assignment', { id: d.assignment }, 'academy');

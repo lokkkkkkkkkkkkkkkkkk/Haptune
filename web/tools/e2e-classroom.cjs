@@ -256,7 +256,7 @@ async function person(browser, base, api, { name, role, handle }) {
       await esc(s);
       await tab(s, 'stage'); await tab(s, 'stage'); await s.waitForSelector('#stage-purpose');
       await s.locator('#stage-how-ok').click({ timeout: 3000 }).catch(() => {});
-      await s.locator('#community-seg .chip').nth(2).click(); await s.waitForSelector('.rq-steps', { timeout: 20000 });
+      await s.locator('#community-seg .chip').filter({ hasText: /^Requests$/ }).click(); await s.waitForSelector('.rq-steps', { timeout: 20000 });
       await s.locator('#stage-plus').click(); await s.waitForSelector('#stage-new');
       if (await s.locator('#stage-new .row').count() < 4) throw new Error('the + sheet should offer the post types');
       await esc(s);
@@ -300,6 +300,39 @@ async function person(browser, base, api, { name, role, handle }) {
       await t.screenshot({ path: path.join(SHOTS, 'golden-piece-practise.png') });
       await esc(t); await t.locator('.navbar .back:visible, .back-btn:visible').first().click().catch(() => {});
       await esc(t); await tab(t, 'hub');
+    });
+    await step('Friends: a request accepted, messages both ways, a beat-my-score challenge opened in Play Along', async () => {
+      const go = async (pg, hash) => { await esc(pg); await pg.evaluate((h) => { location.hash = h; }, hash); await pg.waitForTimeout(500); };
+      await go(s, '#u/ms_tan'); await s.waitForSelector('#friend-add', { timeout: 15000 });
+      await s.locator('#friend-add').click(); await s.waitForSelector('#friend-state');
+      await esc(t); await tab(t, 'stage'); await t.evaluate(() => window.__haptune.push('friends', {}, 'community'));
+      await t.waitForSelector('#accept-ben_violin', { timeout: 15000 }); await t.locator('#accept-ben_violin').click();
+      await t.waitForSelector('#friend-list');
+      await t.screenshot({ path: path.join(SHOTS, 'friends-list.png') });
+      await go(t, '#u/ben_violin'); await t.waitForSelector('#friend-message'); await t.locator('#friend-message').click();
+      await t.waitForSelector('#chat-text'); await t.fill('#chat-text', 'Great job today!'); await t.locator('#chat-send').click();
+      await t.waitForSelector('.chat-list .pt-msg.mine');
+      await esc(s); await tab(s, 'stage'); await s.locator('#stage-messages').click(); await s.waitForSelector('#messages .row');
+      await s.locator('#messages .row').first().click(); await s.waitForSelector('.chat-list .pt-msg');
+      if (!/Great job today/.test(await s.locator('.chat-list').innerText())) throw new Error('the message did not arrive');
+      await s.fill('#chat-text', 'Thank you!'); await s.locator('#chat-send').click(); await s.waitForSelector('.chat-list .pt-msg.mine');
+      await s.screenshot({ path: path.join(SHOTS, 'friends-chat.png') });
+      // Ms Tan challenges Ben on a free-library piece; Ben opens it from Stage > Challenges straight into Play Along
+      const entry = await t.evaluate(async () => (await (await fetch('catalog/index.json')).json()).items.find((r) => /^ryans-/.test(r[0]))?.[0]);
+      const duel = await t.evaluate(async ([server, cat]) => {
+        const tok = JSON.parse(localStorage.getItem('haptune.academyToken'));
+        const r = await fetch(server + '/c/duels', { method: 'POST', headers: { Authorization: `Bearer ${tok}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ handle: 'ben_violin', piece_title: 'A reel', catalog_id: cat, score: 0.8 }) });
+        return r.json();
+      }, [api, entry]);
+      if (!duel.id) throw new Error('the challenge was not made: ' + JSON.stringify(duel));
+      await s.locator('.navbar .back:visible').first().click(); await s.locator('.navbar .back:visible').first().click().catch(() => {});
+      await tab(s, 'stage'); await s.evaluate(() => window.__haptune.popToRoot('community'));
+      await s.locator('#community-seg .chip').filter({ hasText: /^Challenges$/ }).click(); await s.waitForSelector(`#duel-row-${duel.id}`, { timeout: 15000 });
+      await s.screenshot({ path: path.join(SHOTS, 'stage-challenges.png') });
+      await s.locator(`#duel-row-${duel.id}`).click(); await s.waitForSelector('#duel-play');
+      await s.locator('#duel-play').click(); await s.waitForSelector('.mode-cards, .sheet .mode-card', { timeout: 60000 });
+      await esc(s); await s.evaluate(() => { for (const k of ['library', 'community']) window.__haptune.popToRoot(k); });
+      await tab(s, 'hub');
     });
     await step('Hapi: ask from the sparkle button, get an answer with buttons, tap one', async () => {
       // the model is mocked here (no API key in tests); the server side is tested in server/test_aichat.py
@@ -442,6 +475,17 @@ async function person(browser, base, api, { name, role, handle }) {
       await t.locator('#sd-post-send').click(); await t.waitForSelector('#sound-next', { timeout: 60000 });
       const v = await t.evaluate(async ([server, id]) => (await (await fetch(`${server}/c/sounds/${id}`)).json()).versions, [api, soundId]);
       if (!v || v.layers.length !== 1) throw new Error('no layer: ' + JSON.stringify(v));
+    });
+    await step('Sounds: a comment at a moment, a repost, and the Friends feed', async () => {
+      await esc(t); await t.evaluate((id) => { location.hash = `#sound/${id}`; }, soundId); await t.waitForSelector('#moments:visible', { timeout: 15000 });
+      await t.locator('#moment-text:visible').fill('Lovely start');
+      await t.locator('#moment-send:visible').click(); await t.waitForSelector('#moments:visible .moment');
+      await t.locator(`#repost-s-${soundId}:visible`).click(); await t.waitForTimeout(600);
+      await t.screenshot({ path: path.join(SHOTS, 'sound-moments.png') });
+      await esc(s); await tab(s, 'stage'); await s.evaluate(() => window.__haptune.popToRoot('community'));
+      await s.locator('#community-seg .chip').filter({ hasText: /^Friends$/ }).click(); await s.waitForSelector('#friends-feed .ff-item', { timeout: 15000 });
+      if (!/reposted/i.test(await s.locator('#friends-feed').innerText())) throw new Error('the repost is not in the Friends feed');
+      await s.screenshot({ path: path.join(SHOTS, 'stage-friends-feed.png') });
     });
   } catch (e) { problems.push(e.message); }
   for (const x of [T, S]) if (x) problems.push(...x.errors);
