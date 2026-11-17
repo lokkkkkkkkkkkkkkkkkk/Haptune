@@ -261,19 +261,56 @@ async function run(mode, base, browser) {
     if (!/茉莉花/.test(await p.locator('.piece-head h1').innerText())) throw new Error('the typed 簡譜 did not open');
     await back();
   });
-  await step('write a song', async () => {
+  await step('the studio: a first song in under 5 minutes (notes, an instrument, a dynamic, lead-sheet chords, a mix, export)', async () => {
+    const started = Date.now();
+    const wide = await p.evaluate(() => innerWidth >= 900);
     await tab('write'); await p.waitForTimeout(300); await shot('06-write'); await overflow('Create'); await primaries('Create');
     await p.locator('#write-new').click(); await p.waitForSelector('#wiz-kinds'); await primaries('new-song wizard');
     await p.locator('#wiz-full').click(); await p.waitForSelector('#new-song-make');
     await p.fill('#new-song-title', 'My first song'); await p.locator('#new-song-make').click();
-    await p.waitForSelector('.st-score svg', { timeout: 60000 }); await p.waitForTimeout(400);
+    await p.waitForSelector('.st-score svg', { timeout: 60000 }); await p.waitForSelector('#st-toolbar'); await p.waitForTimeout(400);
     const before = await p.locator('.st-score g.note').count();
     for (const k of [0, 2, 4, 5]) { await p.locator('.st-kbd .wkey').nth(k).click(); await p.waitForTimeout(120); }
     await p.waitForFunction((n) => document.querySelectorAll('.st-score g.note').length >= n + 4, before, { timeout: 20000 });
     await p.locator('#st-back').click(); await p.waitForTimeout(300);
     await shot('06b-studio'); await overflow('studio');
+    // Instruments: add a cello part; Palettes: mf at the cursor
+    if (wide) await p.locator('#side-instruments').click(); else await p.locator('#dock-instruments').click();
+    await p.locator('#add-cello').click(); await p.waitForSelector('#part-1');
+    if (wide) await p.locator('#side-palettes').click(); else await p.locator('#dock-palettes').click();
+    await p.locator('#pal-dyn-mf').click(); await p.waitForTimeout(300);
+    if (!wide) await p.locator('#dock-notes').click();
+    // Lead sheet: a chord on bar 1 from the lane
+    await p.locator('#st-lead').click(); await p.waitForSelector('#lead-lane');
+    await p.locator('#lead-lane .ll-bar').first().locator('button').filter({ hasText: /^C$/ }).click(); await p.waitForTimeout(300);
+    await shot('06d-studio-lead'); await overflow('studio lead sheet');
+    // Mix: two channel strips, mute the cello, play
+    await p.locator('#st-modes button').filter({ hasText: /Mix/ }).click(); await p.waitForSelector('#st-mixer .strip');
+    if ((await p.locator('#st-mixer .strip').count()) !== 2) throw new Error('the mixer should have a strip for each part');
+    await p.locator('#st-mixer .strip').nth(1).locator('.mix-b').first().click();
+    if (!(await p.locator('#st-mixer .strip.muted').count())) throw new Error('mute did not mute');
+    await p.locator('#mix-play').click(); await p.waitForTimeout(600); await p.locator('#mix-play').click();
+    await shot('06e-studio-mix'); await overflow('mixer');
+    // Share: export MusicXML with both parts, the dynamic and the chord in it
+    await p.locator('#st-modes button').filter({ hasText: /Share/ }).click(); await p.waitForSelector('#st-share #studio-next');
+    await shot('06f-studio-share');
+    await p.locator('#share-export').click(); await p.waitForSelector('#exp-musicxml');
+    const [dl] = await Promise.all([p.waitForEvent('download', { timeout: 30000 }), p.locator('#exp-musicxml').click()]);
+    const xml = fs.readFileSync(await dl.path(), 'utf8');
+    if ((xml.match(/<score-part /g) || []).length !== 2 || !/<dynamics><mf\/>/.test(xml) || !/<harmony/.test(xml)) throw new Error('the exported MusicXML is missing the cello, the mf or the chord');
+    await p.keyboard.press('Escape'); await p.waitForTimeout(250);
+    const mins = (Date.now() - started) / 60000;
+    if (mins > 5) throw new Error(`the first song took ${mins.toFixed(1)} minutes`);
     await back(); await p.waitForTimeout(300);
     if (!(await p.locator('#write .song-tile').filter({ hasText: 'My first song' }).count())) throw new Error('the new song is not in My songs');
+    // opening it again: the studio is ready (bars drawn) in under 2 seconds
+    const t0 = Date.now();
+    await p.locator('#write .song-tile').filter({ hasText: 'My first song' }).locator('.st-main').click();
+    await p.waitForSelector('.st-score svg g.note', { timeout: 10000 });
+    const ms = Date.now() - t0;
+    console.log(`  ${mode}: studio ready in ${ms} ms; first song made in ${(mins * 60).toFixed(0)} s`);
+    if (ms > 2000) throw new Error(`the studio took ${ms} ms to open (target under 2 s)`);
+    await back(); await p.waitForTimeout(300);
   });
   await step('lyrics -> edited chords -> Play Along', async () => {
     await tab('write'); await p.waitForTimeout(300);

@@ -957,3 +957,74 @@ blockquote.teacher-note { margin: 0 0 8px; padding: 10px 14px; border-left: 3px 
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .apple-btn { background: #fff; color: #000; } }
 :root[data-theme="dark"] .apple-btn { background: #fff; color: #000; }
 #signin-methods { margin-bottom: 14px; }
+
+/* ================= Part 2 · The studio, MuseScore 4 style (screens/studio.jsx) ================= */
+.ms4 .ms-modes { display: flex; justify-content: center; padding: 8px 16px 2px; }
+.ms4 .ms-modes .segmented { width: min(420px, 100%); }
+.ms-toolbar { position: sticky; top: 0; z-index: 12; display: flex; align-items: center; gap: 4px; overflow-x: auto; scrollbar-width: none; padding: 6px 12px;
+  margin: 6px 0 0; background: color-mix(in srgb, var(--bg) 88%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+.ms-toolbar::-webkit-scrollbar { display: none; }
+.ms-toolbar button { flex-shrink: 0; min-width: 40px; height: 40px; padding: 0 8px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  background: var(--card); border: 1px solid var(--line); color: var(--ink); }
+.ms-toolbar button .gl { font-size: 22px; line-height: 1; font-family: "Bravura Text", "Noto Music", serif; }
+.ms-toolbar button.on { background: var(--s-teal); border-color: var(--s-teal); color: #fff; }
+.ms-toolbar button:disabled { opacity: .35; }
+.ms-toolbar .sep { width: 1px; height: 26px; background: var(--line); margin: 0 4px; flex-shrink: 0; }
+.ms-toolbar .lbl { font-size: 12.5px; font-weight: 700; }
+@media (max-width: 520px) { .ms-toolbar .lbl { display: none; } }
+.ms-layout { display: flex; align-items: flex-start; gap: 0; }
+.ms-main { flex: 1; min-width: 0; }
+.ms-side { width: 280px; flex-shrink: 0; position: sticky; top: 56px; max-height: calc(100vh - 120px); overflow-y: auto; padding: 12px; margin: 10px 0 0 12px;
+  border-radius: var(--r); background: var(--card); border: 1px solid var(--line); }
+.ms-side-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 10px; }
+.ms-side-tabs button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border-radius: 10px; font-size: 11.5px; font-weight: 700; color: var(--ink2); }
+.ms-side-tabs button.on { background: var(--fill2); color: var(--ink); }
+.ms-k { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--ink2); margin: 12px 0 6px; }
+.ms-k:first-child { margin-top: 2px; }
+.ms-pal .chip, .ms-ins .chip { min-height: 32px; padding: 5px 11px; font-size: 13.5px; }
+.ms-pal .dyn { font-family: "Times New Roman", serif; font-weight: 700; font-style: italic; font-size: 16px; }
+.ms-part { display: flex; align-items: center; gap: 6px; padding: 6px; border-radius: 12px; margin-bottom: 6px; border: 1px solid var(--line); }
+.ms-part.on { border-color: var(--s-teal); background: color-mix(in srgb, var(--s-teal) 8%, var(--card)); }
+.ms-part .mp-name { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; font-weight: 700; text-align: left; }
+.ms-part select { max-width: 120px; height: 32px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: inherit; font-size: 13px; }
+.ms-big { font-size: 18px; margin: 0 0 6px; }
+.ms-dock-panel { max-height: 42vh; overflow-y: auto; }
+/* the lead-sheet lane: one chord per bar, under the music */
+.lead-lane { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 8px; }
+.ll-bar { display: flex; flex-direction: column; gap: 4px; padding: 8px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); }
+.ll-bar.on { border-color: var(--s-teal); }
+.ll-n { align-self: flex-start; font-size: 11px; font-weight: 800; color: var(--ink2); }
+.ll-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.ll-chips button { min-width: 34px; height: 30px; padding: 0 7px; border-radius: 8px; font-weight: 750; font-size: 13px; background: var(--fill); }
+.ll-chips button.on { background: var(--s-teal); color: #fff; }
+/* the mixer: channel strips */
+.ms-mix { padding-top: 14px; }
+.mix-strips { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.strip { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: var(--r); background: var(--card); border: 1px solid var(--line); }
+.strip.muted { opacity: .55; }
+.strip.solo { border-color: #f5b400; box-shadow: 0 0 0 2px color-mix(in srgb, #f5b400 35%, transparent); }
+.strip .sn { font-size: 15px; }
+.strip select { height: 34px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: inherit; font-size: 13px; }
+.strip .sl { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 6px; font-size: 12px; color: var(--ink2); }
+.strip .sl span { grid-column: 1 / -1; font-weight: 700; }
+.strip .sl input { width: 100%; accent-color: var(--s-teal); }
+.strip .sl b { font-variant-numeric: tabular-nums; color: var(--ink); min-width: 32px; text-align: right; }
+.strip .ms-btns { display: flex; gap: 6px; }
+.strip .mix-b { flex: 1; height: 34px; border-radius: 8px; font-weight: 800; background: var(--fill2); }
+.strip .mix-b.on.m { background: #e5484d; color: #fff; }
+.strip .mix-b.on.s { background: #f5b400; color: #111; }
+/* share */
+.ms-share { padding-top: 14px; }
+.share-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.share-card { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 16px; border-radius: var(--r); text-align: left; background: var(--card); border: 1px solid var(--line); }
+.share-card > svg { color: var(--c); margin-bottom: 6px; }
+.share-card span { font-size: 13px; color: var(--ink2); }
+.share-card:disabled { opacity: .5; }
+.ms4.m-mix, .ms4.m-share { padding-bottom: calc(var(--tabbar-h) + var(--sa-bottom) + 40px) !important; }
+.ms4 .st-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 0 8px; }
+.ms4 .st-tabs button { min-width: 0; padding: 0 6px; font-size: 12px; justify-content: center; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ms4 .st-tabs button svg { flex-shrink: 0; }
+@media (max-width: 440px) { .ms4 .st-tabs button svg { display: none; } }
+.ms-side .chips, .ms-dock-panel .chips { display: flex; flex-wrap: wrap; gap: 6px; overflow: visible; margin: 0; padding: 0; }
+.ms-side .chip, .ms-dock-panel .chip { width: auto; flex: 0 0 auto; }
+@media (min-width: 900px) { .ms-side { max-height: calc(100vh - 300px); } }
