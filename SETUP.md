@@ -76,7 +76,7 @@ To approve a music school's teachers at once, list its email domains:
      Apple's signature, the issuer, this audience and the expiry; nothing secret is needed).
   4. For the iPhone app: `npm i @capacitor-community/apple-sign-in && npx cap sync ios`; the app uses it when present.
 - **Google sign-in inside the Android app** (instead of signing in on the website with a code):
-  1. Google Cloud → Credentials → **OAuth client ID → Android**: package `my.melovyn.app` and the SHA-1 of the
+  1. Google Cloud → Credentials → **OAuth client ID → Android**: package `com.sloky.melovyn` and the SHA-1 of the
      signing key (Play Console → App integrity → App signing).
   2. `cd web && npm i @codetrix-studio/capacitor-google-auth && npx cap sync android`, and in
      `capacitor.config.json` set `plugins.GoogleAuth.serverClientId` to the **Web** client ID (so the token's
