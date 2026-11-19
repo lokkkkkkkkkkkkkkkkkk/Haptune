@@ -34,6 +34,7 @@
     "@capacitor/haptics": "8.0.2",
     "@capacitor/share": "8.0.3",
     "@capacitor/status-bar": "8.0.4",
+    "@capgo/capacitor-social-login": "^8.7.11",
     "@revenuecat/purchases-capacitor": "13.7.6",
     "qrcode-generator": "^2.0.4"
   }

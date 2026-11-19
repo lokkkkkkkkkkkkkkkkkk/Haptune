@@ -78,10 +78,11 @@ To approve a music school's teachers at once, list its email domains:
 - **Google sign-in inside the Android app** (instead of signing in on the website with a code):
   1. Google Cloud → Credentials → **OAuth client ID → Android**: package `com.sloky.melovyn` and the SHA-1 of the
      signing key (Play Console → App integrity → App signing).
-  2. `cd web && npm i @codetrix-studio/capacitor-google-auth && npx cap sync android`, and in
-     `capacitor.config.json` set `plugins.GoogleAuth.serverClientId` to the **Web** client ID (so the token's
-     audience is the one the server already checks). The app uses it when present, and pairs through the
-     website otherwise.
+  2. Already done in the code: the app uses `@capgo/capacitor-social-login` with the **Web** client ID
+     (`441801851459-894b05t66ggvv4f8185ootkpkl9jnn9o.apps.googleusercontent.com`, set in `web/src/ui/signin.js`
+     and by the `GOOGLE_CLIENT_ID` variable). Fly's `GOOGLE_CLIENT_IDS` must include that Web client ID.
+  3. After the first upload to Google Play, add a second Android client with the SHA-1 from Play Console →
+     App integrity → **App signing key certificate** (Play re-signs the app with its own key).
 
 ## 4. Google search (Search Console)
 1. https://search.google.com/search-console → your property `haptune.name.my` (the TXT record you added is already there).
