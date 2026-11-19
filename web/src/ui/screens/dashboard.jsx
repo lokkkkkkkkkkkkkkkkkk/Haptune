@@ -12,10 +12,11 @@ import { call } from '../api.js';
 import { saveFile } from '../files.js';
 import { timeAgo } from './social.jsx';
 import { Payments, TutorsAdmin, Reports, Inbox, Tools, TeachersAdmin } from './admin.jsx';
+import { BrandPanel } from './brand.jsx';
 
 const TABS = [
   ['overview', 'read_analytics'], ['users', 'manage_users'], ['activity', 'read_analytics'], ['features', 'feature_flags'],
-  ['errors', 'read_analytics'], ['access', 'owner'], ['audit', 'owner'],
+  ['errors', 'read_analytics'], ['access', 'owner'], ['brand', 'owner'], ['audit', 'owner'],
   ['payments', 'manage_users'], ['teachers', 'verify_teachers'], ['tutors', 'verify_teachers'], ['reports', 'moderate_stage'], ['feedback', 'manage_users'], ['tools', 'manage_users'],
 ];
 const SCOPES = ['read_analytics', 'manage_users', 'feature_flags', 'moderate_stage', 'verify_teachers'];
@@ -55,6 +56,7 @@ export function AdminView({ active, tab: tab0, prefill = '' }) {
         {tab === 'features' && <Features active={active} canRead={can('read_analytics')} />}
         {tab === 'errors' && <Errors active={active} canUsers={can('manage_users')} />}
         {tab === 'access' && <Access active={active} prefill={prefill} />}
+        {tab === 'brand' && <BrandPanel />}
         {tab === 'audit' && <Audit active={active} />}
         {tab === 'payments' && <Payments active={active} />}
         {tab === 'teachers' && <TeachersAdmin active={active} />}

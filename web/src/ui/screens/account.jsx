@@ -33,6 +33,11 @@ export function AccountSheet() {
   };
   const go = (view, props = {}) => { closeSheet(); push(view, props); };
   const tier = me?.tier || 'free';
+  const signOut = async () => {
+    if (!confirm(t('signOutQ'))) return;
+    try { globalThis.google?.accounts?.id?.disableAutoSelect?.(); } catch { /* Google not loaded */ }
+    await C.logout(); toast(t('signedOut')); ensureAccount();
+  };
   return (
     <SheetFrame title={t('account')} left={false} right={t('done')} onRight={closeSheet}>
       {hasServer() && (
@@ -54,12 +59,25 @@ export function AccountSheet() {
         </Section>
       )}
       {hasServer() && (
-        <Section title={t('signInTitle')} footer={me?.has_password ? t('signedInEverywhere', { n: me?.devices || 1 }) : t('signInHelp')}>
-          <List>
-            {!me?.has_password && <Row icon="key" color="green" title={t('setPassword')} subtitle={t('setPasswordSub')} onClick={() => openSheet('setPassword')} />}
-            <Row icon="person" color="blue" title={t('signInOther')} onClick={() => openSheet('signIn')} />
-            {me?.has_password && <Row icon="logout" color="gray" title={t('signOut')} onClick={async () => { await C.logout(); toast(t('signedOut')); ensureAccount(); }} />}
-          </List>
+        <Section title={t('signInTitle')} footer={me?.registered ? t('signedInEverywhere', { n: me?.devices || 1 }) : t('signInHelp')}>
+          {me?.registered ? (
+            <>
+              <div class="acct-who" id="acct-who">
+                <span class={`aw-ic ${me.google ? 'g' : ''}`} aria-hidden="true">{me.google ? 'G' : <Icon name="key" size={16} />}</span>
+                <span class="aw-t"><strong>{me.google ? me.email : `@${me.handle}`}</strong><span>{me.google ? t('viaGoogle') : t('viaUsername')}</span></span>
+                <span class="pill-ok"><Icon name="check" size={13} stroke={2.6} />{t('signedInT')}</span>
+              </div>
+              <List>
+                <Row icon="person" color="blue" title={t('switchAccount')} subtitle={t('switchAccountSub')} onClick={() => openSheet('hubRole', {})} id="acc-switch" />
+                <Row icon="logout" color="gray" title={t('signOut')} onClick={signOut} id="acc-signout" />
+              </List>
+            </>
+          ) : (
+            <List>
+              <Row icon="person" color="blue" title={t('signIn')} subtitle={t('signInWhy')} onClick={() => openSheet('hubRole', {})} id="acc-signin" />
+              <Row icon="key" color="green" title={t('signInOther')} onClick={() => openSheet('signIn')} />
+            </List>
+          )}
         </Section>
       )}
       <Section title={t('profile')}>
@@ -121,13 +139,7 @@ export function AccountSheet() {
         </Section>
       )}
       {hasServer() && me?.staff && <Section title={t('developer')}><DevModeRows /></Section>}
-      {hasServer() && !me?.staff && (
-        <Section title={t('developer')}>
-          <List>
-            {!me?.staff && <Row icon="key" color="gray" title={t('devUnlock')} subtitle={t('devUnlockSub')} onClick={() => openSheet('devCode')} />}
-          </List>
-        </Section>
-      )}
+      {hasServer() && !me?.staff && me?.registered && <Section title={t('developer')}><DevWhy /></Section>}
       <Section>
         <List>
           {!confirm ? <Row title={t('resetAll')} danger onClick={() => setConfirm(true)} />
@@ -247,3 +259,16 @@ export function DevCodeSheet() {
 }
 
 export { PlansSheet as PaywallSheet } from './plans.jsx';
+
+/** For someone who expects Developer mode but doesn't get it: what the server sees, and what to do. */
+function DevWhy() {
+  const [r, setR] = useState(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => { if (open && !r) C.staffCheck().then(setR).catch(() => setR({ reason: 'offline' })); }, [open]);
+  return (
+    <>
+      <List><Row icon="shield" color="gray" title={t('devWhyT')} subtitle={t('devWhySub')} onClick={() => setOpen(!open)} id="acc-devwhy" /></List>
+      {open && (r ? <p class="note-text" id="dev-why">{t(`devWhy_${r.reason}`, { email: r.email || '—' })}</p> : <div class="loading"><div class="spinner" /></div>)}
+    </>
+  );
+}

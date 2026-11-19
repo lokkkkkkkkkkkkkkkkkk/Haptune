@@ -6,7 +6,9 @@ import { t } from '../../core/i18n.js';
 import { Icon, List, Row, Button } from '../components.jsx';
 import { SheetFrame } from './common.jsx';
 import { C, ensureAccount } from '../account.js';
-import { connectGoogle, toBase64, isDeclined } from '../google.js';
+import { connectGoogle, askGoogle, toBase64, isDeclined } from '../google.js';
+import { GoogleButton } from './hub.jsx';
+import { Mascot } from '../mascot.jsx';
 import { hasServer } from '../api.js';
 
 const ICON = { calendar: ['calendar', 'blue'], drive: ['cloud', 'green'], contacts: ['users', 'orange'] };
@@ -41,38 +43,135 @@ function SignInMethods() {
   );
 }
 
+const FEATURES = ['calendar', 'drive', 'contacts'];
+
+/** The three Google features with a tick or a dash: what Melovyn may use. */
+function GoogleFeatureList({ info, manage, busy, onRemove }) {
+  return (
+    <List>
+      {info.features.map((f) => (
+        <Row key={f.id} id={`conn-${f.id}`} icon={ICON[f.id][0]} color={ICON[f.id][1]} title={t(`conn_${f.id}`)} subtitle={t(`conn_${f.id}Sub`)} chevron={false}
+          right={manage && f.linked ? <Button small kind="secondary" disabled={busy === f.id} onClick={() => onRemove(f.id)}>{t('remove')}</Button>
+            : f.linked ? <span class="pill-ok"><Icon name="check" size={13} stroke={2.6} />{t('onT')}</span> : <span class="pill-off">{t('offT')}</span>} />
+      ))}
+    </List>
+  );
+}
+
 export function ConnectionsSheet() {
+  const s = useApp();
   const [info, setInfo] = useState(null);
   const [busy, setBusy] = useState('');
   const [err, setErr] = useState('');
   const [note, setNote] = useState('');
-  useEffect(() => { if (hasServer()) C.gconn.list().then(setInfo).catch((e) => setErr(e.message)); }, []);
-  const act = async (f, on) => {
-    setBusy(f); setErr(''); setNote('');
-    try { setInfo(on ? await connectGoogle(f) : await C.gconn.revoke(f)); } catch (e) { if (isDeclined(e)) setNote(e.message); else setErr(e.message || String(e)); }
+  const [manage, setManage] = useState(false);
+  const load = () => C.gconn.list().then(setInfo).catch((e) => setErr(e.message));
+  useEffect(() => { if (hasServer()) load(); }, [s.me?.google, s.resumedAt]);
+  const allow = async () => {
+    setBusy('all'); setErr(''); setNote('');
+    try {
+      const r = await connectGoogle('all');
+      if (r?.opened) setNote(t('gAllowOnSite')); else { setInfo(r); if (r.all_linked) toast(t('gAllSet')); }
+    } catch (e) { if (isDeclined(e)) setNote(e.message); else setErr(e.message || String(e)); }
     setBusy('');
   };
-  const any = info?.features?.some((f) => f.linked);
+  const remove = async (f) => {
+    setBusy(f); setErr('');
+    try { setInfo(await C.gconn.revoke(f)); } catch (e) { setErr(e.message || String(e)); }
+    setBusy('');
+  };
   return (
     <SheetFrame title={t('connectionsT')}>
-      <SignInMethods />
       <h3 class="cr-topic-name">{t('connGoogleT')}</h3>
-      <p class="note-text">{t('connHelp')}</p>
-      {!info ? (err ? <p class="t-red">{err}</p> : <div class="loading"><div class="spinner" /></div>) : (
+      {!info ? (err ? <p class="t-red">{err}</p> : <div class="loading"><div class="spinner" /></div>) : !info.available ? (
+        <p class="note-text">{t('connNotSetUp')}</p>
+      ) : !info.signed_in_google ? (
+        <div class="g-card" id="conn-need-google">
+          <p class="note-text">{t('gNeedSignIn')}</p>
+          <GoogleButton onDone={() => { ensureAccount({ fresh: true }); load(); }} />
+        </div>
+      ) : (
         <>
-          {!info.available && <p class="note-text">{t('connNotSetUp')}</p>}
-          {info.email && <p class="tiny muted">Google · {info.email}</p>}
-          <List>
-            {info.features.map((f) => (
-              <Row key={f.id} id={`conn-${f.id}`} icon={ICON[f.id][0]} color={ICON[f.id][1]} title={t(`conn_${f.id}`)} subtitle={t(`conn_${f.id}Sub`)} chevron={false}
-                right={f.linked
-                  ? <Button small kind="secondary" disabled={busy === f.id} onClick={() => act(f.id, false)}>{t('disconnect')}</Button>
-                  : <Button small disabled={!info.available || busy === f.id} onClick={() => act(f.id, true)}>{t('connect')}</Button>} />
-            ))}
-          </List>
-          {any && <Button kind="plain" full icon="trash" onClick={() => act('all', false)} id="conn-all">{t('disconnectAll')}</Button>}
-          {note && <p class="note-text" id="conn-declined">{note}</p>}
-          {err && <p class="t-red tiny">{err}</p>}
+          <div class={`g-card ${info.all_linked ? 'ok' : ''}`} id="conn-google">
+            <span class="g-logo" aria-hidden="true">G</span>
+            <span class="g-main"><strong>{info.email}</strong><span>{info.all_linked ? t('gAllSet') : t('gSomeOff')}</span></span>
+            {info.all_linked && <Icon name="check" size={20} stroke={2.8} />}
+          </div>
+          <GoogleFeatureList info={info} manage={manage} busy={busy} onRemove={remove} />
+          {!info.all_linked && <Button full icon="check" disabled={busy === 'all'} onClick={allow} id="conn-allow-all">{t('gAllowAll')}</Button>}
+          <button type="button" class="link" onClick={() => setManage(!manage)} id="conn-manage">{manage ? t('done') : t('gManage')}</button>
+          {manage && info.features.some((f) => f.linked) && <Button kind="plain" full icon="trash" onClick={() => remove('all')} id="conn-all">{t('disconnectAll')}</Button>}
+        </>
+      )}
+      {note && <p class="note-text" id="conn-declined">{note}</p>}
+      {err && info && <p class="t-red tiny">{err}</p>}
+      <SignInMethods />
+    </SheetFrame>
+  );
+}
+
+/** Right after signing in with Google: allow Calendar, Drive and Contacts with one tap (or not now). */
+export function GoogleAllowSheet({ info: first }) {
+  const s = useApp();
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [done, setDone] = useState(false);
+  // the phone app: back from the browser where Google asked, check and close by itself
+  useEffect(() => {
+    if (!s.resumedAt || done) return;
+    C.gconn.list().then((r) => { if (r.all_linked) { setDone(true); toast(t('gAllSet')); setTimeout(closeSheet, 900); } }).catch(() => {});
+  }, [s.resumedAt]);
+  const later = async () => {
+    const { local } = await import('../storage.js');
+    const seen = local.get('gAllowAsked', { n: 0, at: 0 });
+    local.set('gAllowAsked', { n: seen.n + 1, at: Date.now() });
+    closeSheet();
+  };
+  const allow = async () => {
+    setBusy(true); setMsg('');
+    try {
+      const r = await connectGoogle('all');
+      if (r?.opened) setMsg(t('gAllowOnSite'));
+      else { setDone(true); toast(t('gAllSet')); setTimeout(closeSheet, 900); }
+    } catch (e) { setMsg(e.message || String(e)); }
+    setBusy(false);
+  };
+  return (
+    <SheetFrame title={t('gAllowT')}>
+      <div class="sheet-mascot"><Mascot mood={done ? 'cheer' : 'wave'} size={80} /></div>
+      <p class="note-text center">{t('gAllowSub', { email: first?.email || '' })}</p>
+      <List>
+        {FEATURES.map((f) => <Row key={f} icon={ICON[f][0]} color={ICON[f][1]} title={t(`conn_${f}`)} subtitle={t(`conn_${f}Sub`)} chevron={false} />)}
+      </List>
+      <p class="tiny muted center">{t('gAllowPrivacy')}</p>
+      <Button full icon="check" disabled={busy || done} onClick={allow} id="g-allow">{t('gAllowAll')}</Button>
+      {msg && <p class="note-text center" id="g-allow-msg">{msg}</p>}
+      <button type="button" class="hw-skip" onClick={later} id="g-allow-later">{t('notNow')}</button>
+    </SheetFrame>
+  );
+}
+
+/** The website page the phone app opens (…/app/#gconnect/TICKET/all): one tap, Google's window, done. */
+export function GoogleTicketSheet({ ticket, feature = 'all' }) {
+  const [who, setWho] = useState(null);
+  const [state, setStateX] = useState('ready');                    // ready | busy | done | error
+  const [msg, setMsg] = useState('');
+  useEffect(() => { C.gconn.ticketInfo(ticket).then(setWho).catch((e) => { setStateX('error'); setMsg(e.detail?.message || e.message); }); }, [ticket]);
+  const go = async () => {
+    setStateX('busy'); setMsg('');
+    try { await askGoogle(feature, { clientId: who.client_id, hint: who.email, ticket }); setStateX('done'); } catch (e) { setStateX('ready'); setMsg(e.message || String(e)); }
+  };
+  return (
+    <SheetFrame title={t('gAllowT')}>
+      <div class="sheet-mascot"><Mascot mood={state === 'done' ? 'cheer' : 'wave'} size={84} /></div>
+      {state === 'error' ? <p class="note-text center">{msg}</p> : !who ? <div class="loading"><div class="spinner" /></div> : state === 'done' ? (
+        <div class="empty" id="g-ticket-done"><h3>{t('gAllSet')}</h3><p>{t('gBackToApp')}</p></div>
+      ) : (
+        <>
+          <p class="note-text center">{t('gTicketFor', { name: who.name || who.handle, email: who.email })}</p>
+          <List>{FEATURES.map((f) => <Row key={f} icon={ICON[f][0]} color={ICON[f][1]} title={t(`conn_${f}`)} subtitle={t(`conn_${f}Sub`)} chevron={false} />)}</List>
+          <Button full icon="check" disabled={state === 'busy'} onClick={go} id="g-ticket-allow">{t('gAllowAll')}</Button>
+          {msg && <p class="note-text center">{msg}</p>}
         </>
       )}
     </SheetFrame>

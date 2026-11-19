@@ -573,7 +573,7 @@ def me_json(me: Me) -> dict:
             "devices": n_sessions + 1, "joined": _iso(acc["created"]),
             "staff": {"role": me.staff, "scopes": sorted(me.scopes), "dev_mode": me.dev_mode, "dev_until": _iso(me.dev_until) if me.dev_until else None,
                       "expires": _iso(me.grant_row["expires"]) if me.grant_row and me.grant_row.get("expires") else None} if me.staff else None,
-            "totp": bool(acc.get("totp_on"))}
+            "totp": bool(acc.get("totp_on") and _unseal(acc.get("totp_secret")))}
 
 
 def _new_identity(c, name: str) -> tuple[dict, str]:
@@ -946,7 +946,10 @@ def _unseal(stored: str | None) -> str | None:
         return None
     if stored.startswith("enc:"):
         import google_link
-        return google_link.decrypt(stored[4:])
+        try:
+            return google_link.decrypt(stored[4:])
+        except Exception:                                       # noqa: BLE001 - HAPTUNE_TOKEN_KEY changed since
+            return None
     return stored.removeprefix("plain:")
 
 
@@ -982,16 +985,40 @@ class CodeIn(BaseModel):
     code: str = Field("", max_length=20)
 
 
+@router.get("/me/staff-check")
+def staff_check(me: Me = Depends(current)):
+    """Why this account is or isn't the owner, in words the person can act on (about themselves only)."""
+    acc = me.acc
+    email = (acc.get("email") or "").lower()
+    if me.staff:
+        reason = "ok"
+    elif not owner_emails():
+        reason = "owner_not_set"                # HAPTUNE_OWNER_EMAILS is empty on the server
+    elif not acc.get("google_sub"):
+        reason = "not_google"                   # signed in another way (username, Apple, a device-only account)
+    elif not email:
+        reason = "no_email"                     # Google didn't share a verified email: sign in with Google again
+    elif email not in owner_emails():
+        reason = "other_email"
+    else:
+        reason = "unknown"
+    return {"reason": reason, "email": acc.get("email") or "", "google": bool(acc.get("google_sub")), "registered": is_registered(acc),
+            "staff": me.staff, "totp": bool(acc.get("totp_on")), "totp_readable": bool(_unseal(acc.get("totp_secret"))) if acc.get("totp_on") else None}
+
+
 @router.get("/me/2fa")
 def twofa_status(me: Me = Depends(current)):
-    return {"on": bool(me.acc.get("totp_on")), "recovery_left": len(me.acc.get("totp_recovery") or []), "required": bool(me.staff)}
+    # a secret the server can no longer read (its key changed) counts as off, so it can be set up again
+    return {"on": bool(me.acc.get("totp_on") and _unseal(me.acc.get("totp_secret"))), "recovery_left": len(me.acc.get("totp_recovery") or []), "required": bool(me.staff)}
 
 
 @router.post("/me/2fa/setup")
 def twofa_setup(me: Me = Depends(current)):
     """A new secret to add to an authenticator app (shown as a QR code and as text). Not on until confirmed."""
     require_registered(me)
-    if me.acc.get("totp_on"):
+    # on, and still readable: it stays. (If the server's key changed, the old secret can't be read any more and the
+    # owner, signed in with Google, sets it up again instead of being locked out of Developer mode for good.)
+    if me.acc.get("totp_on") and _unseal(me.acc.get("totp_secret")):
         raise HTTPException(409, "2-step verification is already on.")
     secret = "".join(secrets.choice(B32) for _ in range(32))
     with engine().begin() as c:

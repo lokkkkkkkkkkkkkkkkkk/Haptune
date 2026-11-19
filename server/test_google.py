@@ -30,7 +30,8 @@ class FakeGoogle:
     def __call__(self, method, url, *, token=None, data=None, form=None, headers=None, timeout=20):
         self.calls.append((method, url.split("?")[0], token, form))
         if url == G.TOKEN_URL and form["grant_type"] == "authorization_code":
-            want = {"code-cal-1234": [G.SCOPES["calendar"]], "code-drive-1234": [G.SCOPES["drive"]], "code-none-1234": []}[form["code"]]
+            want = {"code-cal-1234": [G.SCOPES["calendar"]], "code-drive-1234": [G.SCOPES["drive"]], "code-none-1234": [],
+                    "code-all-1234": list(G.SCOPES.values()), "code-two-1234": [G.SCOPES["calendar"], G.SCOPES["drive"]]}[form["code"]]
             return {"access_token": "at-1", "expires_in": 3600, "refresh_token": "rt-secret", "scope": " ".join(["openid", "email", *want])}
         if url == G.TOKEN_URL:
             assert form["refresh_token"] == "rt-secret"
@@ -163,3 +164,56 @@ def test_contacts_for_inviting(fresh, monkeypatch):
                                           email="t@gmail.com", created=0, updated=0))
     got = client.get("/c/google/contacts", params={"q": "ben"}, headers=h).json()["contacts"]
     assert got == [{"name": "Ben Ong", "email": "ben@gmail.com"}]
+
+
+def test_all_at_once_keeps_what_was_allowed(monkeypatch):
+    h = user(monkeypatch, "g-all", "all@gmail.com", "Ana")
+    r = client.get("/c/google/connections", headers=h).json()
+    assert r["signed_in_google"] and not r["all_linked"]
+    # Google lets people untick one: the other two are kept
+    r = client.post("/c/google/connect", json={"code": "code-two-1234", "feature": "all"}, headers=h).json()
+    assert {f["id"] for f in r["features"] if f["linked"]} == {"calendar", "drive"} and not r["all_linked"]
+    r = client.post("/c/google/connect", json={"code": "code-all-1234", "feature": "all"}, headers=h).json()
+    assert r["all_linked"]
+    assert client.post("/c/google/connect", json={"code": "code-none-1234", "feature": "all"}, headers=h).status_code == 400
+
+
+def test_phone_app_links_through_a_one_time_ticket(monkeypatch):
+    h = user(monkeypatch, "g-tk", "tk@gmail.com", "Tan")
+    tk = client.post("/c/google/ticket", headers=h).json()["ticket"]
+    info = client.get(f"/c/google/ticket/{tk}").json()
+    assert info["email"] == "tk@gmail.com" and info["client_id"].startswith("cid")
+    # the website, signed in as nobody, links the permissions to the phone's account
+    r = client.post("/c/google/connect", json={"code": "code-all-1234", "feature": "all", "ticket": tk})
+    assert r.status_code == 200, r.text
+    assert client.get("/c/google/connections", headers=h).json()["all_linked"]
+    # once only
+    assert client.post("/c/google/connect", json={"code": "code-all-1234", "feature": "all", "ticket": tk}).status_code == 401
+    assert client.get(f"/c/google/ticket/{tk}").status_code == 404
+    # guests can't make tickets
+    g = {"Authorization": "Bearer " + client.post("/c/auth/guest", json={"name": "G"}).json()["token"]}
+    assert client.post("/c/google/ticket", headers=g).status_code in (401, 403)
+
+
+def test_staff_check_says_why(monkeypatch):
+    monkeypatch.setenv("HAPTUNE_OWNER_EMAILS", "boss@gmail.com")
+    h = user(monkeypatch, "g-x", "other@gmail.com", "Oth")
+    assert client.get("/c/me/staff-check", headers=h).json()["reason"] == "other_email"
+    h2 = user(monkeypatch, "g-boss", "Boss@gmail.com", "Boss")
+    assert client.get("/c/me/staff-check", headers=h2).json()["reason"] == "ok"
+    g = {"Authorization": "Bearer " + client.post("/c/auth/guest", json={"name": "G"}).json()["token"]}
+    assert client.get("/c/me/staff-check", headers=g).json()["reason"] == "not_google"
+    monkeypatch.setenv("HAPTUNE_OWNER_EMAILS", "")
+    assert client.get("/c/me/staff-check", headers=h).json()["reason"] == "owner_not_set"
+
+
+def test_owner_locked_out_by_a_changed_key_can_set_2fa_up_again(monkeypatch):
+    monkeypatch.setenv("HAPTUNE_OWNER_EMAILS", "boss2@gmail.com")
+    h = user(monkeypatch, "g-boss2", "boss2@gmail.com", "Boss")
+    sec = client.post("/c/me/2fa/setup", headers=h).json()["secret"]
+    assert client.post("/c/me/2fa/enable", json={"code": accounts.totp(sec)}, headers=h).status_code == 200
+    assert client.post("/c/me/2fa/setup", headers=h).status_code == 409
+    monkeypatch.setenv("HAPTUNE_TOKEN_KEY", "another-long-random-key")          # the secret can't be read any more
+    assert client.get("/c/me/staff-check", headers=h).json()["totp_readable"] is False
+    sec2 = client.post("/c/me/2fa/setup", headers=h).json()["secret"]
+    assert client.post("/c/me/2fa/enable", json={"code": accounts.totp(sec2)}, headers=h).status_code == 200

@@ -115,6 +115,8 @@ const PieceMoreSheet = lazy(m_piecemore, 'PieceMoreSheet');
 const m_connections = () => import('./screens/connections.jsx');
 const ConnectionsSheet = lazy(m_connections, 'ConnectionsSheet');
 const TeacherVerifySheet = lazy(m_connections, 'TeacherVerifySheet');
+const GoogleAllowSheet = lazy(m_connections, 'GoogleAllowSheet');
+const GoogleTicketSheet = lazy(m_connections, 'GoogleTicketSheet');
 const m_classroom = () => import('./screens/classroom.jsx');
 const AsgMetaSheet = lazy(m_classroom, 'AsgMetaSheet');
 const SessionSheet = lazy(m_classroom, 'SessionSheet');
@@ -205,7 +207,7 @@ const MoreSheet = lazy(m_social, 'MoreSheet');
 // Me holds your account, plan and settings. On a computer they sit in a sidebar; on a phone four of them are
 // in the tab bar with Write raised in the middle, and Me is the picture at the top of each page.
 export const TABS = [
-  { id: 'summary', icon: 'home', color: 'violet', label: 'practice' },
+  { id: 'summary', icon: 'summary', color: 'violet', label: 'summaryTab' },
   { id: 'academy', icon: 'academy', color: 'orange', label: 'hub' },
   { id: 'write', icon: 'pencil', color: 'teal', label: 'create', center: true },
   { id: 'community', icon: 'stage', color: 'pink', label: 'stage' },
@@ -231,7 +233,7 @@ const SHEETS = {
   newSong: NewSongSheet, hubRole: HubRoleSheet, classQR: ClassQRSheet, pair: PairSheet, take: TakeSheet, joinLink: JoinLinkSheet, moment: MomentSheet,
   setPassword: SetPasswordSheet, signIn: SignInSheet, deleteAccount: DeleteAccountSheet, devCode: DevCodeSheet,
   pieceMore: PieceMoreSheet, chordPick: ChordPickSheet, ceSong: ChordSongSheet, ceSection: ChordSectionSheet, ceExport: ChordExportSheet,
-  aiChat: AIChatSheet, deleteUser: DeleteUserSheet, twoStep: TwoStepSheet, devMode: DevModeSheet, sessions: SessionsSheet, stageNew: StageNewSheet, soundAdd: SoundAddSheet, soundTrack: SoundTrackSheet, soundSettings: SoundSettingsSheet, soundExport: SoundExportSheet, soundPost: SoundPostSheet, connections: ConnectionsSheet, teacherVerify: TeacherVerifySheet, asgMeta: AsgMetaSheet, session: SessionSheet, invite: InviteSheet, grade: GradeSheet, guardians: GuardiansSheet, roster: RosterSheet, duelPick: DuelPickSheet,
+  aiChat: AIChatSheet, deleteUser: DeleteUserSheet, twoStep: TwoStepSheet, devMode: DevModeSheet, sessions: SessionsSheet, stageNew: StageNewSheet, soundAdd: SoundAddSheet, soundTrack: SoundTrackSheet, soundSettings: SoundSettingsSheet, soundExport: SoundExportSheet, soundPost: SoundPostSheet, connections: ConnectionsSheet, googleAllow: GoogleAllowSheet, googleTicket: GoogleTicketSheet, teacherVerify: TeacherVerifySheet, asgMeta: AsgMetaSheet, session: SessionSheet, invite: InviteSheet, grade: GradeSheet, guardians: GuardiansSheet, roster: RosterSheet, duelPick: DuelPickSheet,
 };
 
 /** Android back button: close a sheet, go back a screen, go Home, then leave the app. */
@@ -295,6 +297,9 @@ function openHash() {
   const jn = /^join\/([A-Za-z0-9]{4,12})$/.exec(h);
   if (jn) { go('academy'); openSheet('joinLink', { code: jn[1].toUpperCase() }); history.replaceState(null, '', location.pathname); return; }
   // the app asks the website to sign it in: …/app/#pair=ABCD2345
+  // the phone app asks the website to allow Google features for its account: …/app/#gconnect/TICKET/all
+  const gc = /^gconnect\/([A-Za-z0-9_-]{20,60})\/(all|calendar|drive|contacts)$/.exec(h);
+  if (gc) { history.replaceState(null, '', location.pathname); openSheet('googleTicket', { ticket: gc[1], feature: gc[2] }); return; }
   const pr = /^pair=([A-Za-z0-9]{8})$/.exec(h);
   if (pr) { openSheet('pair', { approve: true, code: pr[1].toUpperCase() }); history.replaceState(null, '', location.pathname); return; }
   if (h === 'write') { go('write'); return; }
@@ -388,7 +393,7 @@ function App() {
       // the sheet engraver (2.3 MB) downloads once Home is on screen and the phone is idle, not before
       setTimeout(() => (globalThis.requestIdleCallback || setTimeout)(() => warmVerovio(), { timeout: 5000 }), 2500);
     });
-    initNative({ onBack, onResume: () => { if (hasServer()) ensureAccount({ fresh: true }); } });
+    initNative({ onBack, onResume: () => { if (hasServer()) ensureAccount({ fresh: true }); setState({ resumedAt: Date.now() }); } });
     addEventListener('hashchange', openHash);
     return () => removeEventListener('hashchange', openHash);
   }, []);

@@ -140,7 +140,7 @@ async function person(browser, base, api, { name, role, handle }) {
     });
     await step('Home: the Learn band and the class shelf (student), takes to review (teacher)', async () => {
       for (const [pg, who] of [[s, 'student'], [t, 'teacher']]) {
-        await tab(pg, 'practice'); await pg.evaluate(() => window.__haptune.popToRoot('summary'));
+        await tab(pg, 'summaryTab'); await pg.evaluate(() => window.__haptune.popToRoot('summary'));
         await pg.waitForSelector('#home-band');
         if (who === 'teacher') await pg.waitForFunction(() => /to review/i.test(document.querySelector('#band-learn')?.innerText || ''), null, { timeout: 15000 });
         else await pg.waitForSelector('#shelf-class .shelf-item', { timeout: 15000 });
@@ -265,14 +265,14 @@ async function person(browser, base, api, { name, role, handle }) {
     await step('Golden path: one search finds the class and the person; links open the assignment, a Stage post and a piece in Play Along', async () => {
       const go = async (pg, hash) => { await esc(pg); await pg.evaluate((h) => { location.hash = h; }, hash); await pg.waitForTimeout(600); };
       // one search: classes and people with type chips
-      await esc(s); await tab(s, 'practice'); await s.evaluate(() => window.__haptune.popToRoot('summary'));
+      await esc(s); await tab(s, 'summaryTab'); await s.evaluate(() => window.__haptune.popToRoot('summary'));
       await s.locator('#hero-find').click(); await s.waitForSelector('#find-q');
       await s.fill('#find-q', 'violin'); await s.waitForSelector('#ft-classes', { timeout: 15000 });
       await s.locator('#ft-classes').click(); await s.waitForSelector('#find-classes-first');
       if (await s.locator('#find-free').count()) throw new Error('the Classes chip still shows pieces');
       await s.screenshot({ path: path.join(SHOTS, 'golden-search-classes.png') });
       await s.locator('#find-classes-first').click(); await s.waitForSelector('#class-tabs:visible', { timeout: 10000 });
-      await tab(s, 'practice'); await s.waitForSelector('#find-q:visible');
+      await tab(s, 'summaryTab'); await s.waitForSelector('#find-q:visible');
       await s.fill('#find-q', 'ms tan'); await s.waitForSelector('#find-people-first', { timeout: 15000 });
       // the assignment link a teacher shares
       const asg = await s.evaluate(async (server) => {
@@ -342,7 +342,23 @@ async function person(browser, base, api, { name, role, handle }) {
       if (await t.locator('#signin-methods button').filter({ hasText: /Remove/ }).count()) throw new Error('the only way to sign in can be removed');
       if (await t.locator('#apple-btn').count()) throw new Error('Apple shows although it is not set up');
       await t.screenshot({ path: path.join(SHOTS, 'signin-ways.png') });
+      // signed in without Google: Google features say to sign in with Google first (no dead "Connect" buttons)
+      if (!(await t.locator('#conn-need-google').count()) && !/aren.t set up|not switched on/i.test(await t.locator('.sheet').innerText())) throw new Error('Connections should ask for Google sign-in first (or say Google is not set up)');
+      if (await t.locator('.sheet button').filter({ hasText: /^Connect$/ }).count()) throw new Error('a "Connect" button shows without Google');
       await esc(t);
+    });
+    await step('Account: who is signed in, Switch account and Sign out; "Why can\'t I open Developer mode?" answers', async () => {
+      await esc(s); await s.evaluate(() => window.__haptune.openSheet('account'));
+      await s.waitForSelector('#acct-who', { timeout: 15000 });
+      const who = await s.locator('#acct-who').innerText();
+      if (!/@ben_violin/.test(who)) throw new Error('the account card does not say who is signed in: ' + who);
+      for (const id of ['#acc-switch', '#acc-signout']) if (!(await s.locator(id).count())) throw new Error(`${id} is missing`);
+      if (await s.locator('#acc-signin').count()) throw new Error('a signed-in account is offered "Sign in" again');
+      await s.locator('#acc-devwhy').click(); await s.waitForSelector('#dev-why');
+      const why = await s.locator('#dev-why').innerText();
+      if (!/without Google/i.test(why)) throw new Error('the Developer mode answer is wrong: ' + why);
+      await s.screenshot({ path: path.join(SHOTS, 'account-signed-in.png') });
+      await esc(s);
     });
     await step('Hapi: ask from the sparkle button, get an answer with buttons, tap one', async () => {
       // the model is mocked here (no API key in tests); the server side is tested in server/test_aichat.py
@@ -351,7 +367,7 @@ async function person(browser, base, api, { name, role, handle }) {
         sent = JSON.parse(route.request().postData());
         await route.fulfill({ json: { text: 'Check your microphone first, then play it slowly.', actions: [{ type: 'open_screen', label: 'Sound check', screen: 'soundCheck' }, { type: 'open_screen', label: 'Stage', screen: 'stage' }] } });
       });
-      await tab(s, 'practice'); await s.waitForSelector('#ai-fab');
+      await tab(s, 'summaryTab'); await s.waitForSelector('#ai-fab');
       await s.locator('#ai-fab').click();
       await s.waitForSelector('#ai-chat .chip'); await s.locator('#ai-chat .chip').first().click();
       await s.waitForSelector('#ai-act-0');
@@ -418,6 +434,12 @@ async function person(browser, base, api, { name, role, handle }) {
       console.log(`  dashboard overview shown ${loadMs} ms after Developer mode`);
       if (loadMs > 1500) throw new Error(`the dashboard took ${loadMs} ms`);
       await t.screenshot({ path: path.join(SHOTS, 'dash-overview.png') });
+      // Brand: the owner sees the name, the icon previews, and what to set up for saving
+      await t.locator('#dash-tab-brand').click(); await t.waitForSelector('#brand-panel #brand-preview');
+      if (await t.inputValue('#brand-name') !== 'Melovyn') throw new Error('the brand name is not shown');
+      if (!(await t.locator('#brand-setup').count())) throw new Error('without GitHub settings the Brand page should say what to set');
+      if (!(await t.locator('#brand-save').isDisabled())) throw new Error('Save should wait for the GitHub settings');
+      await t.screenshot({ path: path.join(SHOTS, 'dash-brand.png') });
       // Users > Ben > give developer access with one scope
       await t.locator('#dash-tab-users').click(); await t.waitForSelector('#u-ben_violin');
       await t.screenshot({ path: path.join(SHOTS, 'dash-users.png') });
@@ -429,7 +451,7 @@ async function person(browser, base, api, { name, role, handle }) {
       // Ben: Developer mode shows only the read-analytics tabs
       await devModeOn(s);
       await s.waitForSelector('#dash-tab-overview');
-      for (const k of ['users', 'access', 'audit', 'features', 'payments']) if (await s.locator(`#dash-tab-${k}`).count()) throw new Error(`the developer sees ${k}`);
+      for (const k of ['users', 'access', 'audit', 'features', 'payments', 'brand']) if (await s.locator(`#dash-tab-${k}`).count()) throw new Error(`the developer sees ${k}`);
       if ((await apiGet(s, '/c/admin/users')).status !== 403) throw new Error('scope not enforced');
       await s.screenshot({ path: path.join(SHOTS, 'dash-developer.png') });
       // the owner revokes: Ben's next call is refused

@@ -642,3 +642,5 @@ import friends  # noqa: E402  (Part 2 D: friends, messages, challenges, Sound mo
 app.include_router(friends.router)
 import signin  # noqa: E402  (Part 2 E: Sign in with Apple, sign-in methods)
 app.include_router(signin.router)
+import brand  # noqa: E402  (Part 3: Developer mode > Brand, the name and icon)
+app.include_router(brand.router)

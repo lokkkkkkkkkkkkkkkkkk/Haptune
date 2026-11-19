@@ -87,6 +87,8 @@ export const C = {
   googleSignIn: async (credential) => {
     const r = await call('/c/auth/google', { method: 'POST', json: { credential, device: navigator.userAgent.slice(0, 60) } });
     local.set('academyToken', r.token); local.set('academyUser', null); setMe(r.me);
+    // then, once, the one-tap "allow Calendar, Drive and Contacts" (nothing else to set up)
+    setTimeout(() => import('./google.js').then((g) => g.offerGoogleAllow()).catch(() => {}), 1200);
     return r.me;
   },
   appleSignIn: async (idToken, name = '') => {
@@ -95,6 +97,7 @@ export const C = {
     return r.me;
   },
   signinMethods: () => call('/c/me/signin'),
+  staffCheck: () => call('/c/me/staff-check'),
   removeSignin: (method) => call(`/c/me/signin/${method}`, { method: 'DELETE' }),
   pairStart: () => call('/c/auth/pair', { method: 'POST', token: '' }),
   pairPoll: (code) => call(`/c/auth/pair/${code}`, { token: '' }),
@@ -141,7 +144,9 @@ export const C = {
   },
   gconn: {
     list: () => call('/c/google/connections'),
-    connect: (code, feature) => call('/c/google/connect', { method: 'POST', json: { code, feature } }),
+    connect: (code, feature, ticket = '') => call('/c/google/connect', { method: 'POST', json: { code, feature, ticket }, ...(ticket ? { token: '' } : {}) }),
+    ticket: () => call('/c/google/ticket', { method: 'POST' }),
+    ticketInfo: (tk) => call(`/c/google/ticket/${encodeURIComponent(tk)}`, { token: '' }),
     revoke: (feature) => call(`/c/google/connections/${feature}`, { method: 'DELETE' }),
     drive: (name, mime, dataB64) => call('/c/google/drive/upload', { method: 'POST', json: { name, mime, data_b64: dataB64 }, timeout: 120000 }),
     contacts: (text = '') => call(`/c/google/contacts${q({ q: text })}`),

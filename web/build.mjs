@@ -10,6 +10,10 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const root = path.dirname(new URL(import.meta.url).pathname);
+// the name and icon (web/brand.json, see tools/brand.cjs): a new name replaces "Melovyn" in every text
+const BRAND = JSON.parse(fs.readFileSync(path.join(root, 'brand.json'), 'utf8'));
+const rename = (text) => (BRAND.name && BRAND.name !== 'Melovyn' ? text.replaceAll('Melovyn', BRAND.name) : text);
+const BRAND_SVG = (() => { try { return fs.readFileSync(path.join(root, BRAND.icon || 'assets/brand/icon.svg'), 'utf8'); } catch { return ''; } })();
 const out = (...p) => path.join(root, 'dist', ...p);
 fs.rmSync(out(), { recursive: true, force: true });
 fs.mkdirSync(out('artifact'), { recursive: true });
@@ -34,7 +38,7 @@ const englishOnly = {
     b.onLoad({ filter: /src[\\/]core[\\/]i18n-\w+\.js$/ }, async (args) => {
       const mod = await import(pathToFileURL(args.path).href);
       const code = Object.entries(mod).map(([name, table]) => `export const ${name} = ${JSON.stringify(Object.fromEntries(Object.entries(table).map(([k, row]) => [k, [row[0]]])))};`).join('\n');
-      return { contents: code, loader: 'js' };
+      return { contents: rename(code), loader: 'js' };
     });
   },
 };
@@ -59,7 +63,7 @@ const START = (() => {
 const CHUNKS = slim.outputFiles.filter((f) => f !== slimMain && f.path.endsWith('.js')).map((f) => path.relative(out('pages', 'app'), f.path).split(path.sep).join('/'));
 const LANG_PACKS = ['ms', 'zh-Hans', 'zh-Hant'];
 // styles.css: layout and every component; theme.css: the Melovyn 2 look on top of it
-const css = ['styles.css', 'theme.css', 'v3.css'].map((f) => fs.readFileSync(path.join(root, 'src/ui', f), 'utf8')).join('\n');
+const css = ['styles.css', 'theme.css', 'v3.css', 'v4.css'].map((f) => fs.readFileSync(path.join(root, 'src/ui', f), 'utf8')).join('\n');
 const VERSION = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version;
 // The server address is built in (GitHub variable HAPTUNE_SERVER_URL -> HAPTUNE_SERVER), so people never type it.
 const SERVER = (process.env.HAPTUNE_SERVER || '').trim().replace(/\/+$/, '');
@@ -108,14 +112,14 @@ ${pwa ? `<meta name="apple-mobile-web-app-capable" content="yes">
 ${config.native || !START.length ? '' : START.map((f) => `<link rel="modulepreload" href="${f}">`).join('')}
 </head>
 <body>
-<div id="haptune" style="height:100%"><div class="splash boot"><div><svg width="56" height="56" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="bootG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5B5BF6"/><stop offset=".55" stop-color="#9B5CF6"/><stop offset="1" stop-color="#F65C9B"/></linearGradient></defs><rect width="32" height="32" rx="9" fill="url(#bootG)"/><path d="M7 21.5h18M7 16.5h18M7 11.5h18" stroke="#fff" stroke-opacity=".35" stroke-width="1.4"/><ellipse cx="13" cy="21.3" rx="4.2" ry="3.2" transform="rotate(-20 13 21.3)" fill="#fff"/><path d="M16.6 20V7.5c2.8.6 5.6 2.4 6.4 5.3" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg><strong>Melovyn</strong></div></div></div>
+<div id="haptune" style="height:100%"><div class="splash boot"><div>${BRAND_SVG ? BRAND_SVG.replace('<svg ', '<svg width="56" height="56" style="border-radius:14px" aria-hidden="true" ').replace(/id="(\w+)"/g, 'id="boot-$1"').replace(/url\(#(\w+)\)/g, 'url(#boot-$1)') : ''}<strong>${BRAND.name}</strong></div></div></div>
 <script>window.HAPTUNE_CONFIG=${CONFIG(config)};</script>
 <script type="module" src="app.js?v=${BUILD}"></script>
 </body>
 </html>
 `;
 const ASSETS = { verovio: 'vendor/verovio-toolkit-wasm.js', pdfjs: 'vendor/pdf.min.js', pdfWorker: 'vendor/pdf.worker.min.js', piano: 'piano/' };
-const html = page({ pwa: true, ...ASSETS }, { pwa: true });
+const html = rename(page({ pwa: true, ...ASSETS }, { pwa: true }));
 fs.writeFileSync(app('index.html'), html);
 fs.mkdirSync(app('chunks'), { recursive: true });
 for (const f of slim.outputFiles) if (f.path.endsWith('.js')) fs.writeFileSync(f.path, f.text);
@@ -124,7 +128,7 @@ fs.mkdirSync(app('i18n'), { recursive: true });
   const { S, INSTR } = allRows();
   LANG_PACKS.forEach((l, j) => {
     const pick = (table) => Object.fromEntries(Object.entries(table).filter(([, row]) => row[j + 1]).map(([k, row]) => [k, row[j + 1]]));
-    fs.writeFileSync(app('i18n', `${l}.json`), JSON.stringify({ s: pick(S), i: pick(INSTR) }));
+    fs.writeFileSync(app('i18n', `${l}.json`), rename(JSON.stringify({ s: pick(S), i: pick(INSTR) })));
   });
 }
 fs.copyFileSync(path.join(root, 'node_modules/verovio/dist/verovio-toolkit-wasm.js'), app('vendor', 'verovio-toolkit-wasm.js'));
@@ -149,7 +153,7 @@ if (fs.existsSync(path.join(root, 'assets/catalog'))) fs.cpSync(path.join(root, 
 // how to pay by DuitNow QR (the picture is optional: without it the app shows the bank account only)
 if (fs.existsSync(path.join(root, 'assets/pay'))) fs.cpSync(path.join(root, 'assets/pay'), app('pay'), { recursive: true });
 fs.writeFileSync(app('manifest.webmanifest'), JSON.stringify({
-  name: 'Melovyn', short_name: 'Melovyn', description: 'Practise with a microphone that listens, learn in classes, write and share sheet music', start_url: './', scope: './', display: 'standalone',
+  name: BRAND.name, short_name: BRAND.shortName || BRAND.name, description: 'Practise with a microphone that listens, learn in classes, write and share sheet music', start_url: './', scope: './', display: 'standalone',
   background_color: '#F5F5FA', theme_color: '#6246FF', orientation: 'any', categories: ['music', 'education'],
   icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }, { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' }, { src: 'icons/icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }],
 }, null, 2));
@@ -171,7 +175,7 @@ self.addEventListener('fetch', (e) => {
 `);
 
 // ---- the website: landing page and legal pages at the top of the site ----
-const fill = (text) => text.replaceAll('{{BUILD}}', BUILD).replaceAll('{{VERSION}}', VERSION).replaceAll('{{SITE}}', SITE).replaceAll('{{PLAY}}', PLAY)
+const fill = (text) => rename(text).replaceAll('{{BUILD}}', BUILD).replaceAll('{{VERSION}}', VERSION).replaceAll('{{SITE}}', SITE).replaceAll('{{PLAY}}', PLAY)
   .replaceAll('{{YEAR}}', String(new Date().getFullYear()));
 for (const f of fs.readdirSync(path.join(root, 'site'))) {
   const src = path.join(root, 'site', f);
@@ -190,5 +194,5 @@ const REVENUECAT = (process.env.HAPTUNE_REVENUECAT_ANDROID || '').trim();
 const catalogPiece = (src) => { const r = path.relative(app('catalog'), src); return !r.startsWith('..') && r !== '' && r !== 'index.json' && !path.isAbsolute(r); };
 fs.rmSync(out('native'), { recursive: true, force: true });
 fs.cpSync(app(), out('native'), { recursive: true, filter: (src) => !/(sw\.js|manifest\.webmanifest)$/.test(src) && !catalogPiece(src) });
-fs.writeFileSync(out('native', 'index.html'), page({ pwa: false, native: true, revenuecat: REVENUECAT, ...ASSETS }, { pwa: false }));
+fs.writeFileSync(out('native', 'index.html'), rename(page({ pwa: false, native: true, revenuecat: REVENUECAT, ...ASSETS }, { pwa: false })));
 console.log('server', SERVER || '(none)', '| build', BUILD, '| artifact', (artifact.length / 1024).toFixed(0), 'KB; app.js', (slimMain.text.length / 1024).toFixed(0), 'KB +', CHUNKS.length, 'chunks', (slim.outputFiles.filter((f) => f !== slimMain).reduce((n, f) => n + f.text.length, 0) / 1024).toFixed(0), 'KB (one file, all languages', (result.outputFiles[0].text.length / 1024).toFixed(0), 'KB)');
