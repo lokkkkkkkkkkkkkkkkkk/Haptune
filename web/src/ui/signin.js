@@ -78,14 +78,32 @@ export async function appleSignIn() {
   }
 }
 
-/** Android / iPhone app: Google's own sign-in sheet when the app has the GoogleAuth plugin. */
-export const nativeGoogleAvailable = () => isNative() && !!plugin('GoogleAuth');
+/** Android / iPhone app: Google's own sign-in sheet (Capgo SocialLogin plugin, or the older GoogleAuth plugin). */
+// The Web client ID: public by design; the server checks the token's audience against it.
+const WEB_CLIENT_ID = '441801851459-894b05t66ggvv4f8185ootkpkl9jnn9o.apps.googleusercontent.com';
+const googleClientId = () => CFG().google || WEB_CLIENT_ID;
+export const nativeGoogleAvailable = () => isNative() && !!(plugin('SocialLogin') || plugin('GoogleAuth'));
+let socialReady = null;
 export async function nativeGoogleSignIn() {
-  const g = plugin('GoogleAuth');
-  if (!g) throw new Error(t('connOnWebsite'));
-  try { await g.initialize?.({ clientId: CFG().google, scopes: ['profile', 'email'], grantOfflineAccess: false }); } catch { /* already */ }
-  const r = await g.signIn();
-  const tok = r?.authentication?.idToken || r?.idToken;
+  const social = plugin('SocialLogin');
+  let tok = null;
+  if (social) {
+    socialReady ||= social.initialize({ google: { webClientId: googleClientId() } }).catch((e) => { socialReady = null; throw e; });
+    await socialReady;
+    try {
+      const r = await social.login({ provider: 'google', options: { scopes: ['email', 'profile'] } });
+      tok = r?.result?.idToken || null;
+    } catch (e) {
+      if (/cancel/i.test(e?.message || e?.code || '')) return null;
+      throw e;
+    }
+  } else {
+    const g = plugin('GoogleAuth');
+    if (!g) throw new Error(t('connOnWebsite'));
+    try { await g.initialize?.({ clientId: googleClientId(), scopes: ['profile', 'email'], grantOfflineAccess: false }); } catch { /* already */ }
+    const r = await g.signIn();
+    tok = r?.authentication?.idToken || r?.idToken;
+  }
   if (!tok) return null;
   track('sign_in', { label: 'google_native' });
   return C.googleSignIn(tok);
