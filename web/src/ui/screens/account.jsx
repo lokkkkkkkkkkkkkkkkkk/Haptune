@@ -16,7 +16,8 @@ export function AccountSheet() {
   const st = s.settings;
   const me = s.me;
   const fileRef = useRef(null);
-  const [confirm, setConfirm] = useState(false);
+  const [askErase, setAskErase] = useState(false);
+  const [askOut, setAskOut] = useState(false);     // "Sign out?" asked in the sheet (a variable named `confirm` here once hid the browser's confirm(), so Sign out did nothing)
   useEffect(() => { if (hasServer()) ensureAccount(); }, []);
   const backup = async () => {
     const json = await makeBackup();
@@ -34,8 +35,8 @@ export function AccountSheet() {
   const go = (view, props = {}) => { closeSheet(); push(view, props); };
   const tier = me?.tier || 'free';
   const signOut = async () => {
-    if (!confirm(t('signOutQ'))) return;
-    try { globalThis.google?.accounts?.id?.disableAutoSelect?.(); } catch { /* Google not loaded */ }
+    setAskOut(false);
+    try { const S = await import('../signin.js'); await S.forgetGoogle(); } catch { /* fine */ }
     await C.logout(); toast(t('signedOut')); ensureAccount();
   };
   return (
@@ -68,8 +69,9 @@ export function AccountSheet() {
                 <span class="pill-ok"><Icon name="check" size={13} stroke={2.6} />{t('signedInT')}</span>
               </div>
               <List>
-                <Row icon="person" color="blue" title={t('switchAccount')} subtitle={t('switchAccountSub')} onClick={() => openSheet('hubRole', {})} id="acc-switch" />
-                <Row icon="logout" color="gray" title={t('signOut')} onClick={signOut} id="acc-signout" />
+                <Row icon="person" color="blue" title={t('switchAccount')} subtitle={t('switchAccountSub')} onClick={() => openSheet('hubRole', { switching: true })} id="acc-switch" />
+                {!askOut ? <Row icon="logout" color="gray" title={t('signOut')} onClick={() => setAskOut(true)} id="acc-signout" />
+                  : <Row icon="logout" color="red" title={t('signOutQ')} right={<span style={{ display: 'flex', gap: 8 }}><Button small kind="secondary" onClick={() => setAskOut(false)}>{t('cancel')}</Button><Button small color="red" onClick={signOut} id="acc-signout-yes">{t('signOut')}</Button></span>} />}
               </List>
             </>
           ) : (
@@ -99,6 +101,9 @@ export function AccountSheet() {
           <span class="num">{st.syncMs > 0 ? '+' : ''}{st.syncMs || 0} ms</span>
         </div>
         <div class="chips">{[[0, 'syncSpeaker'], [180, 'syncBluetooth'], [250, 'syncAirpods']].map(([v, k]) => <Chip key={k} on={(st.syncMs || 0) === v} onClick={() => updateSettings({ syncMs: v })}>{t(k)}</Chip>)}</div>
+      </Section>
+      <Section title={t('lightSoundT')} footer={t('lightSoundHelp')}>
+        <Segmented id="acc-light" value={st.soundLight || 'auto'} onChange={(v) => updateSettings({ soundLight: v })} options={[{ value: 'auto', label: t('lsAuto') }, { value: 'on', label: t('lsOn') }, { value: 'off', label: t('lsOff') }]} />
       </Section>
       <Section title={t('dailyGoal')}>
         <Stepper label={t('dailyGoal')} value={`${st.dailyGoal} ${t('min')}`} onDec={() => updateSettings({ dailyGoal: Math.max(5, st.dailyGoal - 5) })} onInc={() => updateSettings({ dailyGoal: Math.min(120, st.dailyGoal + 5) })} />
@@ -142,8 +147,8 @@ export function AccountSheet() {
       {hasServer() && !me?.staff && me?.registered && <Section title={t('developer')}><DevWhy /></Section>}
       <Section>
         <List>
-          {!confirm ? <Row title={t('resetAll')} danger onClick={() => setConfirm(true)} />
-            : <Row title={t('confirmErase')} danger right={<span style={{ display: 'flex', gap: 8 }}><Button small kind="secondary" onClick={() => setConfirm(false)}>{t('cancel')}</Button><Button small color="red" onClick={eraseAll}>{t('erase')}</Button></span>} />}
+          {!askErase ? <Row title={t('resetAll')} danger onClick={() => setAskErase(true)} />
+            : <Row title={t('confirmErase')} danger right={<span style={{ display: 'flex', gap: 8 }}><Button small kind="secondary" onClick={() => setAskErase(false)}>{t('cancel')}</Button><Button small color="red" onClick={eraseAll}>{t('erase')}</Button></span>} />}
           {hasServer() && me && <Row title={t('deleteAccount')} danger onClick={() => openSheet('deleteAccount')} />}
         </List>
       </Section>

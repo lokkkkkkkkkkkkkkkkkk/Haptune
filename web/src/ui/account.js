@@ -84,22 +84,23 @@ export const C = {
     return r;
   },
   /** Sign in with Google: `credential` is the ID token Google's button gives the page. */
-  googleSignIn: async (credential) => {
-    const r = await call('/c/auth/google', { method: 'POST', json: { credential, device: navigator.userAgent.slice(0, 60) } });
+  googleSignIn: async (credential, { fresh = false } = {}) => {
+    const r = await call('/c/auth/google', { method: 'POST', json: { credential, device: navigator.userAgent.slice(0, 60) }, ...(fresh ? { token: '' } : {}) });
     local.set('academyToken', r.token); local.set('academyUser', null); setMe(r.me);
     // then, once, the one-tap "allow Calendar, Drive and Contacts" (nothing else to set up)
     setTimeout(() => import('./google.js').then((g) => g.offerGoogleAllow()).catch(() => {}), 1200);
     return r.me;
   },
   /** Sign in with a one-time code from Google's OAuth popup (no button iframe: works where that one gets stuck). */
-  googleCode: async (code) => {
-    const r = await call('/c/auth/google/code', { method: 'POST', json: { code, device: navigator.userAgent.slice(0, 60) } });
+  googleCode: async (code, { clientId = '', fresh = false } = {}) => {
+    // fresh (switching account): sent without this device's sign-in, so the Google account isn't linked to it
+    const r = await call('/c/auth/google/code', { method: 'POST', json: { code, client_id: clientId, device: navigator.userAgent.slice(0, 60) }, ...(fresh ? { token: '' } : {}) });
     local.set('academyToken', r.token); local.set('academyUser', null); setMe(r.me);
     setTimeout(() => import('./google.js').then((g) => g.offerGoogleAllow()).catch(() => {}), 1200);
     return r.me;
   },
-  googleStatus: () => call('/c/auth/google/status', { token: '' }),
-  googleStart: (body) => call('/c/auth/google/start', { method: 'POST', json: { device: navigator.userAgent.slice(0, 60), ...body } }),
+  googleStatus: (web = '') => call(`/c/auth/google/status${web ? `?web=${encodeURIComponent(web)}` : ''}`, { token: '' }),
+  googleStart: (body) => call('/c/auth/google/start', { method: 'POST', json: { device: navigator.userAgent.slice(0, 60), ...body }, ...(body?.fresh ? { token: '' } : {}) }),
   googleFinish: async (code) => {
     const r = await call('/c/auth/google/finish', { method: 'POST', json: { code }, token: '' });
     local.set('academyToken', r.token); local.set('academyUser', null); setMe(r.me);
@@ -159,7 +160,7 @@ export const C = {
   },
   gconn: {
     list: () => call('/c/google/connections'),
-    connect: (code, feature, ticket = '') => call('/c/google/connect', { method: 'POST', json: { code, feature, ticket }, ...(ticket ? { token: '' } : {}) }),
+    connect: (code, feature, ticket = '', clientId = '') => call('/c/google/connect', { method: 'POST', json: { code, feature, ticket, client_id: clientId }, ...(ticket ? { token: '' } : {}) }),
     ticket: () => call('/c/google/ticket', { method: 'POST' }),
     ticketInfo: (tk) => call(`/c/google/ticket/${encodeURIComponent(tk)}`, { token: '' }),
     revoke: (feature) => call(`/c/google/connections/${feature}`, { method: 'DELETE' }),

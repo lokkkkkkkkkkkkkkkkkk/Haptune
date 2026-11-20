@@ -71,7 +71,7 @@ export function LearnView({ active }) {
   if (!online) {
     return (
       <div class="scroll" id="learn"><div class="wrap">
-        <LargeTitle title={t('hub')} eyebrow={t('hubEyebrow')} actions={<span class="ph-only"><Avatar /></span>} />
+        <LargeTitle title={t('hub')} eyebrow={t('hubEyebrow')} hapi="think" color="orange" actions={<span class="ph-only"><Avatar /></span>} />
         <div class="empty3 card"><Mascot mood="sleep" size={90} /><h3>{t('hubOffline')}</h3><p>{t('hubOfflineSub')}</p></div>
       </div></div>
     );
@@ -79,7 +79,7 @@ export function LearnView({ active }) {
   return (
     <div class="scroll" id="learn">
       <div class="wrap">
-        <LargeTitle title={t('hub')} eyebrow={t('hubEyebrow')} actions={<span class="ph-only"><Avatar /></span>} />
+        <LargeTitle title={t('hub')} eyebrow={t('hubEyebrow')} hapi="think" color="orange" actions={<span class="ph-only"><Avatar /></span>} />
         {fresh ? <HubWelcome /> : (
           <section class="hero3 hero-learn fade-up" id="hub-hero">
             <h1>{asTeacher ? t('hubTeacherHi') : t('hubStudentHi')}</h1>
@@ -250,7 +250,7 @@ export const GoogleG = ({ size = 18 }) => (
  * came back); if the window can't open, the whole page goes to Google and back. App: Google's native sheet when
  * the app has the plugin, otherwise the phone's browser signs in and the app is paired to the same account.
  */
-export function GoogleButton({ onDone }) {
+export function GoogleButton({ onDone, fresh = false }) {
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const [ready, setReady] = useState(isNative() || null);               // web: is Google sign-in set up on the server?
@@ -264,11 +264,11 @@ export function GoogleButton({ onDone }) {
       if (isNative()) {
         const S = await import('../signin.js');
         if (!S.nativeGoogleAvailable()) { setBusy(false); openSheet('pair', { then: onDone }); return; }
-        const me = await S.nativeGoogleSignIn();
+        const me = await S.nativeGoogleSignIn({ fresh });
         if (me) onDone?.(me);
       } else {
         const G = await import('../google.js');
-        const me = await G.googleSignInPopup();
+        const me = await G.googleSignInPopup({ fresh });
         if (me) onDone?.(me);
       }
     } catch (e) { setErr(e.detail?.message || e.message || String(e)); }
@@ -298,7 +298,7 @@ export function AppleButton({ onDone }) {
   return <div class="apple-wrap"><button type="button" class="apple-btn" onClick={go} id="apple-btn"><svg width="16" height="18" viewBox="0 0 17 20" aria-hidden="true"><path fill="currentColor" d="M14.1 10.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8 1.6 0 2 .8 3.4.8 1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9 0 0-2.7-1-2.7-4.1zM11.6 3.1c.7-.9 1.2-2.1 1.1-3.1-1 0-2.3.7-3 1.6-.7.8-1.3 2-1.1 3.1 1.1.1 2.3-.6 3-1.6z" /></svg>{t('signInApple')}</button>{err && <p class="t-red tiny">{err}</p>}</div>;
 }
 
-export function HubRoleSheet({ need = false, role = '', then = null }) {
+export function HubRoleSheet({ need = false, role = '', then = null, switching = false }) {
   const s = useApp();
   const [mode, setMode] = useState('choose');     // choose | password
   const [handle, setHandle] = useState('');
@@ -316,6 +316,7 @@ export function HubRoleSheet({ need = false, role = '', then = null }) {
   const create = async () => {
     setBusy(true); setErr('');
     try {
+      if (switching) await C.logout();          // a new account, not a new name for the one signed in here
       await ensureAccount();
       const r = await C.setPassword(handle.trim(), pw);
       await ensureAccount({ fresh: true });
@@ -330,11 +331,11 @@ export function HubRoleSheet({ need = false, role = '', then = null }) {
     setBusy(false);
   };
   return (
-    <SheetFrame title={role === 'teacher' ? t('hubSignTeacher') : role === 'student' ? t('hubSignStudent') : t('signIn')}>
+    <SheetFrame title={switching ? t('switchAccount') : role === 'teacher' ? t('hubSignTeacher') : role === 'student' ? t('hubSignStudent') : t('signIn')}>
       <div class="sheet-mascot"><Mascot mood={role === 'teacher' ? 'cheer' : 'wave'} size={84} /></div>
-      <p class="note-text center">{need ? t('hubSignNeed') : t('hubSignWhy')}</p>
+      <p class="note-text center">{switching ? t('switchWhy', { who: s.me?.email || (s.me?.handle ? `@${s.me.handle}` : '') }) : need ? t('hubSignNeed') : t('hubSignWhy')}</p>
       {mode === 'choose' && <>
-        <GoogleButton onDone={done} />
+        <GoogleButton onDone={done} fresh={switching} />
         <AppleButton onDone={done} />
         {!CFG().google && !isNative() && <p class="tiny center">{t('googleNotSetUp')}</p>}
         <div class="or-line"><span>{t('orT')}</span></div>

@@ -194,7 +194,7 @@ export function ImproviseView({ active, pushed = false }) {
   return (
     <div class="scroll">
       <div class="wrap">
-        <LargeTitle title={t('improvise')} back={pushed} />
+        <LargeTitle title={t('improvise')} back={pushed} hapi="cheer" />
         <div class="hero improv">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon name="sparkles" size={22} stroke={2.2} /><h2>AI {t('improvise')}</h2></div>
           <p>{mode === 'vary' ? t('varyIntro') : t('improviseIntro')}</p>

@@ -44,13 +44,16 @@ STATE_TTL = 900.0
 LOGIN_TTL = 300.0
 
 
-def _exchange(code: str, redirect_uri: str) -> tuple[dict, dict]:
-    """Code -> tokens -> checked ID-token claims."""
-    cid, secret = G._client()
+def _exchange(code: str, redirect_uri: str, client_id: str = "") -> tuple[dict, dict]:
+    """Code -> tokens -> checked ID-token claims. `client_id`: the client the code was asked for."""
+    cid, secret = G._client(client_id)
     r = G._http("POST", G.TOKEN_URL, form={"code": code, "client_id": cid, "client_secret": secret, "redirect_uri": redirect_uri, "grant_type": "authorization_code"})
     if not r.get("id_token"):
         raise HTTPException(400, {"code": "google_no_id", "message": "Google did not say who you are. Please try again."})
-    return r, A.verify_google(r["id_token"])
+    info = A.verify_google(r["id_token"])
+    if client_id:
+        G.remember_web_client(cid)
+    return r, info
 
 
 def _after(uid: str, r: dict, email: str) -> None:
@@ -66,12 +69,13 @@ def _after(uid: str, r: dict, email: str) -> None:
 class CodeIn(BaseModel):
     code: str = Field(..., min_length=10, max_length=2048)
     device: str = Field("", max_length=60)
+    client_id: str = Field("", max_length=200)     # the Web client the website's popup used
 
 
 @router.post("/code")
 def with_code(body: CodeIn, request: Request, authorization: str = Header("")):
     A.rate(request, "google", 30, 3600)
-    r, info = _exchange(body.code, "postmessage")
+    r, info = _exchange(body.code, "postmessage", body.client_id)
     tok = A._token(authorization)
     here = A.user_from_token(tok)
     out = A.google_login(info, here, tok if here else None, body.device, request)
@@ -116,6 +120,8 @@ class StartIn(BaseModel):
     pair: str = Field("", max_length=12)
     device: str = Field("", max_length=60)
     hint: str = Field("", max_length=200)
+    client_id: str = Field("", max_length=200)
+    fresh: bool = False                             # switching account: don't link to the account signed in here
 
 
 @router.post("/start")
@@ -123,12 +129,12 @@ def start(body: StartIn, request: Request, authorization: str = Header("")):
     A.rate(request, "google-start", 60, 3600)
     if not _allowed_return(body.return_to):
         raise HTTPException(400, "That return address isn't allowed.")
-    cid, _ = G._client()
-    here = A.user_from_token(A._token(authorization))
+    cid, _ = G._client(body.client_id)
+    here = None if body.fresh else A.user_from_token(A._token(authorization))
     state = secrets.token_urlsafe(24)
     with engine().begin() as c:
         c.execute(insert(A.kv).values(k=f"gstate:{state}", v=json.dumps({"ret": body.return_to.split("#")[0], "uid": here["id"] if here else None,
-                                                                           "pair": re.sub(r"[^A-Z0-9]", "", body.pair.upper()), "device": body.device, "at": _now()})))
+                                                                           "pair": re.sub(r"[^A-Z0-9]", "", body.pair.upper()), "device": body.device, "cid": cid if body.client_id else "", "at": _now()})))
     q = {"client_id": cid, "redirect_uri": callback_url(request), "response_type": "code", "scope": BASIC, "state": state,
          "include_granted_scopes": "true", "access_type": "offline", "prompt": "select_account"}
     if body.hint:
@@ -153,7 +159,7 @@ def callback(request: Request, state: str = "", code: str = "", error: str = "")
     if error or not code:
         return RedirectResponse(f"{ret}#gsignin_error={urllib.parse.quote((error or 'cancelled')[:40])}", status_code=303)
     try:
-        r, info = _exchange(code, callback_url(request))
+        r, info = _exchange(code, callback_url(request), st.get("cid") or "")
         here = None
         if st.get("uid"):
             from academy import users as U
@@ -193,8 +199,12 @@ def finish(body: FinishIn, request: Request):
 
 
 @router.get("/status")
-def status(request: Request):
+def status(request: Request, web: str = ""):
     """What the website needs to know before showing Google's sign-in (no secrets): whether it's set up, the client
-    and the callback address to register."""
+    and the callback address to register. `web`: the website's own client ID; `web_known` says whether the server
+    accepts it (when it doesn't, Google's window shows "no registered origin" or the code can't be swapped)."""
     ids = A.google_client_ids()
-    return {"configured": bool(ids and os.environ.get("GOOGLE_CLIENT_SECRET")), "client_id": ids[0] if ids else "", "callback": callback_url(request)}
+    out = {"configured": bool(ids and os.environ.get("GOOGLE_CLIENT_SECRET")), "client_id": G.web_client_id(ids), "callback": callback_url(request)}
+    if web:
+        out["web_known"] = web in ids
+    return out

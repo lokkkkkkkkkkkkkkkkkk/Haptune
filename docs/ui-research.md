@@ -56,3 +56,13 @@ What we took, and from where (all MIT licensed; values copied, no code dependenc
   Safari 18, Android WebView): cross-fades tab changes without a library; skipped for reduced motion.
 - Considered and not used: Framer Motion / Motion One (React-first or larger), GSAP (licence and size), Lottie
   (needs authored animation files).
+
+## Part 5 (November 2026)
+- Tap ripple modelled on [Material Web's ripple](https://github.com/material-components/material-web) (Apache-2.0),
+  written as ~30 lines (`ui/press.js`) instead of adding the library.
+- "Chosen" pop and spring presses: keyframes in the spirit of [Animate.css](https://github.com/animate-css/animate.css)
+  (MIT) `bounceIn`, with a spring cubic-bezier.
+- Page gradients fade between places with CSS `@property` colour transitions (no library).
+- Coach marks ("Show me around") follow the pattern of [Shepherd.js](https://github.com/shipshapeio/shepherd) /
+  [Driver.js](https://github.com/kamranahmedse/driver.js) (spotlight + card), built in-app (`ui/coach.jsx`, ~100 lines)
+  so Hapi can be the guide and it works with the phone tab bar and the sidebar.

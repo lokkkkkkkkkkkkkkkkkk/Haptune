@@ -104,12 +104,46 @@ def decrypt(blob: str) -> str:
     return AESGCM(_key()).decrypt(raw[:12], raw[12:], b"melovyn-google").decode()
 
 
-def _client() -> tuple[str, str]:
+def web_client_id(ids: list[str] | None = None) -> str:
+    """The Web client: GOOGLE_WEB_CLIENT_ID, else the one the website last signed in with, else the first ID.
+    GOOGLE_CLIENT_IDS also holds Android/iOS client IDs, and Google's popup only works with the Web client
+    (an Android ID there gives "Error 401: invalid_client, no registered origin")."""
+    ids = ids if ids is not None else A.google_client_ids()
+    env = os.environ.get("GOOGLE_WEB_CLIENT_ID", "").strip()
+    if env and env in ids:
+        return env
+    try:
+        with engine().connect() as c:
+            seen = c.execute(select(A.kv.c.v).where(A.kv.c.k == "google:web_client")).scalar()
+        seen = json.loads(seen) if seen else ""
+    except Exception:  # noqa: BLE001 - a fresh database
+        seen = ""
+    if seen and seen in ids:
+        return seen
+    return ids[0] if ids else ""
+
+
+def remember_web_client(cid: str) -> None:
+    """The website's client worked: use it for refreshing tokens and for the redirect sign-in too."""
+    try:
+        with engine().begin() as c:
+            c.execute(delete(A.kv).where(A.kv.c.k == "google:web_client"))
+            c.execute(insert(A.kv).values(k="google:web_client", v=json.dumps(cid)))
+    except Exception:  # noqa: BLE001 - not important enough to fail a sign-in
+        pass
+
+
+def _client(cid: str = "") -> tuple[str, str]:
+    """(client id, secret). `cid` is the client the website used for Google's window, when it says."""
     ids = A.google_client_ids()
     secret = os.environ.get("GOOGLE_CLIENT_SECRET", "")
     if not ids or not secret:
         raise HTTPException(503, "Google connections aren't set up on this server yet.")
-    return ids[0], secret
+    if cid:
+        if cid not in ids:
+            raise HTTPException(400, {"code": "google_client_unknown", "message": "This website's Google client ID isn't in GOOGLE_CLIENT_IDS on the server (SETUP.md §3f)."})
+        return cid, secret
+    return web_client_id(ids), secret
 
 
 def link_of(uid: str) -> dict | None:
@@ -147,6 +181,7 @@ class ConnectIn(BaseModel):
     code: str = Field(..., min_length=10, max_length=2048)
     feature: str = Field(..., pattern="^(calendar|drive|contacts|all)$")
     ticket: str = Field("", max_length=80)       # the phone app's one-time link (see /ticket), instead of a sign-in
+    client_id: str = Field("", max_length=200)   # the Google client the website's window used
 
 
 # The phone app can't show Google's permission window (Google allows it only on a website), so it opens the
@@ -191,8 +226,10 @@ def ticket_info(tk: str):
 def connect(body: ConnectIn, authorization: str = Header("")):
     me = _ticket_me(body.ticket) if body.ticket else A.current(authorization)
     A.require_registered(me)
-    cid, secret = _client()
+    cid, secret = _client(body.client_id)
     r = _http("POST", TOKEN_URL, form={"code": body.code, "client_id": cid, "client_secret": secret, "redirect_uri": "postmessage", "grant_type": "authorization_code"})
+    if body.client_id and r.get("access_token"):
+        remember_web_client(cid)
     granted = set((r.get("scope") or "").split())
     # "all" asks for every feature at once; Google lets people untick some, and whatever they allowed is kept
     wanted = list(SCOPES.values()) if body.feature == "all" else [SCOPES[body.feature]]
@@ -229,7 +266,7 @@ def connections(me: A.Me = Depends(A.current)):
     granted = (row or {}).get("scopes") or []
     return {"available": bool(A.google_client_ids() and os.environ.get("GOOGLE_CLIENT_SECRET")),
             "signed_in_google": bool(me.acc.get("google_sub")), "all_linked": all(f in granted for f in SCOPES),
-            "client_id": (A.google_client_ids() or [""])[0], "email": (row or {}).get("email") or me.acc.get("email") or "",
+            "client_id": web_client_id(), "email": (row or {}).get("email") or me.acc.get("email") or "",
             "features": [{"id": f, "scope": SCOPES[f], "linked": f in granted} for f in SCOPES]}
 
 

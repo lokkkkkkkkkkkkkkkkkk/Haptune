@@ -7,6 +7,7 @@ import { useApp, push, go, openSheet, closeSheet, hooks, getState } from '../sta
 import { t, getLang } from '../../core/i18n.js';
 import { Icon, Button, Chip } from '../components.jsx';
 import { SheetFrame } from './common.jsx';
+import { Mascot } from '../mascot.jsx';
 import { call, hasServer } from '../api.js';
 import { planError } from '../account.js';
 import { track } from '../analytics.js';
@@ -133,5 +134,5 @@ export function AIChatSheet() {
 
 /** The sparkle button: on every main screen, above the tab bar. */
 export function AIFab() {
-  return <button type="button" class="ai-fab" id="ai-fab" onClick={() => openSheet('aiChat')} aria-label={t('aiChat')}><Icon name="sparkles" size={22} stroke={2.3} /></button>;
+  return <button type="button" class="ai-fab" id="ai-fab" onClick={() => openSheet('aiChat')} aria-label={t('aiChat')}><Mascot mood="happy" size={40} animate={false} /></button>;
 }

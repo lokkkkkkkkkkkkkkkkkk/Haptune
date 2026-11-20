@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'preact/hooks';
 import { useApp, pop, closeSheet, go } from '../state.js';
 import { t } from '../../core/i18n.js';
+import { Mascot } from '../mascot.jsx';
 import { Icon } from '../components.jsx';
 
 export function Avatar() {
@@ -16,7 +17,7 @@ export function Avatar() {
 
 /** The iOS large title: big at the top of a page, and once the page scrolls under it, a small centred title in a
  *  frosted bar (like Settings, Reminders and Health). */
-export function LargeTitle({ title, eyebrow, actions, color, back = false, avatar = false }) {
+export function LargeTitle({ title, eyebrow, actions, color, back = false, avatar = false, hapi = null }) {
   const ref = useRef(null);
   const [small, setSmall] = useState(false);
   useEffect(() => {
@@ -36,6 +37,7 @@ export function LargeTitle({ title, eyebrow, actions, color, back = false, avata
       <header ref={ref} class={`large-title c-${color || 'violet'}`}>
         <div>
           {back && <button type="button" class="back-btn" onClick={() => pop()} aria-label={t('back')}><Icon name="chevronL" size={20} stroke={2.6} /></button>}
+          {hapi && <span class="lt-hapi" aria-hidden="true"><Mascot mood={hapi} size={52} /></span>}
           <div style={{ minWidth: 0 }}>
             {eyebrow && <div class="eyebrow">{eyebrow}</div>}
             <h1>{title}</h1>

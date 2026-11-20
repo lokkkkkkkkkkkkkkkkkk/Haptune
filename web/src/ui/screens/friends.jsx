@@ -33,7 +33,11 @@ export function FriendButton({ u, onChange }) {
 // ---------------------------------------------------------------- friends and requests
 export function FriendsView({ active }) {
   const [f, setF] = useState(null);
-  const load = () => C.friends().then(setF).catch(() => setF({ friends: [], incoming: [], outgoing: [] }));
+  const [chats, setChats] = useState(null);       // Friends and Messages are one place: the chats come first
+  const load = () => {
+    C.friends().then(setF).catch(() => setF({ friends: [], incoming: [], outgoing: [] }));
+    C.dms().then((r) => setChats(r.items || [])).catch(() => setChats([]));
+  };
   useEffect(() => { if (active) load(); }, [active]);
   const answer = async (h, on) => { await attempt(() => C.friend(h, on)); load(); };
   const row = (p, right) => (
@@ -47,13 +51,21 @@ export function FriendsView({ active }) {
       <NavBar title={t('friendsT')} backLabel={t('back')} color="pink" />
       <div class="wrap">
         {!f ? <div class="skeleton-rows"><i /><i /><i /></div> : <>
+          {chats?.length > 0 && <section class="sec3" id="friend-chats"><div class="section-head"><h2>{t('chatsT')}</h2></div>
+            <div class="list inset">{chats.slice(0, 20).map((x) => (
+              <button type="button" class={`row${x.unread ? ' unread' : ''}`} key={x.with.handle} onClick={() => push('chat', { handle: x.with.handle })}>
+                <Person user={x.with} size={40} />
+                <span class="row-main"><span class="row-title">{x.with.name}{x.unread ? <span class="count-pill">{x.unread}</span> : null}</span>
+                  <span class="row-sub">{x.last.mine ? `${t('you')}: ` : ''}{x.last.text}</span></span>
+                <span class="tiny muted">{timeAgo(x.last.at)}</span>
+              </button>))}</div></section>}
           {f.incoming.length > 0 && <section class="sec3" id="friend-requests"><div class="section-head"><h2>{t('friendRequests')}</h2></div>
             <div class="list inset">{f.incoming.map((p) => row(p, <><Button small kind="brand" onClick={() => answer(p.handle, true)} id={`accept-${p.handle}`}>{t('accept')}</Button>
               <button type="button" class="link-btn" onClick={() => answer(p.handle, false)}>{t('decline')}</button></>))}</div></section>}
           <section class="sec3"><div class="section-head"><h2>{t('friendsT')} · {f.friends.length}</h2></div>
             {f.friends.length ? <div class="list inset" id="friend-list">{f.friends.map((p) => row(p, <>
               <button type="button" class="icon-btn" aria-label={t('message')} onClick={() => push('chat', { handle: p.handle })}><Icon name="chat" size={18} /></button>
-            </>))}</div> : <Empty icon="users" title={t('noFriends')} sub={t('noFriendsSub')}><Button kind="brand" icon="search" onClick={() => push('find', {}, 'summary')}>{t('findPeopleBtn')}</Button></Empty>}</section>
+            </>))}</div> : <Empty icon="users" mood="wave" title={t('noFriends')} sub={t('noFriendsSub')}><Button kind="brand" icon="search" onClick={() => push('find', {}, 'summary')}>{t('findPeopleBtn')}</Button></Empty>}</section>
           {f.outgoing.length > 0 && <section class="sec3"><div class="section-head"><h2>{t('friendWaiting')}</h2></div>
             <div class="list inset">{f.outgoing.map((p) => row(p, <button type="button" class="link-btn" onClick={() => answer(p.handle, false)}>{t('cancel')}</button>))}</div></section>}
         </>}
@@ -248,7 +260,7 @@ export function FriendsFeed({ active }) {
     <div id="friends-feed">
       <div class="duel-intro"><Icon name="users" size={18} /><span>{t('friendsFeedIntro')}</span>
         <button type="button" class="link-btn" onClick={() => push('friends')} id="open-friends">{t('friendsT')}</button>
-        <button type="button" class="link-btn" onClick={() => push('messages')} id="open-messages">{t('messagesT')}</button></div>
+        <button type="button" class="link-btn" onClick={() => push('friends')} id="open-messages">{t('placeFriends')}</button></div>
       {!f ? <div class="skeleton-rows"><i /><i /><i /></div> : f.length ? f.map((x, i) => (
         <div class="ff-item" key={i}>
           {x.by && <span class="tiny muted ff-by"><Icon name="loop" size={12} /> {t('repostedBy', { name: x.by.name })}</span>}

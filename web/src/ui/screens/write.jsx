@@ -24,6 +24,7 @@ import { hasServer } from '../api.js';
 import { hasPlan } from '../account.js';
 import { RHYTHM_IDS } from '../../core/rhythm.js';
 import { flag } from '../analytics.js';
+import { tick } from '../native.js';
 
 const INSTRUMENTS = ['piano', 'violin', 'guitar', 'voice', 'flute', 'cello', 'ukulele', 'clarinet', 'sax', 'trumpet', 'erhu', 'guzheng'];
 const KEYS = [-4, -3, -2, -1, 0, 1, 2, 3, 4, 5];
@@ -41,7 +42,7 @@ export function WriteView() {
       <div class="wrap">
         <input ref={pageRef} type="file" class="hidden-input" accept=".pdf,application/pdf,image/*" multiple onChange={onPick} id="write-scan-in" aria-label={t('wayScan')} />
         <input ref={fileRef} type="file" class="hidden-input" accept=".musicxml,.xml,.mxl,.mid,.midi,.abc,.cho,.chordpro,.txt" onChange={onPick} aria-label={t('wayFile')} />
-        <LargeTitle title={t('createT2')} eyebrow={t('createEyebrow')} color="teal" actions={<span class="ph-only"><Avatar /></span>} />
+        <LargeTitle title={t('createT2')} eyebrow={t('createEyebrow')} color="teal" hapi="happy" actions={<span class="ph-only"><Avatar /></span>} />
         <section class="hero3 hero-write fade-up">
           <h1>{t('createWhat')}</h1>
           <p>{t('writeHeroSub')}</p>
@@ -98,6 +99,14 @@ const WIZ = [
 ];
 const WIZ_LABEL = { lead: 'wizLead', melody: 'wizMelody', full: 'wizFull', improv: 'wizImprov', rhythm: 'wizRhythm', sound: 'wizSound', exercise: 'wizExercise' };
 
+/** A tiny moving picture for each kind (CSS only; still with reduced motion). */
+function WizArt({ kind }) {
+  if (kind === 'lead') return <span class="wiz-art" aria-hidden="true">{[['C', 8, 20], ['G', 36, 42], ['Am', 54, 18], ['F', 30, 64]].map(([c, x, y], i) => <i key={c} style={{ '--i': i, left: `${x}%`, top: `${y}%` }}>{c}</i>)}</span>;
+  if (kind === 'melody') return <span class="wiz-art" aria-hidden="true"><b class="staff" />{[0, 1, 2, 3, 4].map((i) => <i key={i} class="nt" style={{ '--i': i, '--y': [10, 4, 7, 1, 5][i] }} />)}</span>;
+  if (kind === 'sound') return <span class="wiz-art" aria-hidden="true">{[0, 1, 2, 3, 4, 5, 6].map((i) => <i key={i} class="bar" style={{ '--i': i }} />)}</span>;
+  return <span class="wiz-art" aria-hidden="true"><b class="staff" />{[0, 1, 2].map((i) => <i key={i} class="nt" style={{ '--i': i, '--y': [8, 3, 6][i] }} />)}</span>;
+}
+
 /** New song: first what kind (lead sheet, melody + chords, full notation, improvisation, chord/rhythm song,
  *  a Sound, an exercise), then just the few settings that kind needs. */
 export function NewSongSheet({ kind: kind0 = null, quick = false }) {
@@ -111,6 +120,7 @@ export function NewSongSheet({ kind: kind0 = null, quick = false }) {
   const [style, setStyle] = useState('pop');
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const kinds = WIZ.filter((k) => (k.id !== 'sound' || flag('sounds')) && (k.id !== 'improv' || flag('improvise')));
   const choose = (k) => {
     if (k === 'improv') { closeSheet(); push('improvise', {}, 'write'); return; }
@@ -134,22 +144,37 @@ export function NewSongSheet({ kind: kind0 = null, quick = false }) {
     } catch (e) { toast(e.message || String(e), 'err'); setBusy(false); }
   };
   if (!kind) {
+    // three clear choices (most people want one of these), the rest folded under "More ways"
+    const big = ['lead', 'melody', flag('sounds') ? 'sound' : 'full'];
+    const moreKinds = kinds.filter((k) => !big.includes(k.id) && k.id !== 'rhythm');
+    const forYou = ['voice', 'guitar', 'ukulele', 'bass'].includes(s.settings.instrument) ? 'lead' : 'melody';
     return (
       <SheetFrame title={t('createWhat')}>
+        <div class="wiz-hello"><Mascot mood="cheer" size={58} /><p>{t('wizHello')}</p></div>
         {quick && <button type="button" class="quick-start" id="wiz-quick" onClick={() => { closeSheet(); push('chordEditor', { title: t('mySong'), fresh: true, init: { key: { fifths: 0, mode: 'major' }, time: { beats: 4, beatType: 4 }, tempo: 90, style: 'pop', keyGiven: true } }, 'write'); }}>
           <span class="badge c-teal solid" style={{ width: 40, height: 40, borderRadius: 12 }}><Icon name="sparkles" size={22} stroke={2.1} /></span>
           <span class="row-main"><span class="row-title">{t('quickStart')}</span><span class="row-sub">{t('quickStartSub')}</span></span>
           <Icon name="play" size={18} fill />
         </button>}
-        <div class="list inset" id="wiz-kinds">
-          {kinds.map((k) => (
-            <button type="button" class="row" key={k.id} id={`wiz-${k.id}`} onClick={() => choose(k.id)}>
-              <span class={`badge c-${k.color} solid`} style={{ width: 34, height: 34, borderRadius: 9 }}><Icon name={k.icon} size={20} stroke={2.1} /></span>
-              <span class="row-main"><span class="row-title">{t(WIZ_LABEL[k.id])}</span><span class="row-sub">{t(`${WIZ_LABEL[k.id]}Sub`)}</span></span>
-              <Icon name="chevronR" size={15} stroke={2.4} style={{ opacity: 0.35 }} />
+        <div class="wiz-big" id="wiz-kinds">
+          {big.map((id) => (
+            <button type="button" class={`wiz-card wiz-opt k-${id}`} key={id} id={`wiz-${id}`} onClick={() => { tick(); choose(id); }}>
+              <WizArt kind={id} />
+              <span class="wiz-t"><strong>{t(WIZ_LABEL[id])}</strong><span>{t(`${WIZ_LABEL[id]}Sub`)}</span></span>
+              {id === forYou && <span class="wiz-rec">{t('wizForYou')}</span>}
+              <span class="wiz-go"><Icon name="chevronR" size={18} stroke={2.6} /></span>
             </button>
           ))}
         </div>
+        <button type="button" class="wiz-more-btn" id="wiz-more" aria-expanded={moreOpen} onClick={() => setMoreOpen(!moreOpen)}>
+          {t('wizMoreWays')}<Icon name="chevronR" size={14} stroke={2.6} style={{ transform: moreOpen ? 'rotate(90deg)' : 'none', transition: 'transform .2s' }} />
+        </button>
+        {moreOpen && <div class="wiz-more" id="wiz-more-list">{moreKinds.map((k) => (
+          <button type="button" class="wiz-chip" key={k.id} id={`wiz-${k.id}`} onClick={() => { tick(); choose(k.id); }}>
+            <span class={`badge c-${k.color} solid`}><Icon name={k.icon} size={18} stroke={2.1} /></span>
+            <span><strong>{t(WIZ_LABEL[k.id])}</strong><span>{t(`${WIZ_LABEL[k.id]}Sub`)}</span></span>
+          </button>
+        ))}</div>}
       </SheetFrame>
     );
   }

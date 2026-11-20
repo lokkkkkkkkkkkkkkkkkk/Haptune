@@ -18,7 +18,7 @@ export function ToolsView({ pushed = false }) {
   return (
     <div class="scroll">
       <div class="wrap">
-        <LargeTitle title={t('tools')} back={pushed} />
+        <LargeTitle title={t('tools')} back={pushed} hapi="listen" color="green" />
         <div class="grid tiles">
           {TOOLS.map((x) => (
             <button type="button" key={x.id} class={`tile c-${x.color}`} onClick={() => (x.id === 'scales' ? openSheet('scale') : push('tool', { tool: x.id }))}>
