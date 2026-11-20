@@ -159,7 +159,7 @@ def test_guardians_weekly_summary_and_their_page(monkeypatch):
     r = client.post(f"/academy/classes/{cid}/guardian-summaries", headers=t).json()
     assert r == {"students": 1, "guardians": 2, "emailed": 2}
     to, subject, body = sent[0]
-    assert subject == "Student 0's week on Melovyn" and "Practice: 10 min, 1 take, best 90%" in body and "Missing:" in body and "Old piece" in body
+    assert subject == "Student 0's week on Haptune" and "Practice: 10 min, 1 take, best 90%" in body and "Missing:" in body and "Old piece" in body
     page = client.get("/academy/guardian/" + g["link"].rsplit("/", 1)[1]).json()
     assert page["student"] == "Student 0" and page["minutes"] == 10 and [x["title"] for x in page["missing"]] == ["Old piece"]
     assert client.get("/academy/guardian/not-a-real-token-at-all-xx").status_code == 404

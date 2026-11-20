@@ -45,7 +45,7 @@ function SignInMethods() {
 
 const FEATURES = ['calendar', 'drive', 'contacts'];
 
-/** The three Google features with a tick or a dash: what Melovyn may use. */
+/** The three Google features with a tick or a dash: what Haptune may use. */
 function GoogleFeatureList({ info, manage, busy, onRemove }) {
   return (
     <List>

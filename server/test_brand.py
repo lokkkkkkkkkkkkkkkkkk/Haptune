@@ -23,7 +23,7 @@ SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width
 
 class FakeGitHub:
     def __init__(self):
-        self.files = {"web/brand.json": json.dumps({"name": "Melovyn", "shortName": "Melovyn", "icon": "assets/brand/icon.svg"}).encode(),
+        self.files = {"web/brand.json": json.dumps({"name": "Haptune", "shortName": "Haptune", "icon": "assets/brand/icon.svg"}).encode(),
                       "web/assets/brand/icon.svg": SVG.encode()}
         self.puts = []
 
@@ -63,7 +63,7 @@ def owner_in_dev_mode(monkeypatch):
 def test_owner_renames_and_changes_the_icon(monkeypatch, fresh):
     h = owner_in_dev_mode(monkeypatch)
     cur = client.get("/c/admin/brand", headers=h).json()
-    assert cur["configured"] and cur["name"] == "Melovyn" and cur["icon_svg"].startswith("<svg")
+    assert cur["configured"] and cur["name"] == "Haptune" and cur["icon_svg"].startswith("<svg")
     new = SVG.replace("#6E56CF", "#FF0000")
     r = client.post("/c/admin/brand", json={"name": "Melody Pal", "short_name": "Melody", "icon_svg": new}, headers=h)
     assert r.status_code == 200, r.text

@@ -464,7 +464,7 @@ export function songToMusicXML(song) {
     });
   });
   return `<?xml version="1.0" encoding="UTF-8"?><score-partwise version="4.0"><work><work-title>${xmlEsc(song.title || 'Untitled')}</work-title></work>`
-    + `<identification>${song.artist ? `<creator type="composer">${xmlEsc(song.artist)}</creator>` : ''}<encoding><software>Melovyn</software></encoding></identification>`
+    + `<identification>${song.artist ? `<creator type="composer">${xmlEsc(song.artist)}</creator>` : ''}<encoding><software>Haptune</software></encoding></identification>`
     + `<part-list><score-part id="P1"><part-name>Piano</part-name></score-part></part-list><part id="P1">${measures.join('')}</part></score-partwise>`;
 }
 

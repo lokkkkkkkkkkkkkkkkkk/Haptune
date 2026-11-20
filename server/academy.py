@@ -538,7 +538,7 @@ def create_assignment(cid: str, body: AssignmentIn, me: dict = Depends(current_u
         a = c.execute(select(assignments).where(assignments.c.id == aid)).mappings().first()
         import classroom
         classroom._tell_class(c, cid, "class_assignment", exclude=me["id"], assignment=aid, title=body.title.strip(),
-                              email_subject=f"New assignment: {body.title.strip()}", email_body=f"{body.title.strip()}\nOpen Melovyn to practise it.")
+                              email_subject=f"New assignment: {body.title.strip()}", email_body=f"{body.title.strip()}\nOpen Haptune to practise it.")
     return {"assignment": _assignment_json(dict(a))}
 
 

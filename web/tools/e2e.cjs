@@ -51,10 +51,10 @@ async function run(mode, base, browser) {
   const shot = async (n) => { await p.waitForTimeout(450); await p.screenshot({ path: path.join(SHOTS, `${mode}-${n}.png`) }); };
   const step = async (name, fn) => { try { await fn(); } catch (e) { errors.push(`${name}: ${e.message.split('\n')[0]}`); } };
   // the places: a sidebar on wide screens, a tab bar on phones; Me is the sidebar's account button or the picture
-  const LABEL = { home: 'summaryTab', learn: 'hub', stage: 'stage', library: 'library', write: 'create' };
+  const LABEL = { home: 'homeTab', learn: 'hub', stage: 'stage', library: 'library', write: 'create' };
   const tab = async (id) => {
     const wide = await p.evaluate(() => innerWidth >= 900);
-    if (id === 'me') return wide ? p.locator('#top-me').click() : p.locator('.avatar:visible').first().click();
+    if (id === 'me') return wide ? p.locator('#top-me').click() : p.locator('.avatar:visible, .hh-avatar:visible').first().click();
     return p.locator(`${wide ? '#side' : '#tab'}-${LABEL[id] || id}:visible`).click();
   };
   const back = () => p.locator('.navbar .back:visible, .back-btn:visible').first().click();
@@ -63,7 +63,7 @@ async function run(mode, base, browser) {
       const out = [];
       document.querySelectorAll('.tab-pane:not([hidden]) .view:not([hidden]) *, .sheet *').forEach((el) => {
         const r = el.getBoundingClientRect();
-        if (r.width && r.right > innerWidth + 1 && !el.closest('.shelf, .roll, .chips, .segmented, .score-box, .kbd-wrap, .helpers-strip, .bar-strip, .hscroll, .jp-box'))
+        if (r.width && r.right > innerWidth + 1 && !el.closest('.shelf, .roll, .chips, .segmented, .score-box, .kbd-wrap, .helpers-strip, .bar-strip, .hscroll, .jp-box, .art-cover'))
           out.push(`${el.tagName.toLowerCase()}.${[...el.classList].join('.')} → ${Math.round(r.right)}`);
       });
       return out.slice(0, 4);
@@ -199,7 +199,7 @@ async function run(mode, base, browser) {
     await home();
     if (await p.locator('.hero-tile:visible').count() !== 3) throw new Error('Home should show exactly three hero tiles');
     const order = await p.evaluate(() => [...document.querySelectorAll('#home > .wrap > *')].map((el) => el.id || el.className.split(' ')[0]).filter((x) => x && x !== 'hidden-input'));
-    const want = ['home-rings', 'home-hero', 'home-band', 'home-chips', 'shelf-', 'more-tools'];
+    const want = ['home-head', 'home-hero', 'home-band', 'home-chips', 'shelf-', 'more-tools'];
     let at = -1;
     for (const w of want) { const i = order.findIndex((x, j) => j > at && x.startsWith(w)); if (i < 0) throw new Error(`Home is missing ${w} (or it is out of order): ${order.join(', ')}`); at = i; }
     await shot('01-home'); await overflow('home'); await primaries('home');

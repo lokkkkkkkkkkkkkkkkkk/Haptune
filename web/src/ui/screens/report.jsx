@@ -109,6 +109,6 @@ export async function reportPng(r, title) {
     for (const w of words) { if (g.measureText(line + w).width > W - 160) { g.fillText(line, 80, y); y += 52; line = '  '; } line += `${w} `; }
     g.fillText(line, 80, y); y += 70;
   }
-  g.font = '700 40px sans-serif'; g.fillText('Melovyn', 80, H - 70);
+  g.font = '700 40px sans-serif'; g.fillText('Haptune', 80, H - 70);
   return new Promise((res) => cv.toBlob((b) => b.arrayBuffer().then((x) => res(new Uint8Array(x))), 'image/png'));
 }

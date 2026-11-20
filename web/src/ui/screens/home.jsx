@@ -1,5 +1,5 @@
-// Summary (the first tab): like Apple Health's Summary, one look at everything. Today's rings, where you left off,
-// New songs · Find songs · Create, then a tile for each part of Melovyn (practice, accuracy, Learn, Stage, Create,
+// Summary (the first tab): like Apple Health's Summary, one look at everything. 
+// New songs · Find songs · Create, then a tile for each part of Haptune (practice, accuracy, Learn, Stage, Create,
 // Library, level, Google), each one tap from its screen; below them the music shelves and More tools.
 // Files can still be dropped or pasted anywhere on this page.
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
@@ -77,28 +77,45 @@ function Shelf({ id, title, items, onPlayAll, more }) {
   );
 }
 
-/** One Summary tile: coloured title line, a big number, a small chart, and a tap to its screen. */
-function SumTile({ id, color, icon, title, detail, value, unit, foot, chart, onClick }) {
+/** One pinned tile (Health style): the colour and name on top, a big number or "No data", a small chart. */
+function SumTile({ id, color, icon, title, value, unit, foot, chart, onClick }) {
+  const none = value === null || value === undefined || value === '';
   return (
-    <button type="button" class={`sum-tile c-${color}`} id={id} onClick={() => { tick(); onClick(); }}>
-      <span class="st-head"><Icon name={icon} size={15} stroke={2.4} /><span class="st-t">{title}</span>{detail && <span class="st-d">{detail}</span>}<Icon name="chevronR" size={13} /></span>
-      <span class="st-body"><span class="st-v"><span class="st-num"><span class="num">{value}</span>{unit && <small>{unit}</small>}</span>{foot && <span class="st-f">{foot}</span>}</span>{chart}</span>
+    <button type="button" class={`sum-tile c-${color}${none ? ' none' : ''}`} id={id} onClick={() => { tick(); onClick(); }}>
+      <span class="st-head"><Icon name={icon} size={15} stroke={2.4} /><span class="st-t">{title}</span><Icon name="chevronR" size={13} /></span>
+      <span class="st-body">
+        <span class="st-v">{none ? <span class="st-none">{t('noDataT')}</span> : <span class="st-num"><span class="num">{value}</span>{unit && <small>{unit}</small>}</span>}
+          {foot && <span class="st-f">{foot}</span>}</span>
+        {!none && chart}
+      </span>
     </button>
   );
 }
 
-/** A short "how Melovyn works" for someone new: three steps, dismissed for good with one tap. */
-function FirstGuide({ onClose, teacher }) {
-  const steps = [['search', 'blue', 'guide1T', 'guide1S', () => push('find')], ['mic', 'pink', 'guide2T', 'guide2S', () => push('find')],
-    teacher ? ['academy', 'orange', 'guide3tT', 'guide3tS', () => go('academy')] : ['academy', 'orange', 'guide3T', 'guide3S', () => go('academy')]];
+const DEFAULT_PINS = ['time', 'acc', 'learn', 'stage', 'library', 'create'];
+
+/** Short reads, each opening its part of Help (Health's "Articles"). */
+const ARTICLES = [
+  { id: 'slow', topic: 'playing' }, { id: 'mic', topic: 'playing' }, { id: 'read', topic: 'start' }, { id: 'teach', topic: 'community' },
+];
+
+/** Drawn covers for the articles (no photos to download): bands of colour with notes and staff lines. */
+function ArtCover({ kind }) {
+  const C = {
+    slow: ['#FDE68A', '#F59E0B', '#B45309', '#78350F'],
+    mic: ['#C7D2FE', '#818CF8', '#4F46E5', '#312E81'],
+    read: ['#BBF7D0', '#4ADE80', '#16A34A', '#14532D'],
+    teach: ['#FBCFE8', '#F472B6', '#DB2777', '#831843'],
+  }[kind] || ['#E5E7EB', '#9CA3AF', '#4B5563', '#111827'];
   return (
-    <section class="guide-card" id="home-guide">
-      <div class="gc-head"><Mascot mood="wave" size={52} /><div><strong>{t('guideT')}</strong><span>{t('guideSub')}</span></div>
-        <button type="button" class="gc-x" onClick={onClose} aria-label={t('close')} id="guide-close"><Icon name="close" size={16} /></button></div>
-      <ol>{steps.map(([ic, c, a, b, f], i) => (
-        <li key={a}><button type="button" onClick={f}><span class={`gc-n c-${c}`}>{i + 1}</span><span><strong>{t(a)}</strong><span>{t(b)}</span></span><Icon name={ic} size={18} /></button></li>
-      ))}</ol>
-    </section>
+    <svg class="art-cover" viewBox="0 0 320 150" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <rect width="320" height="150" fill={C[0]} />
+      {kind === 'slow' && [0, 1, 2, 3].map((i) => <path key={i} d={`M${-20 + i * 30} 150 C ${60 + i * 30} ${70 - i * 12}, ${160 + i * 20} ${120 - i * 18}, 340 ${40 + i * 18} L340 150Z`} fill={C[i]} opacity={0.55 + i * 0.15} />)}
+      {kind === 'mic' && [0, 1, 2, 3].map((i) => <circle key={i} cx="240" cy="75" r={110 - i * 26} fill={C[i]} />)}
+      {kind === 'read' && <>{[0, 1, 2, 3, 4].map((i) => <line key={i} x1="0" x2="320" y1={45 + i * 14} y2={45 + i * 14} stroke={C[3]} stroke-width="2" opacity=".5" />)}
+        {[[60, 87], [110, 73], [160, 59], [210, 66], [260, 80]].map(([x, y], i) => <g key={i}><ellipse cx={x} cy={y} rx="11" ry="8" transform={`rotate(-20 ${x} ${y})`} fill={C[2 + (i % 2)]} /><rect x={x + 8} y={y - 42} width="3.5" height="42" fill={C[3]} /></g>)}</>}
+      {kind === 'teach' && [0, 1, 2].map((i) => <rect key={i} x={40 + i * 85} y={30 + (i % 2) * 22} width="70" height="90" rx="20" fill={C[i + 1]} opacity=".9" />)}
+    </svg>
   );
 }
 
@@ -183,52 +200,94 @@ export function HomeView({ active }) {
   const L = h?.learn, ST = h?.stage;
   const hero = (id, color, icon, title, sub, onGo) => (
     <button type="button" class={`hero-tile c-${color}`} id={`hero-${id}`} onClick={() => { tick(); onGo(); }}>
-      <span class="ic"><Icon name={icon} size={26} stroke={2.2} /></span><strong>{t(title)}</strong><span>{t(sub)}</span>
+      <span class="ic"><Icon name={icon} size={24} stroke={2.2} /></span><strong>{t(title)}</strong><span>{t(sub)}</span>
     </button>
   );
-  // today and this week (on this device and, for streak, the account)
+  // this week, on this device (and the account's streak)
   const week = lastDays(7).map((d) => Math.round(minutesOn(d)));
   const todayMin = week[6];
   const goal = Math.max(5, s.settings.dailyGoal || 15);
   const takes = s.history.filter((x) => x.accuracy !== undefined && x.accuracy !== null).slice(-12);
   const lastTake = takes[takes.length - 1];
   const lv = levelFor(s.progress.xp);
-  const todayXP = Math.min(120, Object.values(s.progress.lessons).filter((x) => new Date(x.at).toDateString() === new Date().toDateString()).length * 60 + Math.round(todayMin * 5));
   const mine = s.pieces.filter((p) => p.kind === 'score' && (p.source === 'written' || p.edited));
-  // the guide is for someone new: closed for good with ✕, and gone by itself after a first take
-  const [guide, setGuide] = useState(() => !local.get('guideDone', false) && s.history.length < 2);
-  const closeGuide = () => { local.set('guideDone', true); setGuide(false); };
-  const g = s.me?.google;
+  const me = s.me;
+  const fullName = (me?.name && me.name !== 'Musician' ? me.name : s.settings.name || '').trim();
+  const initials = fullName.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+  const [pins, setPins] = useState(() => local.get('homePins', DEFAULT_PINS));
+  const [hidden, setHidden] = useState(() => local.get('homeHidden', []));
+  const [editing, setEditing] = useState(false);
+  // tiles and suggestions slide into place when added or closed (AutoAnimate, 3 KB, MIT)
+  const gridRef = useRef(null), gmRef = useRef(null);
+  useEffect(() => { import('@formkit/auto-animate').then((m) => { for (const r of [gridRef, gmRef]) if (r.current && !r.current.dataset.aa) { m.default(r.current); r.current.dataset.aa = '1'; } }).catch(() => {}); });
+  const togglePin = (id) => { const v = pins.includes(id) ? pins.filter((x) => x !== id) : [...pins, id]; setPins(v); local.set('homePins', v); };
+  const hide = (id) => { const v = [...hidden, id]; setHidden(v); local.set('homeHidden', v); };
+
+  // the one thing to know now (like Health's status card): sign in, allow Google, review takes, an assignment due
+  const status = !online ? null
+    : !me?.registered ? { id: 'signin', icon: 'person', title: t('stSignInT'), text: t('stSignInS'), act: t('signIn'), go: () => openSheet('hubRole', {}) }
+      : L?.teacher?.to_review ? { id: 'review', icon: 'academy', title: t('takesToReview', { n: L.teacher.to_review }), text: L.teacher.inactive ? t('quietStudents', { n: L.teacher.inactive }) : t('allPractised'), act: t('open'), go: () => go('academy') }
+        : L?.next_assignment ? { id: 'due', icon: 'calendar', title: L.next_assignment.title, text: `${L.next_assignment.class} · ${t('dueOn', { d: dueLabel(L.next_assignment.due, lang) })}`, act: t('open'), go: () => go('academy') }
+          : me?.google ? null : { id: 'google', icon: 'link', title: t('stGoogleT'), text: t('stGoogleS'), act: t('signInGoogle'), go: () => openSheet('hubRole', {}) };
+  const showStatus = status && !hidden.includes(`st-${status.id}`);
+
+  const tiles = {
+    time: { color: 'pink', icon: 'flame', title: t('practiceTime'), value: todayMin || null, unit: t('min'), foot: t('goalMin', { n: goal }), chart: week.some(Boolean) ? <MiniBars values={week} color="pink" width={96} height={40} /> : null, go: () => push('history', { metric: 'time' }, 'summary') },
+    acc: { color: 'green', icon: 'check', title: t('accuracy'), value: lastTake ? Math.round(lastTake.accuracy * 100) : null, unit: '%', foot: lastTake?.title, chart: takes.length > 1 ? <MiniLine values={takes.map((x) => x.accuracy * 100)} color="green" width={96} height={40} /> : null, go: () => push('history', { metric: 'accuracy' }, 'summary') },
+    streak: { color: 'orange', icon: 'flame', title: t('streak'), value: streak || null, unit: t('days'), foot: t('streakFoot'), go: () => push('history', { metric: 'time' }, 'summary') },
+    learn: { id: 'band-learn', color: 'orange', icon: 'academy', title: t('hub'), value: !online ? null : L?.teacher ? L.teacher.to_review : (L?.todo ?? (L?.next_assignment ? 1 : 0)), unit: L?.teacher ? t('toReviewShort') : t('toDoShort'),
+      foot: !online ? t('bandOffline') : L?.teacher ? t('takesToReview', { n: L.teacher.to_review }) : L?.next_assignment ? L.next_assignment.title : L?.classes ? t('nothingDue') : t('joinAClass'), go: () => go('academy') },
+    stage: { id: 'band-stage', color: 'pink', icon: 'stage', title: t('stage'), value: ST?.daily ? (ST.daily.mine != null ? Math.round(ST.daily.mine * 100) : ST.daily.players) : (ST?.open_requests ?? null),
+      unit: ST?.daily ? (ST.daily.mine != null ? '%' : t('playersShort')) : t('requestsShort'), foot: ST?.daily ? `${t('todaysChallenge')}: ${ST.daily.title}` : t('stageRowSub'), go: () => go('community') },
+    create: { color: 'teal', icon: 'pencil', title: t('create'), value: mine.length || null, unit: t('songsShort'), foot: mine[0]?.title || t('heroCreateSub'), go: () => go('write') },
+    library: { color: 'blue', icon: 'library', title: t('library'), value: s.pieces.length || null, unit: t('piecesShort'), foot: catalog ? t('freeLibN', { n: catalog.length.toLocaleString(lang) }) : '', go: () => go('library') },
+    level: { color: 'violet', icon: 'star', title: t('levelN', { n: lv.level }), value: s.progress.xp || null, unit: t('xp'), foot: t('xpToNext', { n: Math.max(0, lv.need - lv.into) }), go: () => push('courses', {}, 'summary') },
+    google: { color: 'blue', icon: 'link', title: 'Google', value: me?.google ? '✓' : null, unit: '', foot: me?.google ? me.email : t('gNeedSignInShort'), go: () => openSheet('connections') },
+  };
+  // "Get more from Haptune": the next useful thing for this person, closed for good with ✕
+  const more = [
+    !me?.registered && online && { id: 'signin', icon: 'person', grad: ['#5B3FD6', '#9C85FF'], title: t('gmSignInT'), text: t('gmSignInS'), go: () => openSheet('hubRole', {}) },
+    !takes.length && { id: 'play', icon: 'mic', grad: ['#E2531F', '#FF9C5B'], title: t('guide2T'), text: t('guide2S'), go: () => push('find', {}, 'summary') },
+    online && !L?.classes && { id: 'class', icon: 'academy', grad: ['#B0399C', '#F07BD8'], title: me?.hub_role === 'teacher' ? t('guide3tT') : t('guide3T'), text: me?.hub_role === 'teacher' ? t('guide3tS') : t('guide3S'), go: () => go('academy') },
+    online && me?.registered && !me?.google && { id: 'google', icon: 'link', grad: ['#1E5BD8', '#5EA8FF'], title: t('stGoogleT'), text: t('stGoogleS'), go: () => openSheet('connections') },
+    !mine.length && { id: 'create', icon: 'pencil', grad: ['#0B8C7E', '#3FD3BF'], title: t('gmCreateT'), text: t('gmCreateS'), go: () => openSheet('newSong', { quick: true }) },
+    online && { id: 'friends', icon: 'users', grad: ['#0A7FC2', '#5CC8F5'], title: t('gmFriendsT'), text: t('gmFriendsS'), go: () => { go('community'); push('friends', {}, 'community'); } },
+  ].filter((x) => x && !hidden.includes(`gm-${x.id}`)).slice(0, 3);
+
   return (
-    <div class="scroll" id="home">
+    <div class="scroll home4" id="home">
+      <div class="home-glow" aria-hidden="true" />
       <div class="wrap">
         <input ref={pageRef} type="file" class="hidden-input" accept=".pdf,application/pdf,image/*" multiple onChange={(e) => { const f = [...(e.currentTarget.files || [])]; e.currentTarget.value = ''; openFiles(f); }} aria-label={t('wayScan')} />
-        <LargeTitle title={t('summary')} eyebrow={dateLabel(lang)} color="violet" actions={<>
-          {streak > 0 && <span class="hm-pill flame" title={t('streak')} id="home-streak"><Icon name="flame" size={15} fill stroke={1.6} />{streak}</span>}
-          {online && <button type="button" class="hm-pill" onClick={() => push('notifications', {}, 'me')} aria-label={t('notifications')} style={{ position: 'relative', padding: '0 9px' }}>
-            <Icon name="bell" size={17} />{s.me?.unread > 0 && <span class="tab-dot" />}</button>}
-          <span class="ph-only"><Avatar /></span>
-        </>} />
-        <p class="sum-greet" id="home-greet">{greet}</p>
-
-        {guide && <FirstGuide onClose={closeGuide} teacher={(s.me?.hub_role || local.get('hubRoleLocal', '')) === 'teacher'} />}
-
-        <div class="sum-top" id="home-rings">
-        <button type="button" class="rings-card2" id="rings-btn" onClick={() => { tick(); push('history', { metric: 'time' }, 'summary'); }}>
-          <Rings size={104} width={12} rings={[{ value: todayMin / goal, color: 'pink' }, { value: todayXP / 120, color: 'green' }, { value: Math.min(7, streak) / 7, color: 'cyan' }]} />
-          <span class="rc-legend">
-            <span><span class="lab t-pink">{t('ringPractise')}</span><span class="val num">{todayMin}<small>/{goal} {t('min')}</small></span></span>
-            <span><span class="lab t-green">{t('ringLearn')}</span><span class="val num">{todayXP}<small>/120 {t('xp')}</small></span></span>
-            <span><span class="lab t-cyan">{t('ringStreak')}</span><span class="val num">{streak}<small>/7 {t('days')}</small></span></span>
-          </span>
-        </button>
+        <div class="home-head" id="home-head">
+          <div class="hh-who">
+            <button type="button" class="hh-avatar" onClick={() => go('me')} aria-label={t('me')}>{initials || <Icon name="person" size={30} />}</button>
+            <div class="hh-text">
+              <span class="hh-date">{dateLabel(lang)}</span>
+              <h1>{t('homeTab')}</h1>
+              <button type="button" class="hh-profile" onClick={() => go('me')}>{fullName || t('profileT')} <Icon name="chevronR" size={13} /></button>
+              <span class="hh-sub">{greet}{streak > 0 ? ` · ${t('streakN', { n: streak })}` : ''}</span>
+            </div>
+            <span class="hh-acts">
+              <button type="button" class="hh-menu ph-only" onClick={() => setState({ drawer: true })} aria-label={t('categoriesT')} id="home-menu"><Icon name="sidebar" size={19} /></button>
+              {online && <button type="button" class="hm-pill" onClick={() => push('notifications', {}, 'me')} aria-label={t('notifications')} style={{ position: 'relative', padding: '0 9px' }}>
+                <Icon name="bell" size={17} />{s.me?.unread > 0 && <span class="tab-dot" />}</button>}
+            </span>
+          </div>
+          {showStatus && (
+            <div class="hh-status" id="home-status">
+              <div class="hs-top"><span class="hs-k">{t('statusK')}</span><button type="button" class="hs-x" onClick={() => hide(`st-${status.id}`)} aria-label={t('close')}><Icon name="close" size={13} stroke={2.6} /></button></div>
+              <strong>{status.title}</strong><span>{status.text}</span>
+              <button type="button" class="hs-act" onClick={status.go} id="home-status-act">{status.act}</button>
+            </div>
+          )}
+        </div>
 
         {last && <button type="button" class="resume-card" id="home-continue" onClick={() => { tick(); push('piece', { id: last.id, ...(last.lastBar > 1 ? { bar: last.lastBar } : {}) }, 'library'); }}>
           <Cover title={last.title} instrument={last.instrument} keyText={last.keyText} size="sm" />
           <span class="cc-t"><span class="cc-k">{t('continueK')}</span><strong>{last.title}</strong><span>{last.lastBar > 1 ? t('atBar', { n: last.lastBar }) : (last.composer || last.keyText || '')}</span></span>
           <span class="cc-play" role="presentation"><Icon name="play" size={20} fill /></span>
         </button>}
-        </div>
 
         <div class="hero-row" id="home-hero">
           {hero('new', 'violet', 'sparkles', 'heroNew', 'heroNewSub', () => push('newSongs'))}
@@ -237,32 +296,32 @@ export function HomeView({ active }) {
         </div>
 
         <section class="sum-sec" id="home-band">
-          <div class="shelf-head"><h2>{t('pinned')}</h2></div>
-          <div class="sum-grid">
-            <SumTile id="tile-time" color="pink" icon="flame" title={t('practiceTime')} detail={t('today')} value={todayMin} unit={t('min')} foot={t('goalMin', { n: goal })}
-              chart={<MiniBars values={week} color="pink" width={96} height={40} />} onClick={() => push('history', { metric: 'time' }, 'summary')} />
-            <SumTile id="tile-acc" color="green" icon="check" title={t('accuracy')} detail={lastTake ? new Date(lastTake.date).toLocaleDateString(lang, { month: 'short', day: 'numeric' }) : ''}
-              value={lastTake ? Math.round(lastTake.accuracy * 100) : '–'} unit="%" foot={lastTake ? lastTake.title : t('noTakes')}
-              chart={takes.length > 1 ? <MiniLine values={takes.map((x) => x.accuracy * 100)} color="green" width={96} height={40} /> : null} onClick={() => push('history', { metric: 'accuracy' }, 'summary')} />
-            <SumTile id="band-learn" color="orange" icon="academy" title={t('hub')}
-              value={!online ? '–' : L?.teacher ? L.teacher.to_review : L?.todo ?? (L?.next_assignment ? 1 : 0)}
-              unit={!online ? '' : L?.teacher ? t('toReviewShort') : t('toDoShort')}
-              foot={!online ? t('bandOffline') : L?.teacher ? (L.teacher.inactive ? t('quietStudents', { n: L.teacher.inactive }) : t('takesToReview', { n: L.teacher.to_review }))
-                : L?.next_assignment ? `${L.next_assignment.title} · ${t('dueOn', { d: dueLabel(L.next_assignment.due, lang) })}` : L?.classes ? t('nothingDue') : t('joinAClass')}
-              onClick={() => go('academy')} />
-            <SumTile id="band-stage" color="pink" icon="stage" title={t('stage')} detail={ST?.friends_new ? t('friendsNewN', { n: ST.friends_new }) : ''}
-              value={ST?.daily ? (ST.daily.mine != null ? Math.round(ST.daily.mine * 100) : ST.daily.players) : (ST?.open_requests ?? '–')}
-              unit={ST?.daily ? (ST.daily.mine != null ? '%' : t('playersShort')) : t('requestsShort')}
-              foot={ST?.daily ? `${t('todaysChallenge')}: ${ST.daily.title}` : t('stageRowSub')} onClick={() => go('community')} />
-            <SumTile id="tile-create" color="teal" icon="pencil" title={t('create')} value={mine.length} unit={t('songsShort')} foot={mine[0]?.title || t('heroCreateSub')} onClick={() => go('write')} />
-            <SumTile id="tile-library" color="blue" icon="library" title={t('library')} value={s.pieces.length} unit={t('piecesShort')} foot={catalog ? t('freeLibN', { n: catalog.length.toLocaleString(lang) }) : t('library')} onClick={() => go('library')} />
-            <SumTile id="tile-level" color="violet" icon="star" title={t('levelN', { n: lv.level })} value={s.progress.xp} unit={t('xp')} foot={t('xpToNext', { n: Math.max(0, lv.need - lv.into) })}
-              chart={<Rings size={40} width={6} rings={[{ value: lv.into / Math.max(1, lv.need), color: 'violet' }]} />} onClick={() => push('courses')} />
-            {online && s.me?.registered && (
-              <SumTile id="tile-google" color={g ? 'green' : 'gray'} icon="link" title="Google" value={g ? '✓' : '–'} unit="" foot={g ? s.me.email : t('gNeedSignInShort')} onClick={() => openSheet('connections')} />
-            )}
+          <div class="shelf-head"><h2>{t('pinned')}</h2><button type="button" class="link-btn" onClick={() => setEditing(!editing)} id="pins-edit">{editing ? t('done') : t('edit')}</button></div>
+          {editing && (
+            <div class="pin-edit" id="pin-edit">{Object.entries(tiles).map(([id, x]) => (
+              <button type="button" key={id} class={`chip${pins.includes(id) ? ' on' : ''}`} onClick={() => togglePin(id)}><Icon name={pins.includes(id) ? 'check' : 'plus'} size={13} stroke={2.6} /> {x.title}</button>))}</div>
+          )}
+          <div class="sum-grid" ref={gridRef}>
+            {pins.filter((id) => tiles[id]).map((id) => { const x = tiles[id]; return <SumTile key={id} id={x.id || `tile-${id}`} color={x.color} icon={x.icon} title={x.title} value={x.value} unit={x.unit} foot={x.foot} chart={x.chart} onClick={x.go} />; })}
           </div>
+          <button type="button" class="show-all" onClick={() => { tick(); push('browse', {}, 'summary'); }} id="home-browse">
+            <span class="sa-ic"><Icon name="grid" size={16} stroke={2.4} /></span>{t('showAllHaptune')}<Icon name="chevronR" size={14} />
+          </button>
         </section>
+
+        {more.length > 0 && (
+          <section class="sum-sec" id="home-more">
+            <div class="shelf-head"><h2>{t('getMoreT')}</h2></div>
+            <div class="gm-grid" ref={gmRef}>{more.map((x) => (
+              <div class="gm-card" key={x.id} id={`gm-${x.id}`}>
+                <button type="button" class="gm-x" onClick={() => hide(`gm-${x.id}`)} aria-label={t('close')}><Icon name="close" size={12} stroke={2.6} /></button>
+                <button type="button" class="gm-main" onClick={() => { tick(); x.go(); }}>
+                  <span class="gm-ic" style={{ background: `linear-gradient(to top right, ${x.grad[0]}, ${x.grad[1]})` }}><Icon name={x.icon} size={30} stroke={2} /></span>
+                  <span class="gm-t"><strong>{x.title}</strong><span>{x.text}</span></span>
+                </button>
+              </div>))}</div>
+          </section>
+        )}
 
         <div class="shelf-head disc-head"><h2>{t('discoverMusic')}</h2></div>
         <div class="chips home-chips" id="home-chips" role="toolbar" aria-label={t('filter')}>
@@ -275,6 +334,15 @@ export function HomeView({ active }) {
         <Shelf id="shelf-trending" title={t('shelfTrending')} items={trending} more={() => go('community')} />
         <Shelf id="shelf-new" title={t('shelfNew')} items={fresh} onPlayAll={playFirst(fresh)} more={() => push('newSongs')} />
         {!catalog && <div class="shelf-skeleton"><i /><i /><i /><i /><i /><i /></div>}
+
+        <section class="sum-sec" id="home-articles">
+          <div class="shelf-head"><h2>{t('articlesT')}</h2></div>
+          <div class="art-grid">{ARTICLES.map((a) => (
+            <button type="button" class="art-card" key={a.id} id={`art-${a.id}`} onClick={() => { tick(); push('help', { topic: a.topic }, 'summary'); }}>
+              <ArtCover kind={a.id} />
+              <span class="art-t"><strong>{t(`art_${a.id}T`)}</strong><span>{t(`art_${a.id}S`)}</span></span>
+            </button>))}</div>
+        </section>
 
         <MoreTools scan={() => pageRef.current?.click()} />
       </div>

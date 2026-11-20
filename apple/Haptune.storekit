@@ -10,13 +10,13 @@
       "internalID" : "6739100001",
       "localizations" : [
         {
-          "description" : "Keep Melovyn Plus forever: Band Split, scanning, transcription and full reports.",
-          "displayName" : "Melovyn Plus Lifetime",
+          "description" : "Keep Haptune Plus forever: Band Split, scanning, transcription and full reports.",
+          "displayName" : "Haptune Plus Lifetime",
           "locale" : "en_US"
         }
       ],
       "productID" : "com.haptune.app.plus.lifetime",
-      "referenceName" : "Melovyn Plus Lifetime",
+      "referenceName" : "Haptune Plus Lifetime",
       "type" : "NonConsumable"
     }
   ],
@@ -36,7 +36,7 @@
       "localizations" : [
 
       ],
-      "name" : "Melovyn Plus",
+      "name" : "Haptune Plus",
       "subscriptions" : [
         {
           "adHocOffers" : [
@@ -58,13 +58,13 @@
           "localizations" : [
             {
               "description" : "Band Split, scanning, transcription and full reports. Billed yearly.",
-              "displayName" : "Melovyn Plus Yearly",
+              "displayName" : "Haptune Plus Yearly",
               "locale" : "en_US"
             }
           ],
           "productID" : "com.haptune.app.plus.yearly",
           "recurringSubscriptionPeriod" : "P1Y",
-          "referenceName" : "Melovyn Plus Yearly",
+          "referenceName" : "Haptune Plus Yearly",
           "subscriptionGroupID" : "21500001",
           "type" : "RecurringSubscription"
         },
@@ -82,13 +82,13 @@
           "localizations" : [
             {
               "description" : "Band Split, scanning, transcription and full reports. Billed monthly.",
-              "displayName" : "Melovyn Plus Monthly",
+              "displayName" : "Haptune Plus Monthly",
               "locale" : "en_US"
             }
           ],
           "productID" : "com.haptune.app.plus.monthly",
           "recurringSubscriptionPeriod" : "P1M",
-          "referenceName" : "Melovyn Plus Monthly",
+          "referenceName" : "Haptune Plus Monthly",
           "subscriptionGroupID" : "21500001",
           "type" : "RecurringSubscription"
         }

@@ -46,7 +46,7 @@ export function TwoStepSheet({ then = null }) {
       <SheetFrame title={t('tsRecovery')} right={t('done')} onRight={() => { closeSheet(); if (then) setTimeout(() => openSheet(then), 0); }}>
         <p class="note-text">{t('tsRecoveryHelp')}</p>
         <div class="recovery-grid" id="ts-recovery">{codes.map((c) => <code key={c}>{c}</code>)}</div>
-        <Button kind="secondary" full icon="download" onClick={() => saveFile('melovyn-recovery-codes.txt', `Melovyn recovery codes (each works once)\n\n${codes.join('\n')}\n`)}>{t('tsSaveCodes')}</Button>
+        <Button kind="secondary" full icon="download" onClick={() => saveFile('melovyn-recovery-codes.txt', `Haptune recovery codes (each works once)\n\n${codes.join('\n')}\n`)}>{t('tsSaveCodes')}</Button>
       </SheetFrame>
     );
   }

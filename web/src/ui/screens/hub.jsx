@@ -239,40 +239,50 @@ export function loadGoogle() {
   return gsiLoading;
 }
 
-/** Sign in with Google: Google's own button on the website; the app opens the website to do it. */
+/** The four-colour Google "G" (Google's sign-in branding guidelines). */
+export const GoogleG = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.2 0 24 0 14.6 0 6.6 5.4 2.6 13.2l7.9 6.2C12.4 13.6 17.7 9.5 24 9.5z" /><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.8c4.3-4 6.9-9.9 6.9-17.2z" /><path fill="#FBBC05" d="M10.5 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.2C1 16.5 0 20.1 0 24s1 7.5 2.6 10.8l7.9-6.2z" /><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.8c-2.1 1.4-4.8 2.3-8.5 2.3-6.3 0-11.6-4.1-13.5-9.9l-7.9 6.2C6.6 42.6 14.6 48 24 48z" /></svg>
+);
+
+/**
+ * Sign in with Google. Website: our own button opens Google's OAuth window and the server checks the answer
+ * (Google's "Continue as" button iframe could get stuck: the click opened and closed Google's window and nothing
+ * came back); if the window can't open, the whole page goes to Google and back. App: Google's native sheet when
+ * the app has the plugin, otherwise the phone's browser signs in and the app is paired to the same account.
+ */
 export function GoogleButton({ onDone }) {
-  const ref = useRef(null);
   const [err, setErr] = useState('');
-  const id = CFG().google;
+  const [busy, setBusy] = useState(false);
+  const [ready, setReady] = useState(isNative() || null);               // web: is Google sign-in set up on the server?
   useEffect(() => {
-    if (!id || isNative()) return;
-    let alive = true;
-    loadGoogle().then((g) => {
-      if (!alive || !ref.current) return;
-      g.accounts.id.initialize({
-        client_id: id, ux_mode: 'popup', auto_select: false, itp_support: true,
-        callback: async (resp) => {
-          try { const me = await C.googleSignIn(resp.credential); onDone?.(me); } catch (e) { setErr(e.message || String(e)); }
-        },
-      });
-      g.accounts.id.renderButton(ref.current, { theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with', width: Math.min(360, ref.current.clientWidth || 320) });
-    }).catch((e) => alive && setErr(e.message));
-    return () => { alive = false; };
-  }, [id]);
-  if (isNative()) {
-    // Google's own sheet when the app has the plugin; otherwise sign in on the website and pair this device
-    const native = async () => {
-      try {
+    if (isNative()) return;
+    import('../google.js').then((G) => { G.preloadGoogle(); G.googleStatus().then((st) => setReady(!!st.configured), () => setReady(!!CFG().google)); });
+  }, []);
+  const go = async () => {
+    setErr(''); setBusy(true);
+    try {
+      if (isNative()) {
         const S = await import('../signin.js');
-        if (!S.nativeGoogleAvailable()) { openSheet('pair', { then: onDone }); return; }
+        if (!S.nativeGoogleAvailable()) { setBusy(false); openSheet('pair', { then: onDone }); return; }
         const me = await S.nativeGoogleSignIn();
         if (me) onDone?.(me);
-      } catch (e) { setErr(e.message || String(e)); }
-    };
-    return <><Button full kind="secondary" icon="globe" onClick={native} id="google-native">{t('signInGoogle')}</Button>{err && <p class="t-red tiny">{err}</p>}</>;
-  }
-  if (!id) return null;
-  return <div class="gsi-wrap"><div ref={ref} class="gsi" id="google-btn" />{err && <p class="t-red tiny">{err}</p>}</div>;
+      } else {
+        const G = await import('../google.js');
+        const me = await G.googleSignInPopup();
+        if (me) onDone?.(me);
+      }
+    } catch (e) { setErr(e.detail?.message || e.message || String(e)); }
+    setBusy(false);
+  };
+  if (ready === false) return null;
+  return (
+    <div class="gsi-wrap">
+      <button type="button" class="g-btn" onClick={go} disabled={busy} id={isNative() ? 'google-native' : 'google-btn'}>
+        <GoogleG />{busy ? t('gSigningIn') : t('signInGoogle')}
+      </button>
+      {err && <p class="t-red tiny" id="google-err">{err}</p>}
+    </div>
+  );
 }
 
 /** Sign in with Apple (web: Apple's popup when set up; iPhone app: the native sheet). */
@@ -358,8 +368,10 @@ export function PairSheet({ then = null, approve = false, code: given = '' }) {
     C.pairStart().then((r) => {
       if (!alive) return;
       setCode(r.code); setSt('waiting');
-      const url = `${(CFG().site || location.origin).replace(/\/+$/, '')}/app/#pair=${r.code}`;
-      openExternal(url);
+      const site = `${(CFG().site || location.origin).replace(/\/+$/, '')}/app/`;
+      // straight to Google in the phone's browser; the app is signed in when Google answers (the old way, a
+      // code to approve on the website, stays as the fallback when Google sign-in isn't set up)
+      C.googleStart({ return_to: site, pair: r.code }).then((g) => openExternal(g.url)).catch(() => openExternal(`${site}#pair=${r.code}`));
       const poll = async () => {
         try {
           const p = await C.pairPoll(r.code);

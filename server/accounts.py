@@ -81,7 +81,7 @@ ledger = Table("ledger", meta,
                Column("user_id", String(36), ForeignKey("users.id"), nullable=False, index=True),
                Column("delta", Integer, nullable=False),
                Column("reason", String(24), nullable=False),
-               Column("minted", Boolean, nullable=False, default=False),   # made by Melovyn (not moved between people)
+               Column("minted", Boolean, nullable=False, default=False),   # made by Haptune (not moved between people)
                Column("ref", String(40), nullable=False, default=""),
                Column("note", String(160), nullable=False, default=""),
                Column("created", Float, nullable=False, index=True))
@@ -452,7 +452,7 @@ def current(authorization: str = Header("")) -> Me:
     tok = _token(authorization)
     user = user_from_token(tok)
     if user is None:
-        raise HTTPException(401, "Please open Melovyn online once to make your account.")
+        raise HTTPException(401, "Please open Haptune online once to make your account.")
     with engine().begin() as c:
         acc = ensure_account(c, user)
         if acc["role"] == "banned":
@@ -786,26 +786,23 @@ class GoogleIn(BaseModel):
     device: str = Field("", max_length=60)
 
 
-@router.post("/auth/google")
-def google_signin(body: GoogleIn, request: Request, authorization: str = Header("")):
-    """Sign in with Google. A Google account seen before signs in to its Melovyn account (on this device too);
-    a new one is linked to the account this device already has (so nothing is lost), or gets a new account."""
-    rate(request, "google", 30, 3600)
-    info = verify_google(body.credential)
+def google_login(info: dict, here: dict | None, here_token: str | None, device: str, request: Request | None) -> dict:
+    """Signs in with checked Google claims (from the button, a code exchange or a redirect). A Google account seen
+    before signs in to its account; a new one is linked to `here` (the account this device already has, so nothing
+    is lost) when that account has no Google yet, or gets a new account. Returns {"token", "me"}."""
     sub = str(info["sub"])[:64]
     email = (info.get("email") or "")[:200] if str(info.get("email_verified", "true")).lower() in ("true", "1") else ""
     name = (info.get("given_name") or info.get("name") or "").strip()[:60]
     with engine().begin() as c:
         uid = c.execute(select(accounts.c.user_id).where(accounts.c.google_sub == sub)).scalar()
         if uid:
-            token = _session(c, uid, body.device or "Google")
+            token = _session(c, uid, device or "Google")
             c.execute(update(accounts).where(accounts.c.user_id == uid).values(email=email or accounts.c.email))
         else:
-            here = user_from_token(_token(authorization))
             acc = c.execute(select(accounts).where(accounts.c.user_id == here["id"])).mappings().first() if here else None
             if here and acc and not acc["google_sub"]:
                 uid = here["id"]
-                token = _token(authorization)                           # this device keeps its sign-in
+                token = here_token or _session(c, uid, device or "Google")   # this device keeps its sign-in
                 c.execute(update(accounts).where(accounts.c.user_id == uid).values(google_sub=sub, email=email))
                 if name and (here.get("name") in ("", "Musician")):
                     c.execute(update(users).where(users.c.id == uid).values(name=name))
@@ -814,8 +811,18 @@ def google_signin(body: GoogleIn, request: Request, authorization: str = Header(
                 uid = user["id"]
                 ensure_account(c, user)
                 c.execute(update(accounts).where(accounts.c.user_id == uid).values(google_sub=sub, email=email))
-    _signed_in(uid, "google", request, body.device)
+    _signed_in(uid, "google", request, device)
     return {"token": token, "me": me_json(current(f"Bearer {token}"))}
+
+
+@router.post("/auth/google")
+def google_signin(body: GoogleIn, request: Request, authorization: str = Header("")):
+    """Sign in with Google's button or One Tap (an ID token). See google_login."""
+    rate(request, "google", 30, 3600)
+    info = verify_google(body.credential)
+    tok = _token(authorization)
+    here = user_from_token(tok)
+    return google_login(info, here, tok if here else None, body.device, request)
 
 
 # Pairing: the phone or tablet app shows a code, the person signs in on the website (where Google sign-in works)
@@ -1023,8 +1030,8 @@ def twofa_setup(me: Me = Depends(current)):
     secret = "".join(secrets.choice(B32) for _ in range(32))
     with engine().begin() as c:
         c.execute(update(accounts).where(accounts.c.user_id == me.id).values(totp_secret=_seal(secret), totp_on=False, totp_last_step=None))
-    label = urllib.parse.quote(f"Melovyn:{me.acc['handle']}")
-    return {"secret": secret, "uri": f"otpauth://totp/{label}?secret={secret}&issuer=Melovyn&digits=6&period=30"}
+    label = urllib.parse.quote(f"Haptune:{me.acc['handle']}")
+    return {"secret": secret, "uri": f"otpauth://totp/{label}?secret={secret}&issuer=Haptune&digits=6&period=30"}
 
 
 @router.post("/me/2fa/enable")
@@ -1208,7 +1215,7 @@ def charge_ai(request: Request, kind: str, amount: int = 1) -> Me | None:
     if limit == 0:
         need = NEEDS.get(kind, "plus")
         raise HTTPException(402, {"code": "plan_required", "feature": kind, "tier": tier, "need": need,
-                                  "message": f"{names.get(kind, kind)} is part of Melovyn {need.capitalize()}."})
+                                  "message": f"{names.get(kind, kind)} is part of Haptune {need.capitalize()}."})
     if me is None or limit is None:
         return me
     with engine().begin() as c:

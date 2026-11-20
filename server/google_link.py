@@ -8,7 +8,7 @@ Google for its own permission the first time someone uses it, and for nothing el
                                                                  attendees; edits made in Google Calendar come
                                                                  back (two-way)
   drive      https://www.googleapis.com/auth/drive.file         export reports, sheets and sounds to Drive (only
-                                                                 files Melovyn makes; it cannot see anything else)
+                                                                 files Haptune makes; it cannot see anything else)
   contacts   https://www.googleapis.com/auth/contacts.readonly  optional: pick students' emails to invite
 
 The web app gets a one-time code from Google Identity Services (initCodeClient, ux_mode "popup",
@@ -198,21 +198,29 @@ def connect(body: ConnectIn, authorization: str = Header("")):
     wanted = list(SCOPES.values()) if body.feature == "all" else [SCOPES[body.feature]]
     if not any(sc in granted for sc in wanted):
         raise HTTPException(400, {"code": "scope_not_granted", "message": "Google did not give that permission. Please tick the box and try again."})
+    store_grant(me.id, granted, r, me.acc.get("email") or "")
+    return connections(me)
+
+
+def store_grant(uid: str, granted: set, r: dict, email: str) -> bool:
+    """Keeps the features Google granted (and the lasting refresh token) for an account. False when nothing to keep."""
     features = sorted(f for f, sc in SCOPES.items() if sc in granted)
-    row = link_of(me.id)
+    row = link_of(uid)
+    if not features and not row:
+        return False
     refresh = r.get("refresh_token") or (decrypt(row["refresh_enc"]) if row else "")
     if not refresh:
-        raise HTTPException(400, "Google did not send a lasting permission. Please remove Melovyn in your Google account and connect again.")
-    vals = dict(scopes=sorted(set(features) | set((row or {}).get("scopes") or [])), refresh_enc=encrypt(refresh), email=me.acc.get("email") or "", updated=_now())
+        raise HTTPException(400, "Google did not send a lasting permission. Please remove Haptune in your Google account and connect again.")
+    vals = dict(scopes=sorted(set(features) | set((row or {}).get("scopes") or [])), refresh_enc=encrypt(refresh), email=email, updated=_now())
     with engine().begin() as c:
         if row:
-            c.execute(update(links).where(links.c.user_id == me.id).values(**vals))
+            c.execute(update(links).where(links.c.user_id == uid).values(**vals))
         else:
-            c.execute(insert(links).values(user_id=me.id, created=_now(), **vals))
+            c.execute(insert(links).values(user_id=uid, created=_now(), **vals))
     if r.get("access_token"):
         with _lock:
-            _access[me.id] = (r["access_token"], time.time() + float(r.get("expires_in", 3000)))
-    return connections(me)
+            _access[uid] = (r["access_token"], time.time() + float(r.get("expires_in", 3000)))
+    return True
 
 
 @router.get("/connections")

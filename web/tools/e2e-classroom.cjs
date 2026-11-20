@@ -140,7 +140,7 @@ async function person(browser, base, api, { name, role, handle }) {
     });
     await step('Home: the Learn band and the class shelf (student), takes to review (teacher)', async () => {
       for (const [pg, who] of [[s, 'student'], [t, 'teacher']]) {
-        await tab(pg, 'summaryTab'); await pg.evaluate(() => window.__haptune.popToRoot('summary'));
+        await tab(pg, 'homeTab'); await pg.evaluate(() => window.__haptune.popToRoot('summary'));
         await pg.waitForSelector('#home-band');
         if (who === 'teacher') await pg.waitForFunction(() => /to review/i.test(document.querySelector('#band-learn')?.innerText || ''), null, { timeout: 15000 });
         else await pg.waitForSelector('#shelf-class .shelf-item', { timeout: 15000 });
@@ -265,14 +265,14 @@ async function person(browser, base, api, { name, role, handle }) {
     await step('Golden path: one search finds the class and the person; links open the assignment, a Stage post and a piece in Play Along', async () => {
       const go = async (pg, hash) => { await esc(pg); await pg.evaluate((h) => { location.hash = h; }, hash); await pg.waitForTimeout(600); };
       // one search: classes and people with type chips
-      await esc(s); await tab(s, 'summaryTab'); await s.evaluate(() => window.__haptune.popToRoot('summary'));
+      await esc(s); await tab(s, 'homeTab'); await s.evaluate(() => window.__haptune.popToRoot('summary'));
       await s.locator('#hero-find').click(); await s.waitForSelector('#find-q');
       await s.fill('#find-q', 'violin'); await s.waitForSelector('#ft-classes', { timeout: 15000 });
       await s.locator('#ft-classes').click(); await s.waitForSelector('#find-classes-first');
       if (await s.locator('#find-free').count()) throw new Error('the Classes chip still shows pieces');
       await s.screenshot({ path: path.join(SHOTS, 'golden-search-classes.png') });
       await s.locator('#find-classes-first').click(); await s.waitForSelector('#class-tabs:visible', { timeout: 10000 });
-      await tab(s, 'summaryTab'); await s.waitForSelector('#find-q:visible');
+      await tab(s, 'homeTab'); await s.waitForSelector('#find-q:visible');
       await s.fill('#find-q', 'ms tan'); await s.waitForSelector('#find-people-first', { timeout: 15000 });
       // the assignment link a teacher shares
       const asg = await s.evaluate(async (server) => {
@@ -367,7 +367,7 @@ async function person(browser, base, api, { name, role, handle }) {
         sent = JSON.parse(route.request().postData());
         await route.fulfill({ json: { text: 'Check your microphone first, then play it slowly.', actions: [{ type: 'open_screen', label: 'Sound check', screen: 'soundCheck' }, { type: 'open_screen', label: 'Stage', screen: 'stage' }] } });
       });
-      await tab(s, 'summaryTab'); await s.waitForSelector('#ai-fab');
+      await tab(s, 'homeTab'); await s.waitForSelector('#ai-fab');
       await s.locator('#ai-fab').click();
       await s.waitForSelector('#ai-chat .chip'); await s.locator('#ai-chat .chip').first().click();
       await s.waitForSelector('#ai-act-0');
@@ -436,7 +436,7 @@ async function person(browser, base, api, { name, role, handle }) {
       await t.screenshot({ path: path.join(SHOTS, 'dash-overview.png') });
       // Brand: the owner sees the name, the icon previews, and what to set up for saving
       await t.locator('#dash-tab-brand').click(); await t.waitForSelector('#brand-panel #brand-preview');
-      if (await t.inputValue('#brand-name') !== 'Melovyn') throw new Error('the brand name is not shown');
+      if (await t.inputValue('#brand-name') !== 'Haptune') throw new Error('the brand name is not shown');
       if (!(await t.locator('#brand-setup').count())) throw new Error('without GitHub settings the Brand page should say what to set');
       if (!(await t.locator('#brand-save').isDisabled())) throw new Error('Save should wait for the GitHub settings');
       await t.screenshot({ path: path.join(SHOTS, 'dash-brand.png') });

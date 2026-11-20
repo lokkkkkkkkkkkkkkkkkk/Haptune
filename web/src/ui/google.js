@@ -14,6 +14,76 @@ export const GOOGLE_SCOPES = {
 
 const ALL = Object.values(GOOGLE_SCOPES).join(' ');
 
+// ---------------------------------------------------------------- signing in
+let status = null;
+/** The server's Google client (so the code is always for the client the server swaps it with). */
+export function googleStatus() {
+  if (!status) status = C.googleStatus().catch((e) => { status = null; throw e; });
+  return status;
+}
+
+/** Why Google said no, in words people can act on. */
+export function googleError(code) {
+  if (code === 'access_denied') return t('gErrDenied');
+  if (code === 'expired') return t('gErrExpired');
+  if (code === 'popup_closed' || code === 'cancelled') return '';
+  return t('gErrOther', { code });
+}
+
+/** The whole page goes to Google and comes back signed in (when a popup can't open). */
+export async function googleRedirect(extra = {}) {
+  const ret = `${location.origin}${location.pathname}`;
+  const { url } = await C.googleStart({ return_to: ret, ...extra });
+  location.href = url;
+}
+
+/**
+ * Sign in with Google on the website: Google's own OAuth window (the same one Calendar and Drive use), then the
+ * server checks the answer. Must be called straight from a tap (browsers allow popups only then): Google's script
+ * is loaded beforehand by preloadGoogle(). Resolves with the account, or null when the person closed the window.
+ */
+export function googleSignInPopup() {
+  const g = globalThis.google;
+  return googleStatus().then((st) => new Promise((resolve, reject) => {
+    if (!st.configured) { reject(new Error(t('googleNotSetUp'))); return; }
+    if (!g?.accounts?.oauth2) { googleRedirect().catch(reject); return; }
+    const client = g.accounts.oauth2.initCodeClient({
+      client_id: st.client_id, scope: 'openid email profile', ux_mode: 'popup', select_account: true, include_granted_scopes: true,
+      callback: (resp) => {
+        if (resp.error) { const m = googleError(resp.error); if (m) reject(Object.assign(new Error(m), { code: resp.error })); else resolve(null); return; }
+        C.googleCode(resp.code).then(resolve, reject);
+      },
+      error_callback: (e) => {
+        if (e?.type === 'popup_failed_to_open') { googleRedirect().catch(reject); return; }  // blocked: go by redirect
+        resolve(null);                                                                      // closed: a choice
+      },
+    });
+    client.requestCode();
+  }));
+}
+
+/** Loads Google's script and the server's client before the button is tapped (so the tap can open the popup). */
+export function preloadGoogle() {
+  googleStatus().catch(() => {});
+  return loadGoogle().catch(() => null);
+}
+
+/** Back from Google's page (…/app/#gsignin=…): finish signing in. Returns true when the address was ours. */
+export async function finishGoogleRedirect(hash) {
+  const ok = /^gsignin=(paired|[A-Za-z0-9_-]{10,80})$/.exec(hash);
+  const bad = /^gsignin_error=([\w%-]{1,60})$/.exec(hash);
+  if (!ok && !bad) return false;
+  history.replaceState(null, '', location.pathname);
+  const { toast } = await import('./state.js');
+  if (bad) { const m = googleError(decodeURIComponent(bad[1])); if (m) toast(m, 'err'); return true; }
+  if (ok[1] === 'paired') { toast(t('gPairedDone')); return true; }
+  try {
+    const me = await C.googleFinish(ok[1]);
+    toast(t('signedInAs', { name: me?.name ? ` · ${me.name}` : '' }));
+  } catch (e) { toast(e.detail?.message || e.message || String(e), 'err'); }
+  return true;
+}
+
 /** Google's own consent window (website only) for one feature or for 'all' of them at once; links whatever the
  *  person allows. `ticket` links to the phone app's account instead of the one signed in here. */
 export function askGoogle(feature, { clientId, hint = '', ticket = '' }) {
@@ -36,7 +106,7 @@ export function askGoogle(feature, { clientId, hint = '', ticket = '' }) {
 /**
  * Asks Google for a feature ('calendar' | 'drive' | 'contacts') or for 'all' of them, and links it.
  * Website: Google's window right here. Phone app: Google shows that window only on a website, so the app opens
- * the Melovyn website with a one-time link for this account; the person taps Allow there and comes back.
+ * the Haptune website with a one-time link for this account; the person taps Allow there and comes back.
  * Resolves with the connections list (website), or {opened: true} (app: it refreshes when the person returns).
  */
 export async function connectGoogle(feature) {

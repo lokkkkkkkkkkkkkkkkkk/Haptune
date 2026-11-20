@@ -156,7 +156,7 @@ async def post_sound(title: str = Form(..., min_length=1, max_length=120), body:
     data = await audio.read(max(lim["bytes"], wav_cap) + 1)
     kind = sniff(data)
     if not kind:
-        raise HTTPException(415, "That file is not audio Melovyn can play (WAV, MP3, AAC, Ogg, WebM or FLAC).")
+        raise HTTPException(415, "That file is not audio Haptune can play (WAV, MP3, AAC, Ogg, WebM or FLAC).")
     if len(data) > (wav_cap if kind == "audio/wav" else lim["bytes"]):
         raise HTTPException(413, {"code": "too_big", "message": f"Sounds can be up to {lim['bytes'] >> 20} MB on your plan."})
     if len(project) > MAX_PROJECT or len(sheet_xml) > MAX_XML:

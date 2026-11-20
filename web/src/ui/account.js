@@ -1,4 +1,4 @@
-// The person's Melovyn account (shared by the community, Academy classes and plans) and the community API.
+// The person's Haptune account (shared by the community, Academy classes and plans) and the community API.
 // A device gets an account the first time it goes online; nobody fills in a form to start.
 import { call, hasServer, accountToken, ApiError } from './api.js';
 import { local } from './storage.js';
@@ -88,6 +88,21 @@ export const C = {
     const r = await call('/c/auth/google', { method: 'POST', json: { credential, device: navigator.userAgent.slice(0, 60) } });
     local.set('academyToken', r.token); local.set('academyUser', null); setMe(r.me);
     // then, once, the one-tap "allow Calendar, Drive and Contacts" (nothing else to set up)
+    setTimeout(() => import('./google.js').then((g) => g.offerGoogleAllow()).catch(() => {}), 1200);
+    return r.me;
+  },
+  /** Sign in with a one-time code from Google's OAuth popup (no button iframe: works where that one gets stuck). */
+  googleCode: async (code) => {
+    const r = await call('/c/auth/google/code', { method: 'POST', json: { code, device: navigator.userAgent.slice(0, 60) } });
+    local.set('academyToken', r.token); local.set('academyUser', null); setMe(r.me);
+    setTimeout(() => import('./google.js').then((g) => g.offerGoogleAllow()).catch(() => {}), 1200);
+    return r.me;
+  },
+  googleStatus: () => call('/c/auth/google/status', { token: '' }),
+  googleStart: (body) => call('/c/auth/google/start', { method: 'POST', json: { device: navigator.userAgent.slice(0, 60), ...body } }),
+  googleFinish: async (code) => {
+    const r = await call('/c/auth/google/finish', { method: 'POST', json: { code }, token: '' });
+    local.set('academyToken', r.token); local.set('academyUser', null); setMe(r.me);
     setTimeout(() => import('./google.js').then((g) => g.offerGoogleAllow()).catch(() => {}), 1200);
     return r.me;
   },

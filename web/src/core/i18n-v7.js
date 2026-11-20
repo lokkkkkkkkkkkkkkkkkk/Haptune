@@ -68,7 +68,7 @@ export const V7 = {
   rosterSub: ['Paste names and emails, or choose a CSV (a Google Classroom or school export works). Everyone gets an invitation with the class code.', 'Tampal nama dan e-mel, atau pilih CSV (eksport Google Classroom atau sekolah boleh digunakan). Semua menerima jemputan dengan kod kelas.', '粘贴姓名和邮箱，或选择 CSV 文件（Google Classroom 或学校导出的名单都可以）。每个人都会收到带班级代码的邀请。', '貼上姓名和電子郵件，或選擇 CSV 檔（Google Classroom 或學校匯出的名單都可以）。每個人都會收到附班級代碼的邀請。'],
   rosterFile: ['Choose a CSV file', 'Pilih fail CSV', '选择 CSV 文件', '選擇 CSV 檔'],
   rosterInvite: ['Invite them', 'Jemput mereka', '发送邀请', '傳送邀請'],
-  rosterDone: ['Invited {n} people ({m} already on Melovyn).', '{n} orang dijemput ({m} sudah di Melovyn).', '已邀请 {n} 人（其中 {m} 人已在 Melovyn）。', '已邀請 {n} 人（其中 {m} 人已在 Melovyn）。'],
+  rosterDone: ['Invited {n} people ({m} already on Haptune).', '{n} orang dijemput ({m} sudah di Haptune).', '已邀请 {n} 人（其中 {m} 人已在 Haptune）。', '已邀請 {n} 人（其中 {m} 人已在 Haptune）。'],
   change: ['Change', 'Tukar', '更改', '更改'],
   openBtn: ['Open', 'Buka', '打开', '開啟'],
   emailT: ['Email', 'E-mel', '邮箱', '電子郵件'],
@@ -87,7 +87,7 @@ export const V7 = {
   n_sound_layered: ['{name} added a layer to your Sound', '{name} menambah lapisan pada Bunyi anda', '{name} 给你的声音加了一层', '{name} 為你的聲音加了一層'],
   n_teacher_verified: ['You are a verified teacher now', 'Anda kini guru yang disahkan', '你已成为认证老师', '你已成為認證老師'],
   n_teacher_rejected: ['Your teacher verification needs another look', 'Pengesahan guru anda perlu disemak semula', '你的老师认证需要补充资料', '你的老師認證需要補充資料'],
-  n_staff_message: ['A message from Melovyn', 'Mesej daripada Melovyn', '来自 Melovyn 的消息', '來自 Melovyn 的訊息'],
+  n_staff_message: ['A message from Haptune', 'Mesej daripada Haptune', '来自 Haptune 的消息', '來自 Haptune 的訊息'],
   n_dev_access: ['You have developer access', 'Anda mempunyai akses pembangun', '你获得了开发者权限', '你獲得了開發者權限'],
   n_dev_access_ended: ['Your developer access ended', 'Akses pembangun anda tamat', '你的开发者权限已结束', '你的開發者權限已結束'],
 };

@@ -79,7 +79,7 @@ def user(monkeypatch, sub, email, name):
 
 def test_only_the_scope_a_feature_needs_and_only_these_three():
     assert set(G.SCOPES) == {"calendar", "drive", "contacts"}
-    assert G.SCOPES["drive"].endswith("drive.file")             # only files Melovyn makes, never the whole Drive
+    assert G.SCOPES["drive"].endswith("drive.file")             # only files Haptune makes, never the whole Drive
     assert not any(s.endswith("/calendar") or s.endswith("/drive") for s in G.SCOPES.values())
     src = open(os.path.join(os.path.dirname(__file__), "google_link.py")).read()
     for f in G.SCOPES:                                          # every scope is used by an endpoint
@@ -217,3 +217,67 @@ def test_owner_locked_out_by_a_changed_key_can_set_2fa_up_again(monkeypatch):
     assert client.get("/c/me/staff-check", headers=h).json()["totp_readable"] is False
     sec2 = client.post("/c/me/2fa/setup", headers=h).json()["secret"]
     assert client.post("/c/me/2fa/enable", json={"code": accounts.totp(sec2)}, headers=h).status_code == 200
+
+
+def _fake_id(monkeypatch, sub, email):
+    monkeypatch.setattr(accounts, "verify_google", lambda tok: {"sub": sub, "email": email, "email_verified": "true", "given_name": "Yu"})
+
+
+def test_sign_in_with_a_popup_code_links_the_account_on_this_device(monkeypatch, fresh):
+    # Google's token endpoint answers a sign-in code with an ID token (basic scopes only)
+    real = fresh.__call__
+    def fake(method, url, **kw):
+        if url == G.TOKEN_URL and kw["form"].get("code") == "code-signin-1234":
+            assert kw["form"]["redirect_uri"] == "postmessage"
+            return {"access_token": "at-s", "expires_in": 3600, "id_token": "idtok", "scope": "openid email profile"}
+        return real(method, url, **kw)
+    monkeypatch.setattr(G, "_http", fake)
+    h = {"Authorization": "Bearer " + client.post("/c/auth/guest", json={"name": "Lok"}).json()["token"]}
+    client.post("/c/auth/password", json={"handle": "lokk", "password": "a-long-password"}, headers=h)
+    _fake_id(monkeypatch, "g-yslok", "yslok@gmail.com")
+    r = client.post("/c/auth/google/code", json={"code": "code-signin-1234"}, headers=h)
+    assert r.status_code == 200, r.text
+    me = r.json()["me"]
+    assert me["handle"] == "lokk" and me["google"] and me["email"] == "yslok@gmail.com"     # linked, same account
+    # someone else, no account here: a new account
+    r2 = client.post("/c/auth/google/code", json={"code": "code-signin-1234"}).json()
+    assert r2["me"]["handle"] == "lokk"                                                      # same Google account -> same person
+    assert G.link_of(me["id"]) is None                                                         # basic scopes: nothing to keep
+
+
+def test_sign_in_by_redirect_and_for_the_phone_app(monkeypatch, fresh):
+    real = fresh.__call__
+    def fake(method, url, **kw):
+        if url == G.TOKEN_URL and kw["form"].get("code") == "code-redirect-1234":
+            assert kw["form"]["redirect_uri"].endswith("/c/auth/google/callback")
+            return {"access_token": "at-r", "expires_in": 3600, "id_token": "idtok", "refresh_token": "rt-secret", "scope": "openid email " + G.SCOPES["drive"]}
+        return real(method, url, **kw)
+    monkeypatch.setattr(G, "_http", fake)
+    monkeypatch.setenv("HAPTUNE_SITE_URL", "https://haptune.name.my")
+    _fake_id(monkeypatch, "g-new", "new@gmail.com")
+    # an open redirect is refused
+    assert client.post("/c/auth/google/start", json={"return_to": "https://evil.example/app/"}).status_code == 400
+    url = client.post("/c/auth/google/start", json={"return_to": "https://haptune.name.my/app/"}).json()["url"]
+    q = dict(x.split("=", 1) for x in url.split("?", 1)[1].split("&"))
+    assert "scope=openid+email+profile" in url and q["prompt"] == "select_account"
+    r = client.get(f"/c/auth/google/callback?state={q['state']}&code=code-redirect-1234", follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"].startswith("https://haptune.name.my/app/#gsignin=")
+    one = r.headers["location"].split("#gsignin=")[1]
+    me = client.post("/c/auth/google/finish", json={"code": one}).json()["me"]
+    assert me["email"] == "new@gmail.com"
+    assert G.link_of(me["id"])["scopes"] == ["drive"]                                          # Drive granted earlier: kept
+    assert client.post("/c/auth/google/finish", json={"code": one}).status_code == 404         # once only
+    # the same state can't be used twice; "access denied" (Testing mode, not a test user) comes back as an error
+    url = client.post("/c/auth/google/start", json={"return_to": "https://haptune.name.my/app/"}).json()["url"]
+    st = dict(x.split("=", 1) for x in url.split("?", 1)[1].split("&"))["state"]
+    r = client.get(f"/c/auth/google/callback?state={st}&error=access_denied", follow_redirects=False)
+    assert r.headers["location"].endswith("#gsignin_error=access_denied")
+    # the phone app: a pairing code, signed in in the browser, the app gets the account
+    code = client.post("/c/auth/pair").json()["code"]
+    url = client.post("/c/auth/google/start", json={"return_to": "https://haptune.name.my/app/", "pair": code}).json()["url"]
+    st = dict(x.split("=", 1) for x in url.split("?", 1)[1].split("&"))["state"]
+    r = client.get(f"/c/auth/google/callback?state={st}&code=code-redirect-1234", follow_redirects=False)
+    assert r.headers["location"].endswith("#gsignin=paired")
+    p = client.get(f"/c/auth/pair/{code}").json()
+    assert p["status"] == "done" and p["me"]["email"] == "new@gmail.com"
+    assert client.get("/c/auth/google/status").json()["configured"] is True

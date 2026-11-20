@@ -1,4 +1,4 @@
-/* Melovyn 4 (loaded last). docs/ui-research.md, "Part 3":
+/* Haptune 4 (loaded last). docs/ui-research.md, "Part 3":
    - colours from Radix Colors (MIT, github.com/radix-ui/colors): a 12-step slate grey and violet, light and dark
      made as pairs, so text keeps its contrast in both (steps 11-12 for text, 3-5 for fills, 6-8 for lines);
    - the shape of mobile screens from Konsta UI and Framework7 (MIT): inset grouped lists, 44-48 px touch targets,
@@ -182,5 +182,5 @@ button.row:active, .row[role="button"]:active { background: var(--fill); }
 }
 
 /* coloured words on white (ring labels, tile titles): darkened towards the text colour so they pass AA */
-.rings-card2 .lab, .sum-tile .st-head { color: color-mix(in srgb, var(--c, currentColor) 70%, var(--ink)); }
+.rings-card2 .lab, .sum-tile .st-head { color: color-mix(in srgb, var(--c, currentColor) 60%, var(--ink)); }
 .rings-card2 .lab.t-pink { --c: var(--pink); } .rings-card2 .lab.t-green { --c: var(--green); } .rings-card2 .lab.t-cyan { --c: var(--cyan); }
