@@ -111,7 +111,7 @@ answers a month). The app reads the plans from the server.
 
 ## 6. Store listing (copy, then adjust)
 
-**Title:** Haptune: Practise, Learn & Write Music
+**App name (30 characters at most):** Haptune: Music Practice
 
 **Short description (80 characters):** Play along with feedback, learn with your teacher, write and share sheet music.
 
@@ -126,7 +126,7 @@ answers a month). The app reads the plans from the server.
 >   their classes here, private or open to everyone.
 > • Write: tap notes on the piano keys, scan a PDF or a photo, add chords, change the key, and share it.
 > • Stage: post what you are playing, a recording, photos or a score; request any song and help others.
-> • 4,900 free pieces, staff notation and 簡譜, piano, violin, guitar, voice, erhu, guzheng and 20+ instruments.
+> • 6,600+ free pieces, staff notation and 簡譜, piano, violin, guitar, voice, erhu, guzheng and 20+ instruments.
 > • In English, Bahasa Melayu, 简体中文 and 繁體中文.
 >
 > Free: practice, classes, writing and the whole community, with no ads. Haptune Plus and Pro add AI help: reading
@@ -138,8 +138,9 @@ answers a month). The app reads the plans from the server.
 
 **繁體中文（簡短）：** 求任何歌曲的樂譜，邊練邊得到回饋，和朋友一起學習。
 
-**Screenshots:** run `tools/community-smoke.cjs` (it saves phone screenshots to `web/shots/`) or take them on your
-phone: Community home, a request with a score, Play Along, the score cursor, Plans.
+**Graphics:** app icon 512 × 512 (`icons/icon-512.png`), feature graphic 1024 × 500, and 2–8 phone screenshots in
+9:16 (1080 × 1920). Google refuses screenshots whose long side is more than twice the short side (iPhone-shaped
+1170 × 2532 shots are too tall).
 
 ## 7. Updating the app later
 
