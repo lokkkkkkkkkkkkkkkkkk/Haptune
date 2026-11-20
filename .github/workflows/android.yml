@@ -58,16 +58,64 @@ jobs:
       - name: Build the test APK
         working-directory: web/android
         run: ./gradlew --no-daemon assembleDebug -PversionCode=${{ github.run_number }} -PversionName=${{ steps.v.outputs.name }}
-      - name: Build the Google Play bundle (signed)
+      # The upload key is checked first, so a wrong secret gives a clear message (Gradle only says "keystore password
+      # was incorrect", which is also what a damaged keystore file looks like). The test APK is still built and
+      # published; the run turns red at the end.
+      - name: Check the upload key (the four signing secrets)
+        id: key
         if: env.HAS_KEY == 'true'
-        working-directory: web/android
         env:
-          HAPTUNE_KEYSTORE_PASSWORD: ${{ secrets.HAPTUNE_KEYSTORE_PASSWORD }}
-          HAPTUNE_KEY_ALIAS: ${{ secrets.HAPTUNE_KEY_ALIAS }}
-          HAPTUNE_KEY_PASSWORD: ${{ secrets.HAPTUNE_KEY_PASSWORD }}
+          KEY_B64: ${{ secrets.HAPTUNE_KEYSTORE_BASE64 }}
+          SP0: ${{ secrets.HAPTUNE_KEYSTORE_PASSWORD }}
+          ALIAS0: ${{ secrets.HAPTUNE_KEY_ALIAS }}
+          KP0: ${{ secrets.HAPTUNE_KEY_PASSWORD }}
         run: |
-          echo "${{ secrets.HAPTUNE_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/upload.jks"
-          HAPTUNE_KEYSTORE="$RUNNER_TEMP/upload.jks" ./gradlew --no-daemon bundleRelease -PversionCode=${{ github.run_number }} -PversionName=${{ steps.v.outputs.name }}
+          set +e
+          ks="$RUNNER_TEMP/upload.jks"
+          bad() { echo "::error title=Google Play signing::$1"; echo "ok=false" >> "$GITHUB_OUTPUT"; exit 0; }
+          trim() { printf '%s' "$1" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'; }
+          # line breaks or spaces copied into the base64 text are dropped
+          printf '%s' "$KEY_B64" | tr -d '\r\n\t ' | base64 -d > "$ks" 2>/dev/null
+          [ "$(stat -c%s "$ks" 2>/dev/null || echo 0)" -gt 1000 ] || bad "HAPTUNE_KEYSTORE_BASE64 is not the base64 text of a .jks file (it is empty, cut short or not base64). Make haptune-upload.txt again (web/ANDROID.md §3) and paste all of it."
+          echo "keystore file: $(stat -c%s "$ks") bytes, sha256 $(sha256sum "$ks" | cut -c1-16)…"
+          opens() { keytool -list -keystore "$ks" -storepass "$1" >/dev/null 2>&1; }
+          SP="$SP0"
+          if ! opens "$SP"; then
+            T="$(trim "$SP0")"
+            if [ -n "$T" ] && [ "$T" != "$SP0" ] && opens "$T"; then
+              echo "::add-mask::$T"; SP="$T"
+              echo "::warning title=Google Play signing::HAPTUNE_KEYSTORE_PASSWORD had a space or line break at the start or end; it was used without it."
+            else
+              bad "HAPTUNE_KEYSTORE_PASSWORD does not open this keystore. Either it isn't the password you typed in keytool, or HAPTUNE_KEYSTORE_BASE64 is the text of a different .jks file. On your PC run: keytool -list -keystore haptune-upload.jks  (the password that works there goes in the secret; the file size should be $(stat -c%s "$ks") bytes)."
+            fi
+          fi
+          ALIAS="$(trim "$ALIAS0")"
+          if ! keytool -list -keystore "$ks" -storepass "$SP" -alias "$ALIAS" >/dev/null 2>&1; then
+            have="$(keytool -list -v -keystore "$ks" -storepass "$SP" 2>/dev/null | sed -n 's/^Alias name: //p' | paste -sd, -)"
+            bad "HAPTUNE_KEY_ALIAS '$ALIAS' is not in this keystore. It has: $have. Put that name in HAPTUNE_KEY_ALIAS."
+          fi
+          # the key's own password: new keystores (PKCS12, the default since Java 9) use the keystore password for the key
+          if keytool -list -keystore "$ks" -storepass "$SP" 2>/dev/null | grep -qi "Keystore type: PKCS12"; then
+            [ "$KP0" = "$SP0" ] || [ "$(trim "$KP0")" = "$SP" ] || echo "::warning title=Google Play signing::This keystore has one password for everything; HAPTUNE_KEY_PASSWORD differs from HAPTUNE_KEYSTORE_PASSWORD, so the keystore password was used. Set both secrets to the same value."
+            KP0="$SP"
+          fi
+          keyok() { keytool -certreq -keystore "$ks" -storepass "$SP" -alias "$ALIAS" -keypass "$1" >/dev/null 2>&1; }
+          KP="$KP0"
+          if ! keyok "$KP"; then
+            T="$(trim "$KP0")"
+            if [ -n "$T" ] && keyok "$T"; then echo "::add-mask::$T"; KP="$T"; echo "::warning title=Google Play signing::HAPTUNE_KEY_PASSWORD had a space or line break at the start or end; it was used without it."
+            elif keyok "$SP"; then KP="$SP"; echo "::warning title=Google Play signing::HAPTUNE_KEY_PASSWORD is wrong, but the keystore password opens the key, so that was used. Set HAPTUNE_KEY_PASSWORD to the same value as HAPTUNE_KEYSTORE_PASSWORD."
+            else bad "HAPTUNE_KEY_PASSWORD does not open the key '$ALIAS'. For keystores made with a recent keytool it is the same as HAPTUNE_KEYSTORE_PASSWORD."
+            fi
+          fi
+          echo "upload key certificate (public; Google Play shows the same under App integrity):"
+          keytool -list -v -keystore "$ks" -storepass "$SP" -alias "$ALIAS" 2>/dev/null | grep -E "SHA1:|SHA256:" | sed 's/^[[:space:]]*/  /'
+          { echo "HAPTUNE_KEYSTORE=$ks"; echo "HAPTUNE_KEYSTORE_PASSWORD<<__END__"; echo "$SP"; echo "__END__"; echo "HAPTUNE_KEY_ALIAS=$ALIAS"; echo "HAPTUNE_KEY_PASSWORD<<__END__"; echo "$KP"; echo "__END__"; } >> "$GITHUB_ENV"
+          echo "ok=true" >> "$GITHUB_OUTPUT"
+      - name: Build the Google Play bundle (signed)
+        if: steps.key.outputs.ok == 'true'
+        working-directory: web/android
+        run: ./gradlew --no-daemon bundleRelease -PversionCode=${{ github.run_number }} -PversionName=${{ steps.v.outputs.name }}
       - name: Collect files
         run: |
           mkdir -p ../out
@@ -86,3 +134,8 @@ jobs:
           gh release create android-test ../out/Haptune.apk --prerelease --target "$GITHUB_SHA" \
             --title "Android test build ${{ steps.v.outputs.name }} (${{ github.run_number }})" \
             --notes "Newest test build from branch ${{ github.ref_name }}, commit ${GITHUB_SHA::7}. Download Haptune.apk on your Android phone and open it to install (allow installing from your browser if asked). (App ID com.sloky.melovyn: it installs next to older test builds that used another app ID, which you can delete.)"
+      - name: Signing secrets need fixing (see the red note above)
+        if: env.HAS_KEY == 'true' && steps.key.outputs.ok != 'true'
+        run: |
+          echo "The test APK was built and published, but Haptune.aab was not: fix the secret named in the error above, then run this workflow again."
+          exit 1
