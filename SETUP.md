@@ -167,6 +167,24 @@ library. To add a collection later, see `web/tools/import-catalog.mjs` (only Pub
 are accepted). Popular songs still in copyright are never added: people get them through Stage requests or by
 importing a sheet they own.
 
+## 9d. The name and icon (Developer mode > Brand)
+The app's name and icon live in `web/brand.json` and `web/assets/brand/icon.svg` (Hapi). Change them either way:
+- **From the app** (owner, Developer mode on): **Me → Name and icon**. Type the name, pick an SVG or a square PNG
+  (512 px or more), check the three previews, **Save**. One-time server setup for this:
+  1. github.com → your picture → **Settings → Developer settings → Fine-grained tokens → Generate new token**:
+     Repository access *Only select repositories* → Haptune; Permissions → **Contents: Read and write** and
+     **Actions: Read and write**. Copy the token.
+  2. ```powershell
+     fly secrets set GITHUB_TOKEN=github_pat_xxx GITHUB_REPO=lokkkkkkkkkkkkkkkkkk/Haptune -a haptune-lok
+     ```
+- **By hand**: edit `web/brand.json` (or replace the icon file) on GitHub and commit.
+
+Either way the **Brand** workflow makes every icon size (website, installed web app, Android launcher icons in all
+densities, round and adaptive) and the Android app's name, commits them, and starts the website and Android
+builds. The website changes in about 5 minutes; Google search shows the new name and icon after Google visits
+the site again (Search Console → URL inspection → Request indexing makes that quicker). The Android app changes
+with the next version you upload to Google Play.
+
 ## 10. Before charging real money
 - Read `terms.html`, `refunds.html` and `privacy.html` (in `web/assets/legal/`) and change anything that isn't how you want to run it. The refund policy promises a full refund within 7 days of a first payment.
 - In the Anthropic Console set a monthly spend limit.

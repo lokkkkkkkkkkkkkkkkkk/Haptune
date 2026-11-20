@@ -1,0 +1,186 @@
+/* Melovyn 4 (loaded last). docs/ui-research.md, "Part 3":
+   - colours from Radix Colors (MIT, github.com/radix-ui/colors): a 12-step slate grey and violet, light and dark
+     made as pairs, so text keeps its contrast in both (steps 11-12 for text, 3-5 for fills, 6-8 for lines);
+   - the shape of mobile screens from Konsta UI and Framework7 (MIT): inset grouped lists, 44-48 px touch targets,
+     a large title that gives way to content, and on Android a Material 3 navigation bar (an indicator pill behind
+     the chosen tab) and Roboto;
+   - easing and shadows in the spirit of Open Props (MIT, github.com/argyleink/open-props).
+   One rule above them all: the first thing to do on a screen is the biggest thing on it, and nothing needs
+   explaining twice: new parts carry a short guide that can be closed for good. */
+
+:root {
+  --slate1: #fcfcfd; --slate2: #f9f9fb; --slate3: #f0f0f3; --slate4: #e8e8ec; --slate5: #e0e1e6; --slate6: #d9d9e0;
+  --slate7: #cdced6; --slate8: #b9bbc6; --slate9: #8b8d98; --slate10: #80838d; --slate11: #60646c; --slate12: #1c2024;
+  --violet3: #f4f0fe; --violet4: #ebe4ff; --violet5: #e1d9ff; --violet6: #d4cafe; --violet9: #6e56cf; --violet10: #654dc4; --violet11: #6550b9; --violet12: #2f265f;
+  --bg: var(--slate2); --card: #ffffff; --card2: var(--slate1); --solid: #ffffff;
+  --line: rgba(0, 9, 50, .12); --sep: rgba(0, 9, 50, .10); --fill: rgba(0, 0, 51, .06); --fill2: rgba(0, 0, 45, .09);
+  --ink: var(--slate12); --ink2: var(--slate11); --ink3: var(--slate9);
+  --violet: var(--violet9); --violet-ink: var(--violet11); --violet-soft: var(--violet3);
+  --s-violet: var(--violet9);
+  --ease-out: cubic-bezier(.22, 1, .36, 1); --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+  --shadow: 0 1px 1px rgba(0, 9, 50, .04), 0 2px 8px rgba(0, 9, 50, .05);
+  --shadow-up: 0 2px 4px rgba(0, 9, 50, .05), 0 12px 32px rgba(0, 9, 50, .10);
+  --r: 20px; --r-sm: 14px; --touch: 48px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --slate1: #111113; --slate2: #18191b; --slate3: #212225; --slate4: #272a2d; --slate5: #2e3135; --slate6: #363a3f;
+    --slate7: #43484e; --slate8: #5a6169; --slate9: #696e77; --slate10: #777b84; --slate11: #b0b4ba; --slate12: #edeef0;
+    --violet3: #291f43; --violet4: #33255b; --violet5: #3c2e69; --violet6: #473876; --violet9: #6e56cf; --violet10: #7d66d9; --violet11: #baa7ff; --violet12: #e2ddfe;
+    --bg: var(--slate1); --card: var(--slate2); --card2: var(--slate3); --solid: var(--slate2);
+    --line: rgba(217, 237, 254, .12); --sep: rgba(217, 237, 254, .10); --fill: rgba(221, 234, 248, .08); --fill2: rgba(211, 237, 248, .13);
+    --violet: #8C7BFF; --violet-ink: var(--violet11); --s-violet: var(--violet11);
+    --shadow: 0 1px 2px rgba(0, 0, 0, .45); --shadow-up: 0 14px 36px rgba(0, 0, 0, .55); --bar: var(--slate2);
+  }
+}
+:root[data-theme="dark"] {
+  --slate1: #111113; --slate2: #18191b; --slate3: #212225; --slate4: #272a2d; --slate5: #2e3135; --slate6: #363a3f;
+  --slate7: #43484e; --slate8: #5a6169; --slate9: #696e77; --slate10: #777b84; --slate11: #b0b4ba; --slate12: #edeef0;
+  --violet3: #291f43; --violet4: #33255b; --violet5: #3c2e69; --violet6: #473876; --violet9: #6e56cf; --violet10: #7d66d9; --violet11: #baa7ff; --violet12: #e2ddfe;
+  --bg: var(--slate1); --card: var(--slate2); --card2: var(--slate3); --solid: var(--slate2);
+  --line: rgba(217, 237, 254, .12); --sep: rgba(217, 237, 254, .10); --fill: rgba(221, 234, 248, .08); --fill2: rgba(211, 237, 248, .13);
+  --violet: #8C7BFF; --violet-ink: var(--violet11); --s-violet: var(--violet11);
+  --shadow: 0 1px 2px rgba(0, 0, 0, .45); --shadow-up: 0 14px 36px rgba(0, 0, 0, .55); --bar: var(--slate2);
+}
+
+/* ---------- Android: Roboto and Material 3 ---------- */
+.native-android { --font: Roboto, "Noto Sans", "Noto Sans CJK SC", "Jakarta", sans-serif; --display: var(--font); }
+
+/* ---------- touch: every button big enough, and it answers the finger ---------- */
+.btn { min-height: var(--touch); border-radius: var(--r-sm); transition: transform .12s var(--ease-out), filter .12s; }
+.btn.small { min-height: 36px; }
+.btn.plain { min-height: 40px; }
+.btn:not(:disabled):active { transform: scale(.97); filter: brightness(.96); }
+.chip { min-height: 36px; display: inline-flex; align-items: center; transition: background .15s, transform .12s var(--ease-out); }
+.chip:active { transform: scale(.96); }
+.row { min-height: 52px; transition: background .12s; }
+button.row:active, .row[role="button"]:active { background: var(--fill); }
+.list { border: 1px solid var(--line); box-shadow: none; }
+.native-android button:active, .native-android .row:active { background-image: radial-gradient(circle at center, var(--fill2) 0%, transparent 70%); }
+
+/* ---------- sheets: a grab handle on phones, and the title stays small and clear ---------- */
+@media (max-width: 699px) {
+  .sheet { border-radius: 22px 22px 0 0; }
+  .sheet::before { content: ""; display: block; width: 38px; height: 5px; margin: 7px auto -3px; border-radius: 3px; background: var(--slate7); flex-shrink: 0; }
+}
+
+/* ---------- tab bar: an indicator pill behind the chosen tab (Material 3 / iOS 26 alike) ---------- */
+.app.v3 .tabbar button { color: var(--ink2); }
+.app.v3 .tabbar button:not(.center) .tab-ic { width: 58px; height: 30px; border-radius: 15px; transition: background .2s var(--ease-out); }
+.app.v3 .tabbar button.on:not(.center) .tab-ic { background: color-mix(in srgb, var(--c) 16%, transparent); }
+.app.v3 .tabbar button.on .tab-label { color: var(--ink); }
+.native-android .app.v3 .tabbar { --tabbar-h: 72px; padding-top: 10px; }
+.native-android .app.v3 .tabbar button:not(.center) .tab-ic { width: 64px; height: 32px; border-radius: 16px; }
+
+/* ---------- Summary (the first tab) ---------- */
+.sum-top { display: flex; flex-direction: column; gap: 12px; }
+@media (min-width: 900px) { .sum-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: stretch; } .sum-top > * { margin-top: 0; height: 100%; } }
+.sum-greet { margin: -10px 0 0; font-size: 16px; font-weight: 600; color: var(--ink2); }
+.rings-card2 { display: flex; align-items: center; gap: 18px; width: 100%; padding: 16px 18px; border-radius: var(--r); background: var(--card); border: 1px solid var(--line); text-align: left; transition: transform .15s var(--ease-out); }
+.rings-card2:active { transform: scale(.985); }
+.rings-card2 .rc-legend { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.rings-card2 .rc-legend > span { display: flex; flex-direction: column; }
+.rings-card2 .lab { font-size: 13px; font-weight: 800; letter-spacing: .02em; }
+.rings-card2 .val { font-size: 22px; font-weight: 800; line-height: 1.1; color: var(--ink); }
+.rings-card2 .val small { font-size: 13px; font-weight: 600; color: var(--ink2); margin-left: 2px; }
+.sum-sec { display: flex; flex-direction: column; gap: 10px; }
+.sum-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (min-width: 700px) { .sum-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1040px) { .sum-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.sum-tile { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 13px 14px 14px; border-radius: 18px; background: var(--card); border: 1px solid var(--line);
+  text-align: left; transition: transform .15s var(--ease-out), box-shadow .15s; }
+.sum-tile:active { transform: scale(.97); }
+@media (hover: hover) { .sum-tile:hover { box-shadow: var(--shadow-up); } }
+.sum-tile .st-head { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--c); font-size: 13.5px; font-weight: 800; }
+.sum-tile .st-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sum-tile .st-d { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--ink2); white-space: nowrap; }
+.sum-tile .st-head > svg:last-child { color: var(--ink3); flex-shrink: 0; }
+.sum-tile .st-d + svg { margin-left: 4px; }
+.sum-tile .st-head .st-t + svg { margin-left: auto; }
+.sum-tile .st-body { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; min-width: 0; }
+.sum-tile .st-v { display: flex; flex-direction: column; min-width: 0; }
+.sum-tile .st-num { display: flex; align-items: baseline; gap: 4px; min-width: 0; }
+.sum-tile .st-v .num { font-size: 28px; font-weight: 800; line-height: 1; color: var(--ink); letter-spacing: -.02em; }
+.sum-tile .st-v small { font-size: 14px; font-weight: 700; color: var(--ink2); white-space: nowrap; }
+@media (max-width: 520px) { .sum-tile .st-d { display: none; } .sum-tile .st-head { font-size: 14px; } }
+.sum-tile .st-f { font-size: 12.5px; color: var(--ink2); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.sum-tile svg.minibars, .sum-tile svg.miniline { flex-shrink: 0; }
+.disc-head { margin-top: 6px; }
+
+/* the first-time guide */
+.guide-card { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: var(--r); background: var(--brand-soft, var(--violet3)); border: 1px solid color-mix(in srgb, var(--violet) 22%, transparent); }
+.guide-card .gc-head { display: flex; align-items: center; gap: 10px; }
+.guide-card .gc-head > div { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.guide-card .gc-head strong { font-size: 17px; }
+.guide-card .gc-head span { font-size: 14px; color: var(--ink2); }
+.guide-card .gc-x { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--ink2); background: var(--card); }
+.guide-card ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.guide-card li button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border-radius: 14px; background: var(--card); text-align: left; min-height: var(--touch); }
+.guide-card li button > span:nth-child(2) { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.guide-card li strong { font-size: 15px; }
+.guide-card li span span { font-size: 13px; color: var(--ink2); }
+.guide-card .gc-n { width: 28px; height: 28px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; font-weight: 800; color: #fff; background: var(--c); }
+.guide-card li button > svg { color: var(--ink2); flex-shrink: 0; }
+
+/* ---------- Play Along: the microphone level, and what to do when nothing is heard ---------- */
+.pa-level { height: 5px; margin-top: 6px; border-radius: 3px; background: var(--fill2); overflow: hidden; --lv: 0; }
+.pa-level i { display: block; height: 100%; width: calc(var(--lv) * 100%); border-radius: 3px; background: linear-gradient(90deg, var(--green), var(--yellow) 75%, var(--red)); transition: width .08s linear; }
+.pa-quiet { display: flex; align-items: flex-start; gap: 8px; margin: 8px 0 0; padding: 9px 11px; border-radius: 12px; font-size: 13.5px; line-height: 1.35;
+  background: color-mix(in srgb, var(--orange) 14%, var(--card)); color: var(--ink); }
+.pa-quiet svg { flex-shrink: 0; color: var(--orange); margin-top: 1px; }
+
+/* ---------- Google and the account ---------- */
+.g-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--r-sm); background: var(--card); border: 1px solid var(--line); }
+.g-card.ok { border-color: color-mix(in srgb, var(--green) 45%, transparent); background: color-mix(in srgb, var(--green) 8%, var(--card)); }
+.g-card.ok > svg { color: var(--green); }
+.g-card .g-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.g-card .g-main strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.g-card .g-main span { font-size: 13.5px; color: var(--ink2); }
+#conn-need-google { flex-direction: column; align-items: stretch; }
+.g-logo, .acct-who .aw-ic.g { width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; font: 800 17px/1 var(--font); color: #fff;
+  background: conic-gradient(from -45deg, #ea4335 0 25%, #4285f4 0 50%, #34a853 0 75%, #fbbc05 0); }
+.pill-off { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 999px; font-size: 12.5px; font-weight: 700; color: var(--ink2); background: var(--fill); }
+.acct-who { display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin-bottom: 8px; border-radius: var(--r-sm); background: var(--card); border: 1px solid var(--line); }
+.acct-who .aw-ic { width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; color: var(--ink2); background: var(--fill); }
+.acct-who .aw-t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.acct-who .aw-t strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acct-who .aw-t span { font-size: 13px; color: var(--ink2); }
+
+/* ---------- Developer: branding ---------- */
+.brand-prev { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.brand-prev > div { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 8px; border-radius: var(--r-sm); background: var(--card); border: 1px solid var(--line); text-align: center; font-size: 12.5px; color: var(--ink2); }
+.brand-prev img { width: 56px; height: 56px; border-radius: 14px; }
+.brand-prev .bp-tab { display: flex; align-items: center; gap: 6px; max-width: 100%; padding: 6px 9px; border-radius: 8px 8px 0 0; background: var(--fill); font-size: 12px; color: var(--ink); }
+.brand-prev .bp-tab img { width: 16px; height: 16px; border-radius: 3px; }
+.brand-prev .bp-tab span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brand-prev .bp-serp { align-items: flex-start; text-align: left; }
+.brand-prev .bp-serp b { color: #1a0dab; font-weight: 500; font-size: 14px; }
+:root[data-theme="dark"] .brand-prev .bp-serp b { color: #99c3ff; }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn, .chip, .sum-tile, .rings-card2, .pa-level i { transition: none !important; }
+}
+
+/* dark: the bright tile colours are mixed with black so white text on them stays readable (WCAG AA) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .hero-tile { background: linear-gradient(145deg, color-mix(in srgb, var(--c) 62%, #000), color-mix(in srgb, var(--c) 42%, #000)); }
+}
+:root[data-theme="dark"] .hero-tile { background: linear-gradient(145deg, color-mix(in srgb, var(--c) 62%, #000), color-mix(in srgb, var(--c) 42%, #000)); }
+.sum-top > :only-child { grid-column: 1 / -1; }
+
+/* the three numbers on Me: the number and its unit on one line, the label never wraps */
+.hm-stat { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 5px; align-items: baseline; }
+.hm-stat .k { grid-column: 1 / -1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: .02em; color: var(--ink2); }
+.hm-stat .k svg { flex-shrink: 0; }
+.hm-stat .s { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+
+@media (max-width: 520px) {
+  .guide-card { gap: 8px; padding: 12px; }
+  .guide-card .gc-head .mascot { width: 40px; height: 40px; }
+  .guide-card li button { padding: 8px 10px; min-height: 44px; }
+  .guide-card li span span { display: none; }
+}
+
+/* coloured words on white (ring labels, tile titles): darkened towards the text colour so they pass AA */
+.rings-card2 .lab, .sum-tile .st-head { color: color-mix(in srgb, var(--c, currentColor) 70%, var(--ink)); }
+.rings-card2 .lab.t-pink { --c: var(--pink); } .rings-card2 .lab.t-green { --c: var(--green); } .rings-card2 .lab.t-cyan { --c: var(--cyan); }

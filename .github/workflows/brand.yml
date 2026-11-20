@@ -1,0 +1,50 @@
+# The app's name and icon: Developer mode > Brand (or an edit by hand) changes web/brand.json and the icon file.
+# This makes every icon size and the Android name from them (web/tools/brand.cjs), commits the result, and starts
+# the website and Android builds.
+name: Brand (name and icon)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/brand.json'
+      - 'web/assets/brand/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: brand
+  cancel-in-progress: false
+
+jobs:
+  icons:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: node tools/brand.cjs
+      - name: Commit the icons and names
+        run: |
+          git config user.name "melovyn-brand"
+          git config user.email "brand@users.noreply.github.com"
+          git add -A site/favicon.svg site/favicon.ico assets/icons android/app/src/main/res capacitor.config.json
+          if git diff --cached --quiet; then echo "nothing changed"; else git commit -m "Brand: icons and names from brand.json" && git push; fi
+      # a push made with this workflow's token starts no other workflow, so start the builds here
+      - name: Rebuild the website and the Android app
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run pages.yml --ref main
+          gh workflow run android.yml --ref main || echo "Android build not started (it may need a manual start)"

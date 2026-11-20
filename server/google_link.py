@@ -31,7 +31,7 @@ import time
 import urllib.parse
 import urllib.request
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import JSON, Column, Float, String, Table, Text, delete, insert, select, update
 
@@ -145,16 +145,58 @@ def access_token(uid: str, feature: str) -> str:
 # ------------------------------------------------------------------------------------------------ connect / list / revoke
 class ConnectIn(BaseModel):
     code: str = Field(..., min_length=10, max_length=2048)
-    feature: str = Field(..., pattern="^(calendar|drive|contacts)$")
+    feature: str = Field(..., pattern="^(calendar|drive|contacts|all)$")
+    ticket: str = Field("", max_length=80)       # the phone app's one-time link (see /ticket), instead of a sign-in
+
+
+# The phone app can't show Google's permission window (Google allows it only on a website), so it opens the
+# website with a one-time ticket for this account: the website asks Google there and links the permissions to the
+# same account, with nothing to sign in to. A ticket lasts 10 minutes and works once.
+TICKET_TTL = 600.0
+
+
+@router.post("/ticket")
+def ticket(me: A.Me = Depends(A.current)):
+    A.require_registered(me)
+    import secrets as _s
+    tk = _s.token_urlsafe(24)
+    with engine().begin() as c:
+        c.execute(insert(A.kv).values(k=f"gticket:{tk}", v=json.dumps({"uid": me.id, "exp": _now() + TICKET_TTL})))
+    return {"ticket": tk, "expires_in": int(TICKET_TTL)}
+
+
+def _ticket_me(tk: str) -> A.Me:
+    with engine().begin() as c:
+        row = c.execute(select(A.kv.c.v).where(A.kv.c.k == f"gticket:{tk}")).scalar()
+        c.execute(delete(A.kv).where(A.kv.c.k == f"gticket:{tk}"))
+    row = json.loads(row) if row else None
+    if not row or row.get("exp", 0) < _now():
+        raise HTTPException(401, {"code": "ticket_expired", "message": "This link has expired. Open it again from the app."})
+    return A.reload(row["uid"])
+
+
+@router.get("/ticket/{tk}")
+def ticket_info(tk: str):
+    """Who the ticket is for (shown on the website page before asking Google). Does not use it up."""
+    with engine().connect() as c:
+        row = c.execute(select(A.kv.c.v).where(A.kv.c.k == f"gticket:{tk}")).scalar()
+    row = json.loads(row) if row else None
+    if not row or row.get("exp", 0) < _now():
+        raise HTTPException(404, {"code": "ticket_expired", "message": "This link has expired. Open it again from the app."})
+    me = A.reload(row["uid"])
+    return {"name": me.user.get("name") or "", "handle": me.acc.get("handle") or "", "email": me.acc.get("email") or "", "client_id": (A.google_client_ids() or [""])[0]}
 
 
 @router.post("/connect")
-def connect(body: ConnectIn, me: A.Me = Depends(A.current)):
+def connect(body: ConnectIn, authorization: str = Header("")):
+    me = _ticket_me(body.ticket) if body.ticket else A.current(authorization)
     A.require_registered(me)
     cid, secret = _client()
     r = _http("POST", TOKEN_URL, form={"code": body.code, "client_id": cid, "client_secret": secret, "redirect_uri": "postmessage", "grant_type": "authorization_code"})
     granted = set((r.get("scope") or "").split())
-    if SCOPES[body.feature] not in granted:
+    # "all" asks for every feature at once; Google lets people untick some, and whatever they allowed is kept
+    wanted = list(SCOPES.values()) if body.feature == "all" else [SCOPES[body.feature]]
+    if not any(sc in granted for sc in wanted):
         raise HTTPException(400, {"code": "scope_not_granted", "message": "Google did not give that permission. Please tick the box and try again."})
     features = sorted(f for f, sc in SCOPES.items() if sc in granted)
     row = link_of(me.id)
@@ -178,6 +220,7 @@ def connections(me: A.Me = Depends(A.current)):
     row = link_of(me.id)
     granted = (row or {}).get("scopes") or []
     return {"available": bool(A.google_client_ids() and os.environ.get("GOOGLE_CLIENT_SECRET")),
+            "signed_in_google": bool(me.acc.get("google_sub")), "all_linked": all(f in granted for f in SCOPES),
             "client_id": (A.google_client_ids() or [""])[0], "email": (row or {}).get("email") or me.acc.get("email") or "",
             "features": [{"id": f, "scope": SCOPES[f], "linked": f in granted} for f in SCOPES]}
 

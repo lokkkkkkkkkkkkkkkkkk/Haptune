@@ -135,24 +135,45 @@ export class Detector {
   }
 
   // ---- the room ----
-  startCalibration() { this.cal = { mag: new Float64Array(this.size / 2 + 1), rms: [], n: 0 }; }
+  startCalibration() { this.cal = { mags: [], rms: [], n: 0 }; }
   get calibrating() { return !!this.cal; }
   calibrate(frame) {
     if (!this.cal) this.startCalibration();
     const { mag } = this.spectrum(frame);
-    for (let k = 0; k < mag.length; k++) this.cal.mag[k] += mag[k];
+    this.cal.mags.push(mag);
     this.cal.rms.push(rmsOf(frame));
     this.cal.n++;
   }
+  /**
+   * The room is what is left in its quietest moments: per bin and in level, a low percentile of the second of
+   * listening. Someone who starts playing (or a count-in) while the room is measured must not make the detector
+   * deaf to that very instrument, which the old average/80th-percentile did.
+   */
   finishCalibration() {
     const c = this.cal;
     this.cal = null;
     if (!c || !c.n) return { noiseRms: this.noiseRms };
-    this.noiseMag = c.mag.map((x) => x / c.n);
-    // the room's level: a high percentile (passing sounds count), not the quietest moment
-    const sorted = [...c.rms].sort((a, b) => a - b);
-    this.noiseRms = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.8))] || 0;
+    const pick = (xs) => { const a = [...xs].sort((x, y) => x - y); return a[Math.min(a.length - 1, Math.floor(a.length * 0.35))] || 0; };
+    const bins = c.mags[0].length;
+    this.noiseMag = new Float64Array(bins);
+    const col = new Float64Array(c.n);
+    for (let k = 0; k < bins; k++) { for (let i = 0; i < c.n; i++) col[i] = c.mags[i][k]; this.noiseMag[k] = pick(col); }
+    this.noiseRms = Math.min(pick(c.rms), 0.05);
     return { noiseRms: this.noiseRms, db: this.noiseRms ? Math.round(20 * Math.log10(this.noiseRms)) : -120 };
+  }
+
+  /** The room can get quieter than it was measured (or was measured with music in it): follow its floor down. */
+  followFloor(raw) {
+    const h = this.levels || (this.levels = []);
+    h.push(raw);
+    if (h.length > 150) h.shift();                                  // about 3 s
+    if (h.length < 40 || !this.noiseRms) return;
+    const floor = [...h].sort((a, b) => a - b)[Math.floor(h.length * 0.1)];
+    if (floor > 0 && this.noiseRms > floor * 2.5) {
+      const ratio = (floor * 1.5) / this.noiseRms;
+      this.noiseRms *= ratio;
+      if (this.noiseMag) for (let k = 0; k < this.noiseMag.length; k++) this.noiseMag[k] *= ratio;
+    }
   }
 
   spectrum(frame) {
@@ -196,7 +217,9 @@ export class Detector {
   process(frame) {
     const raw = rmsOf(frame.length > this.size ? frame.subarray(frame.length - this.size) : frame);
     // the gate follows the room: a little above its level, never below a sensible minimum
-    const gate = Math.max(0.0035, this.noiseRms * 1.25);
+    // (quiet microphones, above all phones with their own gain switched off, give peaks around -50 dB)
+    this.followFloor(raw);
+    const gate = Math.max(0.0007, this.noiseRms * 1.6);
     const { samples, mag } = this.clean(frame);
     // onsets: how much the cleaned spectrum grew since the last frame
     let flux = 0;

@@ -1,5 +1,30 @@
 # Changelog
 
+## Part 3: Summary, one-tap Google, the microphone, brand, Melovyn 4 look (November 2026)
+- **Play Along hears you again.** Two causes found and fixed in the detector (`core/detect.js`): playing (or a count-in)
+  while the room was measured made it deaf to that instrument, and phone microphones with their gain control off
+  (peaks near -50 dB) were below the old level gate. The room is now the quietest part of that second, the floor
+  follows the room down while you play, and the gate starts much lower. A live microphone level shows in Play Along,
+  and after 6 silent seconds it says what to try. Noise corpus still passes (99.8 % at 10 dB).
+- **Google in one tap.** After signing in with Google, one sheet asks for Calendar, Drive and Contacts together (Google
+  lets people untick any; what they allow is kept). The Android app opens the website with a one-time link for its
+  account, so nothing needs signing in twice. Connections shows a tick per feature; once all are on there are no
+  "Connect" buttons left, only Manage. Any feature that finds a permission missing asks for all of them once.
+- **Signed in, clearly.** Settings shows who is signed in (Google email or @username) with **Switch account** and
+  **Sign out** (Google accounts had no sign-out before). "Why can't I open Developer mode?" says what the server sees
+  (owner not set, signed in without Google, another email). A 2-step secret the server can't read after a key change
+  can be set up again instead of locking the owner out.
+- **Summary** replaces the Practice home: today's rings, Continue, New · Find · Create, a tile for each part of
+  Melovyn (practice time, accuracy, Learn, Stage, Create, Library, level, Google), then Discover music. A three-step
+  guide for someone new, closed for good with one tap.
+- **Hapi is the icon** of the website (favicon, so Google search), the web app and the Android app (all densities,
+  round and adaptive). **Developer mode > Brand** (owner): change the name and icon with previews of a browser tab,
+  Google search and the Android home screen; saving commits `web/brand.json` and GitHub rebuilds everything
+  (`tools/brand.cjs`, `.github/workflows/brand.yml`). Setup: SETUP.md §9d.
+- **Melovyn 4 look** (docs/ui-research.md, Part 3): Radix Colors slate and violet scales, inset grouped lists and
+  48 px touch targets (Konsta UI, Framework7), a pill behind the chosen tab, Material 3 navigation and Roboto in the
+  Android app, a grab handle on sheets, readable white text on the hero tiles in dark mode.
+
 ## Owner account, Developer mode and analytics (November 2026)
 - **Roles:** owner (set only by `HAPTUNE_OWNER_EMAILS`, can't be demoted from the app) > developers (scopes and an end
   date, given and revoked by the owner) > verified teachers > users.

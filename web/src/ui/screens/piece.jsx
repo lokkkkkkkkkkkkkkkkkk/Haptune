@@ -428,7 +428,16 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
       toast(t(e.code === 'denied' ? 'micDenied' : 'micUnavailable'), 'err');
       return;
     }
-    practice.current = { mode, sel: psel, started: performance.now(), range, speed: sp, buzzWrong, buzzBeat, octaves: !!arranged?.octaves };
+    practice.current = { mode, sel: psel, started: performance.now(), heardAt: performance.now(), range, speed: sp, buzzWrong, buzzBeat, octaves: !!arranged?.octaves };
+    {
+      // nothing heard for 6 seconds: say so (and how to fix it) instead of silently waiting
+      const pr0 = practice.current;
+      const tick = setInterval(() => {
+        if (practice.current !== pr0) { clearInterval(tick); return; }
+        const quiet = performance.now() - pr0.heardAt > 6000;
+        setPa((x) => x && x.quiet !== quiet ? { ...x, quiet } : x);
+      }, 1000);
+    }
     if (hasServer()) C.pulse(true).catch(() => {});             // counted in "practising now" on Stage
     if (mode === 'wait') {
       const exp = expectedNotes(perf, matchSel(psel), range);
@@ -464,6 +473,11 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
   const onFrame = (p, rms = 0) => {
     const pr = practice.current;
     if (!pr) return;
+    // the level meter in the banner (drawn straight on the element: 50 times a second is too often for a render)
+    const lvl = p ? p.rms : rms;
+    const el = document.getElementById('pa-level');
+    if (el) el.style.setProperty('--lv', String(Math.max(0, Math.min(1, (20 * Math.log10(Math.max(lvl, 1e-5)) + 70) / 55))));
+    if (p) pr.heardAt = performance.now();
     if (pr.mode === 'beat') {
       const tr = transport.current;
       if (!p || !tr?.playing || !builtRef.current) return;
@@ -836,10 +850,12 @@ function PracticeBanner({ pa, f, piano, keyFifths, onStop, onSkip }) {
             ? (pa.msg ? <strong class="t-orange">{t('youPlayed', { a: name(pa.msg.played), b: name(pa.msg.want) })}</strong> : <strong>{t('playNote', { n: name(cur.top) })}</strong>)
             : <strong>{t('listening')}</strong>}
           <div class="sub">{pa.mode === 'wait' ? `${t('waitForMe')} · ${Math.min(pa.k ?? 0, pa.n ?? 0)}/${pa.n ?? 0}` : t('keepBeat')}</div>
+          <div class="pa-level" id="pa-level" role="meter" aria-label={t('micLevel')}><i /></div>
         </div>
         {pa.mode === 'wait' && <button type="button" class="ptag" onClick={onSkip}>{t('next')}</button>}
         <button type="button" class="play-btn stop" onClick={onStop} aria-label={t('stop')}><Icon name="stop" size={18} fill stroke={1.5} /></button>
       </div>
+      {pa.quiet && <p class="pa-quiet" id="pa-quiet"><Icon name="mic" size={15} />{t('micQuietHint')}</p>}
       {pa.mode === 'wait' && piano && cur && <MiniKeys want={cur.midis} played={pa.msg?.played} />}
     </div>
   );

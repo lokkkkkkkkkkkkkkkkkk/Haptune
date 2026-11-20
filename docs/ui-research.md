@@ -22,3 +22,26 @@ What we borrow is **information hierarchy, not branding**. Everything is rebuilt
 5. **Social proof stays small**: counts and avatars on cards, never a feed on Home.
 6. **Phone first**: everything reachable with a thumb; sheets instead of new pages for quick choices; the mini-player
    sits above the tab bar on every tab.
+
+
+## Part 3 (Nov 2026): Summary, one-tap Google, and a design system from open-source kits
+
+What we took, and from where (all MIT licensed; values copied, no code dependency added):
+
+- **Radix Colors** (github.com/radix-ui/colors): a 12-step `slate` grey and `violet` scale, light and dark made as
+  pairs. Steps 1-2 are backgrounds, 3-5 fills, 6-8 lines, 9-10 solid colour, 11-12 text. Mapping our tokens to
+  them (`--ink` = slate12, `--ink2` = slate11, `--line` = slateA6...) keeps text contrast right in both themes
+  without checking each colour by hand (the axe-core check still runs in CI).
+- **Konsta UI** and **Framework7** (github.com/konstaui/konsta, github.com/framework7io/framework7): the shape of
+  native-feeling mobile screens. From them: inset grouped lists with 52 px rows, 44-48 px touch targets on every
+  button, a grab handle on bottom sheets, a large title that hands over to the content, and for the Android app a
+  Material 3 navigation bar (an indicator pill behind the chosen tab, 72 px tall) and Roboto.
+- **Open Props** (github.com/argyleink/open-props): easing curves (`ease-out` for things settling, `ease-spring`
+  for small pops) and soft two-layer shadows, all switched off with reduced motion.
+- **Apple Health's Summary**: the first tab is now *Summary*: today's rings (practise minutes, learning XP,
+  streak), then a pinned tile for each part of Melovyn (practice time, accuracy, Learn, Stage, Create, Library,
+  level, Google), each one tap from its screen, a big number, a short line and a small chart where there is one.
+  The music shelves stay below as "Discover music", so a playable sheet is still two taps away.
+- **Guides instead of explanations**: a three-step "Welcome" card on Summary for someone new (find a song, play
+  along, join your class), closed for good with one tap; Play Along shows a live microphone level and, after 6
+  silent seconds, says what to do; Settings → "Why can't I open Developer mode?" says what the server sees.

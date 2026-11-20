@@ -125,6 +125,7 @@ export function DevModeRows() {
       <Row icon="bolt" color="purple" title={t('dmTitle')} subtitle={staff.dev_mode ? t('dmUntil', { time: new Date(staff.dev_until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }) : t('dmOffSub')}
         right={<Toggle id="me-devmode" checked={staff.dev_mode} onChange={toggle} label={t('dmTitle')} />} />
       {staff.dev_mode && <Row icon="summary" color="purple" title={t('devPanel')} subtitle={staff.role === 'owner' ? t('dmOwner') : t(`role_${staff.role}`)} onClick={() => push('admin')} id="me-dashboard" />}
+      {staff.dev_mode && staff.role === 'owner' && <Row icon="sparkles" color="pink" title={t('brandRow')} subtitle={t('brandRowSub')} onClick={() => push('admin', { tab: 'brand' })} id="me-brand" />}
     </List>
   );
 }
