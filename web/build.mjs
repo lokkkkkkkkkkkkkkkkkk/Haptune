@@ -63,7 +63,7 @@ const START = (() => {
 const CHUNKS = slim.outputFiles.filter((f) => f !== slimMain && f.path.endsWith('.js')).map((f) => path.relative(out('pages', 'app'), f.path).split(path.sep).join('/'));
 const LANG_PACKS = ['ms', 'zh-Hans', 'zh-Hant'];
 // styles.css: layout and every component; theme.css: the Haptune 2 look on top of it
-const css = ['styles.css', 'theme.css', 'v3.css', 'v4.css', 'v5.css', 'v6.css', 'v7.css'].map((f) => fs.readFileSync(path.join(root, 'src/ui', f), 'utf8')).join('\n');
+const css = ['styles.css', 'theme.css', 'v3.css', 'v4.css', 'v5.css', 'v6.css', 'v7.css', 'v8.css'].map((f) => fs.readFileSync(path.join(root, 'src/ui', f), 'utf8')).join('\n');
 const VERSION = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version;
 // The server address is built in (GitHub variable HAPTUNE_SERVER_URL -> HAPTUNE_SERVER), so people never type it.
 const SERVER = (process.env.HAPTUNE_SERVER || '').trim().replace(/\/+$/, '');

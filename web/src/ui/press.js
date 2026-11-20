@@ -9,6 +9,7 @@ export function installPress(root = globalThis.document) {
     if (still?.matches || e.button > 0) return;
     const el = e.target.closest?.(SEL);
     if (!el || el.disabled || el.closest('.no-rip')) return;
+    globalThis.__haptuneSfx?.(el.closest('.tabbar, .side') ? 'tab' : 'tap');
     const cs = getComputedStyle(el);
     if (cs.position === 'static') el.style.position = 'relative';
     const r = el.getBoundingClientRect();

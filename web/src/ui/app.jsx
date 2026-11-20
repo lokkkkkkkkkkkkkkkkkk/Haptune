@@ -24,6 +24,7 @@ import { ensureAccount, C } from './account.js';
 import { initNative } from './native.js';
 import { warmVerovio } from './verovio.js';
 import { setSyncOffset, onAudioProblem, setLightSound } from './audio.js';
+import { configureSounds } from './ambience.js';
 
 
 // Screens load the first time they are opened (esbuild splits them into chunks/), so the first screen appears sooner.
@@ -414,6 +415,8 @@ function App() {
   }, []);
   useEffect(() => { setSyncOffset(s.settings.syncMs || 0); }, [s.settings.syncMs]);
   useEffect(() => { setLightSound(s.settings.soundLight || 'auto'); }, [s.settings.soundLight]);
+  // the app's own sounds: background music (a random track each time it opens) and sound effects
+  useEffect(() => { configureSounds({ music: s.settings.music !== false, sfx: s.settings.sfx !== false, theme: s.settings.theme || 'system' }); }, [s.settings.music, s.settings.sfx, s.settings.theme]);
   const visited = useRef(new Set());                    // a tab is built the first time it is opened (faster start)
   const [sideSmall, setSideSmall] = useState(() => storeLocal.get('sideSmall', false));   // the sidebar folded to icons
   const [catsOpen, setCatsOpen] = useState(() => storeLocal.get('sideCats', true));       // Categories open

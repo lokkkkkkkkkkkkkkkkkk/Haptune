@@ -271,6 +271,7 @@ export function HomeView({ active }) {
               <span class="hh-sub">{greet}{streak > 0 ? ` · ${t('streakN', { n: streak })}` : ''}</span>
             </div>
             <span class="hh-acts">
+              <button type="button" class="hh-mini-av ph-only" onClick={() => go('me')} aria-label={t('me')} id="home-me">{initials || <Icon name="person" size={18} />}</button>
               <button type="button" class="hh-menu ph-only" onClick={() => setState({ drawer: true })} aria-label={t('categoriesT')} id="home-menu"><Icon name="sidebar" size={19} /></button>
               {online && <button type="button" class="hm-pill" onClick={() => push('notifications', {}, 'me')} aria-label={t('notifications')} style={{ position: 'relative', padding: '0 9px' }}>
                 <Icon name="bell" size={17} />{s.me?.unread > 0 && <span class="tab-dot" />}</button>}

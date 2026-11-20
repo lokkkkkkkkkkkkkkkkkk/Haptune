@@ -1,0 +1,88 @@
+/* Haptune, Part 7: a phone layout of its own (up to 599 px wide), after Apple Health on iPhone and the iOS sizes
+   that Konsta UI (github.com/konstaui/konsta, MIT) and Ionic's iOS mode use: one card per row, big numbers,
+   34 px large titles, 17 px body text, 52 px rows, 22 px corners, and a floating capsule tab bar.
+   Wider screens keep the sidebar layout. */
+@media (max-width: 599px) {
+  .app.v3 { --gutter-l: max(16px, var(--sa-left)); --gutter-r: max(16px, var(--sa-right)); --tabbar-h: 70px; font-size: 17px; }
+  .app.v3 .wrap { gap: 18px; }
+
+  /* ---- the floating capsule tab bar ---- */
+  .app.v3 .tabbar { left: max(12px, var(--sa-left)); right: max(12px, var(--sa-right)); bottom: calc(10px + var(--sa-bottom)); height: 66px;
+    padding: 0 6px; border: 1px solid color-mix(in srgb, var(--line) 70%, transparent); border-radius: 33px; align-items: center;
+    background: color-mix(in srgb, var(--card) 80%, transparent); backdrop-filter: blur(24px) saturate(1.5); -webkit-backdrop-filter: blur(24px) saturate(1.5);
+    box-shadow: 0 12px 34px -12px rgba(20, 10, 50, .38), 0 1px 0 rgba(255, 255, 255, .25) inset; }
+  .app.v3 .tabbar button { flex: 1; height: 56px; min-width: 0; border-radius: 28px; gap: 2px; font-size: 11px; padding: 0; justify-content: center; }
+  .app.v3 .tabbar button:not(.center) .tab-ic { width: auto; height: 26px; background: none !important; }
+  .app.v3 .tabbar button.on:not(.center) { background: color-mix(in srgb, var(--c) 15%, transparent) !important; }
+  .app.v3 .tabbar button.on:not(.center) .tab-label, .app.v3 .tabbar button.on:not(.center) .tab-ic { color: var(--c); }
+  .app.v3 .tabbar button.center .tab-ic { width: 50px; height: 50px; margin-top: 0; border-radius: 25px; }
+  .app.v3 .tabbar button.center .tab-label { display: none; }
+  .app.v3 .tabbar .tab-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .app.v3 .scroll { padding-bottom: calc(66px + 34px + var(--sa-bottom)); }
+  .app.v3.has-mini .scroll { padding-bottom: calc(66px + 110px + var(--sa-bottom)); }
+  .mini-player { bottom: calc(66px + 18px + var(--sa-bottom)); border-radius: 22px; }
+  .ai-fab { bottom: calc(66px + 22px + var(--sa-bottom)); width: 54px; height: 54px; }
+  .has-mini .ai-fab { bottom: calc(66px + 96px + var(--sa-bottom)); }
+
+  /* ---- type and touch sizes ---- */
+  .app.v3 .large-title h1, .app.v3 .home-head h1 { font-size: 34px; letter-spacing: -.03em; }
+  .app.v3 .section-head h2, .app.v3 .sum-sec h2, .app.v3 .browse-h, .app.v3 .sec3 h2 { font-size: 22px; letter-spacing: -.02em; }
+  .app.v3 .row { min-height: 52px; }
+  .app.v3 .row-title { font-size: 16.5px; }
+  .app.v3 .row-sub { font-size: 14px; }
+  .app.v3 .list.inset, .app.v3 .list { border-radius: 20px; }
+  .app.v3 .btn { min-height: 48px; font-size: 16px; border-radius: 14px; }
+  .app.v3 .btn.small { min-height: 38px; font-size: 14.5px; }
+  .app.v3 .chip { min-height: 38px; font-size: 15px; padding: 0 14px; }
+
+  /* ---- Home, like Health's Summary ---- */
+  .home4 .home-head { padding-top: 6px; }
+  .home4 .hh-who { display: grid; grid-template-columns: 1fr auto; align-items: start; gap: 8px; }
+  .home4 .hh-avatar, .home4 .hh-profile { display: none; }
+  .home4 .hh-acts { flex-direction: row; gap: 8px; align-items: center; padding-top: 2px; }
+  .hh-mini-av { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font: 800 15px/1 var(--round, inherit); color: #fff;
+    background: linear-gradient(135deg, #6E54F0, #B28CFF); box-shadow: 0 0 0 2px var(--card), 0 4px 12px -4px rgba(91, 63, 214, .6); }
+  .home4 .hh-text { gap: 2px; }
+  .home4 .hh-date { font-size: 13px; }
+  .home4 .hh-sub { font-size: 15px; }
+  .home4 .hh-status { border-radius: 22px; padding: 16px 18px; }
+  .home4 .resume-card { border-radius: 22px; min-height: 76px; }
+
+  /* the three big ways in: a swipeable row of large cards */
+  .home4 .hero-row { display: flex; overflow-x: auto; gap: 12px; margin: 0 calc(-1 * var(--gutter-r)) 0 calc(-1 * var(--gutter-l));
+    padding: 2px var(--gutter-r) 6px var(--gutter-l); scroll-snap-type: x mandatory; scrollbar-width: none; scroll-padding-left: var(--gutter-l); }
+  .home4 .hero-row::-webkit-scrollbar { display: none; }
+  .home4 .hero-tile { flex: 0 0 74%; scroll-snap-align: start; min-height: 138px; border-radius: 24px; padding: 18px; }
+  .home4 .hero-tile strong { font-size: 21px; }
+  .home4 .hero-tile span:not(.ic) { font-size: 14.5px; -webkit-line-clamp: 2; }
+
+  /* Pinned: one card per row, big number on the left and the little chart on the right (Health's Steps card) */
+  .home4 .sum-grid { grid-template-columns: 1fr !important; gap: 12px; }
+  .home4 .sum-tile { min-height: 128px; border-radius: 22px; padding: 16px 18px; }
+  .home4 .sum-tile .st-head { font-size: 17px; }
+  .home4 .sum-tile .st-body { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+  .home4 .sum-tile .st-num .num { font-size: 40px; letter-spacing: -.03em; }
+  .home4 .sum-tile .st-num small { font-size: 17px; }
+  .home4 .sum-tile .st-none { font-size: 26px; }
+  .home4 .sum-tile .st-d { display: block; }
+  .home4 .sum-tile .st-body > :last-child:not(.st-v) { flex: 0 0 38%; max-width: 150px; }
+  .home4 .show-all, .home4 #home-browse { min-height: 58px; border-radius: 20px; font-size: 17px; }
+
+  /* Get more and Articles: swipeable cards */
+  .home4 .gm-grid, .home4 .art-grid { display: flex !important; overflow-x: auto; gap: 12px; margin: 0 calc(-1 * var(--gutter-r)) 0 calc(-1 * var(--gutter-l));
+    padding: 2px var(--gutter-r) 6px var(--gutter-l); scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .home4 .gm-grid > *, .home4 .art-grid > * { flex: 0 0 82%; scroll-snap-align: start; }
+  .hapi-tip { border-radius: 22px; padding: 12px 16px; }
+
+  /* ---- Browse and the other pages ---- */
+  .browse-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 12px; }
+  .browse-tile { min-height: 110px; border-radius: 22px; font-size: 17px; }
+  .wiz-card { min-height: 104px; border-radius: 24px; }
+  .version-card, .flag-row { border-radius: 20px; }
+  .sheet { border-radius: 26px 26px 0 0; }
+  .sheet .sheet-head h2 { font-size: 18px; }
+}
+@media (max-width: 380px) {
+  .app.v3 .tabbar .tab-label { font-size: 10px; }
+  .home4 .hero-tile { flex-basis: 80%; }
+}

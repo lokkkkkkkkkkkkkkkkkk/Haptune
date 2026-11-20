@@ -154,3 +154,25 @@ test('v14 text: four languages, same placeholders; only the reworded labels over
     assert.ok(!older.has(k) || reworded.has(k), `v14 overwrites ${k}`);
   }
 });
+
+test('v15 text: four languages, same placeholders, no older key overwritten', async () => {
+  const { V15 } = await import('../src/core/i18n-v15.js');
+  const older = new Set();
+  for (const f of ['base', 'community', 'v2', 'v3', 'v4', 'v5', 'v6', 'v7', 'v8', 'v9', 'v10', 'v11', 'v12', 'v13', 'v14']) for (const tb of Object.values(await import(`../src/core/i18n-${f}.js`))) for (const k of Object.keys(tb)) older.add(k);
+  for (const [k, v] of Object.entries(V15)) {
+    assert.equal(v.length, 4, k);
+    assert.ok(v.every((x) => typeof x === 'string' && x.trim().length), `empty text in ${k}`);
+    assert.equal(new Set(v.map(ph)).size, 1, `placeholders differ in ${k}`);
+    assert.ok(!older.has(k), `v15 overwrites ${k}`);
+  }
+});
+
+test('background music: 8 tracks, 4 per theme, each a playable scale and progression', async () => {
+  const { TRACKS } = await import('../src/ui/ambience.js');
+  assert.equal(TRACKS.length, 8);
+  assert.equal(TRACKS.filter((x) => x.theme === 'light').length, 4);
+  assert.equal(TRACKS.filter((x) => x.theme === 'dark').length, 4);
+  for (const tr of TRACKS) {
+    assert.ok(tr.bpm >= 40 && tr.bpm <= 100 && tr.scale[0] === 0 && tr.prog.length >= 4, tr.id);
+  }
+});
