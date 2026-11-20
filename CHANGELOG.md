@@ -1,5 +1,17 @@
 # Changelog
 
+## The 1-minute demo video (November 2026)
+- **"Haptune in 1 minute"** (1:12, 1920×1080, with music): Play Along listening to a real take (92%, 57 of 62 notes),
+  a PDF read into a score that checks itself, 簡譜 / slow down / loop / key, Create, the Learning hub, Stage and the
+  6,600+ free pieces. Every screen is the real app. For the Google Play promo video (upload the 1080p file to YouTube)
+  and the website.
+- **Website**: a "See it in action" section right under the hero, and "Watch the 1-minute video" next to Get the
+  app (scrolls to it and starts it). The web copy (720p, 5.5 MB) is `site/media/haptune-demo.mp4` with a poster.
+  The phone hero no longer runs past the right edge; the free library count now says 6,600+ (6,679 in the index).
+- **In the app**: the welcome card has "Watch the 1-minute video", which plays right in the card; it's also in
+  Settings › Guide and at the top of Help. The app streams it from the website, so the download doesn't grow. The
+  background music and sound effects go quiet while a video plays; the service worker leaves videos alone.
+
 ## Part 7: a phone layout of its own, and Haptune's own sounds (November 2026)
 - **Phones (up to 599 px) get their own layout** (`ui/v8.css`), after Apple Health on iPhone and the iOS sizes used
   by Konsta UI and Ionic: a floating capsule tab bar with a pill behind the chosen tab, 34 px titles, 17 px text,

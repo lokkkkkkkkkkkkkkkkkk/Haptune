@@ -87,6 +87,7 @@ export function AccountSheet() {
       <Section title={t('guideSecT')} footer={t('guideFoot')}>
         <List>
           <Row icon="sparkles" color="violet" title={t('coachReplayT')} subtitle={t('coachReplayS')} onClick={() => { closeSheet(); setTimeout(() => startCoach(), 0); }} id="acc-guide" />
+          <Row icon="play" color="purple" title={t('watchVideo')} subtitle={t('demoVideoS')} onClick={() => openSheet('demoVideo')} id="acc-video" />
           <Row icon="star" color="pink" title={t('replayTour')} subtitle={t('replayTourSub')} onClick={() => { closeSheet(); setTimeout(() => openSheet('welcome'), 0); }} id="acc-tour" />
         </List>
       </Section>
