@@ -1,6 +1,6 @@
 // One post: a request (and the scores people made for it), a question (and its answers), a shared score or
 // a practice win. Everything you can do with it is here.
-import { useState, useEffect } from 'preact/hooks';
+import { useState, useEffect, useRef } from 'preact/hooks';
 import { useApp, push, pop, go, openSheet, closeSheet, toast, getPiece, addScore, getState } from '../state.js';
 import { t } from '../../core/i18n.js';
 import { Icon, Button, Card, Section, List, Row, Chip, Skeleton } from '../components.jsx';
@@ -18,11 +18,15 @@ import { Reactions, TYPE, PersonLine, Person, Coins, StatusPill, RequestSteps, I
 const live = { reload: null };            // the open post refreshes itself after a sheet changes it
 export const reloadPost = () => live.reload?.();
 
-export function PostView({ id, active, justPosted = null }) {
+export function PostView({ id, active, justPosted = null, openVersion = null }) {
   const s = useApp();
   const [p, setP] = useState(null);
   const [err, setErr] = useState('');
   const [text, setText] = useState('');
+  const [photo, setPhoto] = useState(null);            // a photo for the comment (data URL)
+  const [version, setVersion] = useState(null);        // { xml, title }: your own version of the song
+  const photoRef = useRef(null);
+  const opened = useRef(false);
   const [busy, setBusy] = useState(false);
   const [party, setParty] = useState(false);
   const load = async () => {
@@ -32,6 +36,12 @@ export function PostView({ id, active, justPosted = null }) {
   if (err && !p) return <div class="scroll"><NavBar title="" backLabel={t('community')} /><div class="wrap"><p class="sub">{err}</p></div></div>;
   if (!p) return <div class="scroll"><NavBar title="" backLabel={t('community')} /><Skeleton /></div>;
   const ty = TYPE[p.type];
+  const versions = (p.replies_list || []).filter((r) => r.version?.id);
+  if (openVersion && !opened.current) {                  // …/#stage/post/ID/v/REPLY: straight into that version
+    opened.current = true;
+    const r = versions.find((x) => x.id === openVersion);
+    if (r) setTimeout(() => openScoreFile(r.version.id, r.version.title, { from: 'stage', postId: p.id }, 'listen').catch((e) => toast(e.message, 'err')), 0);
+  }
   const me = s.me;
   const isAuthor = p.me.is_author;
   const run = async (fn, ok) => {
@@ -42,11 +52,17 @@ export function PostView({ id, active, justPosted = null }) {
     return r;
   };
   const send = async () => {
-    if (!text.trim()) return;
+    if (!text.trim() && !photo && !version) return;
     if (!(await ensureAccount())) { toast(t('needOnline'), 'err'); return; }
     const kind = p.type === 'question' && p.status === 'open' && !isAuthor ? 'answer' : 'comment';
-    const r = await run(() => C.reply(p.id, { kind, body: text.trim() }));
-    if (r) setText('');
+    const extra = { ...(photo ? { image: photo } : {}), ...(version ? { version_xml: version.xml, version_title: version.title } : {}) };
+    const r = await run(() => C.reply(p.id, { kind, body: text.trim(), ...extra }));
+    if (r) { setText(''); setPhoto(null); setVersion(null); }
+  };
+  const pickPhoto = async (e) => {
+    const f = e.currentTarget.files?.[0]; e.currentTarget.value = '';
+    if (!f) return;
+    try { setPhoto(await shrinkPhoto(f)); } catch { toast(t('photoBad'), 'err'); }
   };
   const more = () => openSheet('more', { items: [
     { icon: 'link', label: t('copyLink'), onClick: () => copyLink(p) },
@@ -91,16 +107,33 @@ export function PostView({ id, active, justPosted = null }) {
         {p.type === 'share' && <ShareBox p={p} run={run} />}
         <div class="row-gap" style={{ gap: 8, alignItems: 'center', flexWrap: 'wrap' }}><Reactions target={`p:${p.id}`} />{p.visibility !== 'class' && !isAuthor && <RepostButton target={`p:${p.id}`} />}</div>
 
+        {versions.length > 0 && (
+          <Section title={t('versionsT', { n: versions.length })} footer={t('versionsFoot')}>
+            <div class="versions" id="post-versions">{versions.map((r) => <VersionCard key={r.id} p={p} r={r} big />)}</div>
+          </Section>
+        )}
+
         <Section title={p.type === 'request' ? t('scoresAndComments', { n: p.replies_list.length }) : p.type === 'question' ? t('answersN', { n: p.replies_list.length }) : t('commentsN', { n: p.replies_list.length })}>
           {p.replies_list.length === 0 && <p class="note-text">{t(p.type === 'request' ? 'noScoresYet' : p.type === 'question' ? 'noAnswersYet' : 'noCommentsYet')}</p>}
           <div class="replies">{p.replies_list.map((r) => <Reply key={r.id} r={r} p={p} run={run} onAccepted={() => { setParty(true); setTimeout(() => setParty(false), 2200); }} />)}</div>
         </Section>
 
         {p.status !== 'closed' && (
-          <div class="composer">
-            <textarea class="textarea" rows="2" maxLength={2000} value={text} onInput={(e) => setText(e.currentTarget.value)} id="reply-text"
-              placeholder={t(p.type === 'question' && !isAuthor && p.status === 'open' ? 'writeAnswer' : 'writeComment')} aria-label={t('writeComment')} />
-            <Button icon="send" disabled={busy || !text.trim()} onClick={send}>{t('send')}</Button>
+          <div class="composer c2">
+            <div class="composer-in">
+              <textarea class="textarea" rows="2" maxLength={2000} value={text} onInput={(e) => setText(e.currentTarget.value)} id="reply-text"
+                placeholder={t(p.type === 'question' && !isAuthor && p.status === 'open' ? 'writeAnswer' : 'writeComment')} aria-label={t('writeComment')} />
+              {(photo || version) && <div class="attach-row">
+                {photo && <span class="attach-chip"><img src={photo} alt="" /><button type="button" onClick={() => setPhoto(null)} aria-label={t('remove')}><Icon name="close" size={13} stroke={2.6} /></button></span>}
+                {version && <span class="attach-chip v"><Icon name="staff" size={16} />{version.title}<button type="button" onClick={() => setVersion(null)} aria-label={t('remove')}><Icon name="close" size={13} stroke={2.6} /></button></span>}
+              </div>}
+              <div class="composer-tools">
+                <input ref={photoRef} type="file" accept="image/*" class="hidden-input" onChange={pickPhoto} id="reply-photo-file" aria-label={t('addPhotoT')} />
+                <button type="button" class="ctool" onClick={() => photoRef.current?.click()} id="reply-photo"><Icon name="camera" size={17} />{t('addPhotoT')}</button>
+                <button type="button" class="ctool" onClick={() => openSheet('pickVersion', { onPick: setVersion })} id="reply-version"><Icon name="staff" size={17} />{t('addVersionT')}</button>
+              </div>
+            </div>
+            <Button icon="send" disabled={busy || (!text.trim() && !photo && !version)} onClick={send} id="reply-send">{t('send')}</Button>
           </div>
         )}
         <p class="note-text center">{t('beKind')} <button type="button" class="link" onClick={() => openSheet('guidelines')}>{t('guidelines')}</button></p>
@@ -209,13 +242,64 @@ function ShareBox({ p, run }) {
 }
 
 /** Downloads a community score into the library and opens it. */
-export async function openScoreFile(fid, title, extra = {}) {
+export async function openScoreFile(fid, title, extra = {}, start = null) {
+  const have = getState().pieces.find((x) => x.fileId === fid);         // opened before: the same copy
+  if (have) { push('piece', { id: have.id, ...(start ? { start } : {}) }, getState().tab); return have; }
   const xml = await C.fileText(fid);
   const score = parseMusicXML(xml);
   if (!score.title || score.title === 'Untitled') score.title = title;
-  const rec = await addScore(score, { source: 'community', fmt: 'musicxml', title: score.title || title, extra });
-  push('piece', { id: rec.id }, getState().tab);
+  const rec = await addScore(score, { source: 'community', fmt: 'musicxml', title: score.title || title, extra: { ...extra, fileId: fid } });
+  push('piece', { id: rec.id, ...(start ? { start } : {}) }, getState().tab);
   return rec;
+}
+
+/** A link straight to someone's version in a Stage comment: opens the post and the version. */
+export function versionLink(p, r) {
+  const base = (globalThis.HAPTUNE_CONFIG?.native ? `${globalThis.HAPTUNE_CONFIG?.site || 'https://haptune.name.my'}/app/` : location.href.split('#')[0]);
+  return `${base}#stage/post/${p.id}/v/${r.id}`;
+}
+
+/** Someone's own version of the song, made in Haptune: open it to play along or listen, or copy its link. */
+export function VersionCard({ p, r, big = false }) {
+  const [busy, setBusy] = useState(false);
+  const open = async (start) => {
+    setBusy(true);
+    try { await openScoreFile(r.version.id, r.version.title || p.song || p.title, { from: 'stage', postId: p.id }, start); } catch (e) { toast(e.message, 'err'); }
+    setBusy(false);
+  };
+  const copy = async () => { const u = versionLink(p, r); try { await navigator.clipboard.writeText(u); toast(t('linkCopied')); } catch { toast(u); } };
+  return (
+    <div class={`version-card${big ? ' big' : ''}`} id={`version-${r.id}`}>
+      <span class="vc-art" aria-hidden="true"><Icon name="staff" size={22} stroke={2.2} /></span>
+      <span class="vc-t"><strong>{r.version.title}</strong><span>{t('versionBy', { name: r.author?.name || '' })} · {t('barsN', { n: r.version.bars || 0 })}</span></span>
+      <span class="vc-acts">
+        <Button small color="green" icon="play" disabled={busy} onClick={() => open('listen')} id={`version-play-${r.id}`}>{t('playT')}</Button>
+        <Button small kind="secondary" icon="mic" disabled={busy} onClick={() => open('playAlong')}>{t('playAlongShort')}</Button>
+        <button type="button" class="icon-btn" onClick={copy} aria-label={t('copyLink')}><Icon name="link" size={17} /></button>
+      </span>
+    </div>
+  );
+}
+
+/** A photo in a comment, loaded when shown; tap to see it full size. */
+function ReplyPhoto({ id }) {
+  const [url, setUrl] = useState('');
+  useEffect(() => { let alive = true; C.fileBlobURL(id).then((u) => { if (alive) setUrl(u); }).catch(() => {}); return () => { alive = false; }; }, [id]);
+  if (!url) return <div class="r-photo loading" />;
+  return <button type="button" class="r-photo" onClick={() => openExternal(url)}><img src={url} alt={t('photoT')} loading="lazy" /></button>;
+}
+
+/** Makes a phone photo small enough to send (longest side 1600 px, JPEG). */
+async function shrinkPhoto(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = bad; i.src = url; });
+    const k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', 0.85);
+  } finally { URL.revokeObjectURL(url); }
 }
 
 function Reply({ r, p, run, onAccepted }) {
@@ -243,6 +327,8 @@ function Reply({ r, p, run, onAccepted }) {
         </div>
       )}
       {r.body && <p class="r-body">{r.body}</p>}
+      {r.image?.id && <ReplyPhoto id={r.image.id} />}
+      {r.version?.id && <VersionCard p={p} r={r} />}
       {r.note && (accepted || r.status === 'changes') && <p class="r-note"><Icon name={accepted ? 'heart' : 'pencil'} size={14} /> {r.note}</p>}
       {r.reward > 0 && <p class="r-reward"><Coins n={r.reward} size="sm" /> {t('earned')}</p>}
       <div class="r-actions">
@@ -341,6 +427,33 @@ export function SubmitScoreSheet({ post }) {
       ) : <p class="sub">{t('noScoresInLibrary')}</p>}
       <textarea class="textarea" rows="2" maxLength={2000} placeholder={t('scoreMessage')} value={msg} onInput={(e) => setMsg(e.currentTarget.value)} aria-label={t('scoreMessage')} />
       <Button full color="green" icon="send" disabled={!sel || busy} onClick={go}>{busy ? t('sending') : t('sendScore')}</Button>
+    </SheetFrame>
+  );
+}
+
+/** Choose one of your own scores to add to a comment as your version of the song. */
+export function PickVersionSheet({ onPick }) {
+  const s = useApp();
+  const [busy, setBusy] = useState(false);
+  const mine = s.pieces.filter((x) => x.kind === 'score').sort((a, b) => (b.edited || b.added || 0) - (a.edited || a.added || 0));
+  const pick = async (x) => {
+    setBusy(true);
+    try {
+      const data = await getPiece(x.id);
+      const xml = data?.rec?.xml || (data?.score ? writeMusicXML(data.score) : null);
+      if (!xml) throw new Error(t('notAScore'));
+      onPick?.({ xml, title: x.title });
+      closeSheet();
+    } catch (e) { toast(e.message, 'err'); }
+    setBusy(false);
+  };
+  return (
+    <SheetFrame title={t('addVersionT')}>
+      <div class="with-mascot"><Mascot mood="cheer" size={56} /><div class="bubble left">{t('addVersionHint')}</div></div>
+      {mine.length ? (
+        <List>{mine.slice(0, 80).map((x) => <Row key={x.id} icon="staff" color={x.source === 'written' ? 'teal' : 'gray'} title={x.title} disabled={busy}
+          subtitle={[x.source === 'written' ? t('madeByYou') : x.composer, x.measures ? t('barsN', { n: x.measures }) : ''].filter(Boolean).join(' · ')} onClick={() => pick(x)} />)}</List>
+      ) : <p class="sub">{t('noScoresInLibrary')}</p>}
     </SheetFrame>
   );
 }

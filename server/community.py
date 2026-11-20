@@ -74,6 +74,9 @@ replies = Table("replies", meta,
                 Column("kind", String(12), nullable=False),                 # comment | answer | submission
                 Column("body", Text, nullable=False, default=""),
                 Column("file_id", String(16), nullable=True),
+                Column("image_id", String(16), nullable=True),             # a photo with a comment (a page of music, anything)
+                Column("version_id", String(16), nullable=True),           # the commenter's own version of the song, made in Haptune
+                Column("version_title", String(120), nullable=False, default=""),
                 Column("bars", Integer, nullable=False, default=0),
                 Column("notes", Integer, nullable=False, default=0),
                 Column("status", String(10), nullable=False, default=""),   # "" | accepted | changes | helpful
@@ -487,6 +490,12 @@ def _can_see_file(c, me: A.Me | None, f: dict) -> bool:
     p = c.execute(select(posts).where(posts.c.id == f["post_id"])).mappings().first() if f["post_id"] else None
     if p and p["file_id"] == f["id"]:
         return p["visibility"] in ("public", "unlisted") and not p["hidden"]
+    v = c.execute(select(replies.c.post_id, replies.c.hidden).where(replies.c.version_id == f["id"])).mappings().first()
+    if v:                                                        # someone's own version in a comment: shared with the post's readers
+        vp = c.execute(select(posts.c.visibility, posts.c.hidden, posts.c.user_id).where(posts.c.id == v["post_id"])).mappings().first()
+        if not vp or vp["hidden"] or v["hidden"]:
+            return False
+        return vp["visibility"] in ("public", "unlisted") or bool(me and me.id == vp["user_id"])
     r = c.execute(select(replies).where(replies.c.file_id == f["id"])).mappings().first()
     if not r:
         return False
@@ -527,6 +536,8 @@ def get_post(pid: str, me: A.Me | None = Depends(A.optional)):
             out_r.append({"id": r["id"], "kind": r["kind"], "body": r["body"], "author": people.get(r["user_id"]), "status": r["status"],
                           "note": r["note"], "rating": r["rating"], "reward": r["reward"], "likes": r["likes"], "liked": (f"r:{r['id']}", "like") in mine,
                           "file": f, "hidden": r["hidden"], "created": _iso(r["created"]),
+                          "image": {"id": r["image_id"]} if r.get("image_id") else None,
+                          "version": {"id": r["version_id"], "title": r["version_title"], "bars": r["bars"], "notes": r["notes"]} if r.get("version_id") else None,
                           "can": {"accept": is_owner and p["status"] == "open" and r["kind"] in ("submission", "answer") and r["user_id"] != p["user_id"],
                                   "helpful": is_owner and r["status"] == "" and r["user_id"] != p["user_id"] and helpful_given < REWARDS["helpful_per_post"],
                                   "changes": is_owner and p["status"] == "open" and r["kind"] == "submission" and r["status"] == "",
@@ -668,6 +679,28 @@ class ReplyIn(BaseModel):
     kind: Literal["comment", "answer", "submission"]
     body: str = Field("", max_length=2000)
     xml: str | None = None
+    image: str | None = Field(None, max_length=4_200_000)          # a photo, base64 (JPEG, PNG or WebP, up to 3 MB)
+    version_xml: str | None = None                                  # your own version of the song (MusicXML)
+    version_title: str = Field("", max_length=120)
+
+
+IMAGE_MAGIC = ((b"\xff\xd8\xff", "image/jpeg"), (b"\x89PNG", "image/png"), (b"RIFF", "image/webp"))
+
+
+def _image_bytes(b64: str) -> tuple[bytes, str]:
+    """A photo sent with a comment: base64 (a data: URL is fine) -> bytes and its type. Only real pictures."""
+    import base64
+    raw = b64.split(",", 1)[1] if b64.startswith("data:") else b64
+    try:
+        data = base64.b64decode(raw, validate=False)
+    except ValueError:
+        raise HTTPException(400, "That photo couldn't be read.")
+    if len(data) > 3 * 1024 * 1024:
+        raise HTTPException(400, "That photo is too big (3 MB at most).")
+    for magic, mime in IMAGE_MAGIC:
+        if data.startswith(magic) and (mime != "image/webp" or data[8:12] == b"WEBP"):
+            return data, mime
+    raise HTTPException(400, "Send a photo (JPEG, PNG or WebP).")
 
 
 @router.post("/posts/{pid}/replies")
@@ -696,9 +729,19 @@ def reply(pid: str, body: ReplyIn, me: A.Me = Depends(A.current)):
                 raise HTTPException(400, "Answers go on open questions.")
             if len(text) < 2:
                 raise HTTPException(400, "Write your answer first.")
-        elif len(text) < 1:
+        elif len(text) < 1 and not body.image and not body.version_xml:
             raise HTTPException(400, "Write something first.")
+        image_id = version_id = None
+        if body.image:
+            data, mime = _image_bytes(body.image)
+            image_id = _save_file(c, me.id, "image", f"photo.{mime.split('/')[1]}", mime, data, pid)
+        vtitle = (clean_text(body.version_title, 120) or p.get("song") or p["title"])[:120]
+        if body.version_xml and body.kind != "submission":
+            vxml = _check_xml(body.version_xml)
+            bars, notes = _score_size(vxml)
+            version_id = _save_file(c, me.id, "musicxml", f"{vtitle}.musicxml", "application/vnd.recordare.musicxml+xml", vxml.encode(), pid)
         c.execute(insert(replies).values(id=rid, post_id=pid, user_id=me.id, kind=body.kind, body=text, file_id=file_id, bars=bars, notes=notes,
+                                         image_id=image_id, version_id=version_id, version_title=vtitle if version_id else "",
                                          created=now, updated=now))
         extra = {"replies": posts.c.replies + 1}
         if body.kind == "submission" and p["claimed_by"] == me.id:

@@ -37,6 +37,7 @@ export const typeOf = (item) => ({ piece: 'pieces', catalog: 'pieces', request: 
 // ---------------------------------------------------------------- deep links
 // #piece/ID            the piece          #piece/ID/practise   straight into Play Along     #piece/ID/create  its studio
 // #class/ID            the class          #class/ID/assignment/AID                            #stage/post/ID    a Stage post
+// #stage/post/ID/v/RID  someone's own version in a comment, opened at once
 // #sound/ID            a Sound            older links still work: #post/ID, #u/handle, #join/CODE, #q=…
 const ID = '([A-Za-z0-9_.-]{2,80})';
 const ROUTES = [
@@ -44,6 +45,7 @@ const ROUTES = [
   [new RegExp(`^class/${ID}/assignment/${ID}$`), (m) => ({ route: 'assignment', classId: m[1], id: m[2] })],
   [new RegExp(`^class/${ID}$`), (m) => ({ route: 'class', id: m[1] })],
   [new RegExp(`^(?:stage/)?post/${ID}$`), (m) => ({ route: 'post', id: m[1] })],
+  [new RegExp(`^(?:stage/)?post/${ID}/v/${ID}$`), (m) => ({ route: 'post', id: m[1], version: m[2] })],
   [new RegExp(`^sound/${ID}$`), (m) => ({ route: 'sound', id: m[1] })],
   [/^u\/([a-z0-9_.]{3,20})$/, (m) => ({ route: 'person', id: m[1] })],
 ];

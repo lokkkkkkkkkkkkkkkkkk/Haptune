@@ -297,6 +297,8 @@ export function HomeView({ active }) {
           {hero('create', 'teal', 'pencil', 'heroCreate', 'heroCreateSub', () => openSheet('newSong', { quick: true }))}
         </div>
 
+        <HapiTip />
+
         <section class="sum-sec" id="home-band">
           <div class="shelf-head"><h2>{t('pinned')}</h2><button type="button" class="link-btn" onClick={() => setEditing(!editing)} id="pins-edit">{editing ? t('done') : t('edit')}</button></div>
           {editing && (
@@ -350,5 +352,20 @@ export function HomeView({ active }) {
       </div>
       {drag && <div class="dropzone"><div><Icon name="upload" size={44} stroke={2} />{t('dropHere')}<small>{t('dropHereSub')}</small></div></div>}
     </div>
+  );
+}
+
+/** Hapi's tip of the day (tap for the next one). */
+const TIPS = ['hapiTip1', 'hapiTip2', 'hapiTip3', 'hapiTip4', 'hapiTip5', 'hapiTip6'];
+function HapiTip() {
+  const day = Math.floor(Date.now() / 86400000);
+  const [k, setK] = useState(day % TIPS.length);
+  const moods = ['happy', 'think', 'cheer', 'listen', 'wave', 'happy'];
+  return (
+    <button type="button" class="hapi-tip" id="home-tip" onClick={() => setK((k + 1) % TIPS.length)} aria-label={t('hapiTipT')}>
+      <Mascot mood={moods[k]} size={50} />
+      <span><strong>{t('hapiTipT')}</strong><span key={k} class="ht-text">{t(TIPS[k])}</span></span>
+      <Icon name="chevronR" size={14} />
+    </button>
   );
 }

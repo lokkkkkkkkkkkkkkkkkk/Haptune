@@ -41,8 +41,10 @@ Most staves have one voice: one string. When a staff has two independent rhythms
 
 ## Checks before you answer
 - Every voice of every bar must add up to the time signature (only the first bar - a pickup - and the last bar may be shorter). Count each bar; if it does not add up, look again at dots, tuplets, rests and beams.
-- Every bar must list every staff of the system, top to bottom. An empty staff gets R.
-- If something is truly unreadable, give your best reading, set "uncertain": true and say why in "comment". Do not guess silently.
+- Every bar must list every staff of the system, top to bottom. Write R only when that staff shows a rest (or nothing) for the whole bar; if any notehead is printed on it, transcribe it. Missing bars are the most common mistake: check each staff of each bar for noteheads before writing R.
+- Read each staff from its own five lines. Never copy the notes of one staff onto another (in violin + piano music, the violin and the piano's right hand often play different notes).
+- For half and whole notes, find the line or space of the notehead by counting from the bottom line of its staff; long notes are easy to misplace by one step.
+- Set "uncertain" only when a symbol is genuinely hard to see (smudged, cut off, overlapping). Do not set it out of general caution: the player is told about every bar marked uncertain, so it must mean something. If something is truly unreadable, give your best reading, set "uncertain": true and say what in "comment". Do not guess silently.
 """
 
 OVERVIEW_PROMPT = """This is page {page} of {pages} of a score{hint}. Before the music is transcribed line by line, describe the score: its title and credits, the instruments (parts) from top to bottom of each system with how many staves each has and their clefs, the key and time signature at the start, any tempo marking, and whether the first bar is a pickup. Use the instrument key that fits best ("other" if none does). If this is not sheet music, set is_sheet_music to false."""

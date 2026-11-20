@@ -9,6 +9,7 @@ import { levelFor } from '../../core/academy.js';
 import { isNative } from '../native.js';
 import { canInstall, promptInstall, onInstallChange } from '../install.js';
 import { DevModeRows } from './staff.jsx';
+import { Mascot } from '../mascot.jsx';
 
 export function MeView({ active }) {
   const s = useApp();
@@ -40,6 +41,8 @@ export function MeView({ active }) {
           <button type="button" class="hm-stat" onClick={() => push('history')}><span class="k"><Icon name="clock" size={13} stroke={2.4} />{t('thisWeek')}</span><span class="v num">{week}</span><span class="s">{t('min')}</span></button>
           <button type="button" class="hm-stat" onClick={() => push('courses')}><span class="k"><Icon name="academy" size={13} stroke={2.4} />{t('level')}</span><span class="v num">{lv.level}</span><span class="s">{s.progress.xp} {t('xp')}</span></button>
         </div>
+
+        <div class="page-hapi" id="me-hapi"><Mascot mood={streak > 0 ? 'cheer' : 'wave'} size={56} /><p>{streak > 0 ? t('hapiStreak', { n: streak }) : t('hapiStart')}</p></div>
 
         {online && me && !me.registered && (
           <div class="signin-card" id="me-signin">

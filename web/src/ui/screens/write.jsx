@@ -20,6 +20,7 @@ import { soundOf } from '../../core/instruments.js';
 import { difficulty } from '../../core/analysis.js';
 import { q, ZERO } from '../../core/q.js';
 import { openFiles } from '../intake.js';
+import { ACCEPT } from '../importer.js';
 import { hasServer } from '../api.js';
 import { hasPlan } from '../account.js';
 import { RHYTHM_IDS } from '../../core/rhythm.js';
@@ -97,12 +98,13 @@ const WIZ = [
   { id: 'lead', icon: 'chords', color: 'orange' }, { id: 'melody', icon: 'note1', color: 'teal' }, { id: 'full', icon: 'staff', color: 'blue' },
   { id: 'improv', icon: 'sparkles', color: 'pink' }, { id: 'rhythm', icon: 'metronome', color: 'violet' }, { id: 'sound', icon: 'wave', color: 'red' }, { id: 'exercise', icon: 'stairs', color: 'green' },
 ];
-const WIZ_LABEL = { lead: 'wizLead', melody: 'wizMelody', full: 'wizFull', improv: 'wizImprov', rhythm: 'wizRhythm', sound: 'wizSound', exercise: 'wizExercise' };
+const WIZ_LABEL = { import: 'wizImport', lead: 'wizLead', melody: 'wizMelody', full: 'wizFull', improv: 'wizImprov', rhythm: 'wizRhythm', sound: 'wizSound', exercise: 'wizExercise' };
 
 /** A tiny moving picture for each kind (CSS only; still with reduced motion). */
 function WizArt({ kind }) {
   if (kind === 'lead') return <span class="wiz-art" aria-hidden="true">{[['C', 8, 20], ['G', 36, 42], ['Am', 54, 18], ['F', 30, 64]].map(([c, x, y], i) => <i key={c} style={{ '--i': i, left: `${x}%`, top: `${y}%` }}>{c}</i>)}</span>;
   if (kind === 'melody') return <span class="wiz-art" aria-hidden="true"><b class="staff" />{[0, 1, 2, 3, 4].map((i) => <i key={i} class="nt" style={{ '--i': i, '--y': [10, 4, 7, 1, 5][i] }} />)}</span>;
+  if (kind === 'import') return <span class="wiz-art" aria-hidden="true"><b class="page" /><b class="scan" />{[0, 1, 2].map((i) => <i key={i} class="nt" style={{ '--i': i, '--y': [6, 2, 4][i] }} />)}</span>;
   if (kind === 'sound') return <span class="wiz-art" aria-hidden="true">{[0, 1, 2, 3, 4, 5, 6].map((i) => <i key={i} class="bar" style={{ '--i': i }} />)}</span>;
   return <span class="wiz-art" aria-hidden="true"><b class="staff" />{[0, 1, 2].map((i) => <i key={i} class="nt" style={{ '--i': i, '--y': [8, 3, 6][i] }} />)}</span>;
 }
@@ -121,6 +123,7 @@ export function NewSongSheet({ kind: kind0 = null, quick = false }) {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const importRef = useRef(null);
   const kinds = WIZ.filter((k) => (k.id !== 'sound' || flag('sounds')) && (k.id !== 'improv' || flag('improvise')));
   const choose = (k) => {
     if (k === 'improv') { closeSheet(); push('improvise', {}, 'write'); return; }
@@ -145,7 +148,7 @@ export function NewSongSheet({ kind: kind0 = null, quick = false }) {
   };
   if (!kind) {
     // three clear choices (most people want one of these), the rest folded under "More ways"
-    const big = ['lead', 'melody', flag('sounds') ? 'sound' : 'full'];
+    const big = ['lead', 'melody', flag('sounds') ? 'sound' : 'full', 'import'];
     const moreKinds = kinds.filter((k) => !big.includes(k.id) && k.id !== 'rhythm');
     const forYou = ['voice', 'guitar', 'ukulele', 'bass'].includes(s.settings.instrument) ? 'lead' : 'melody';
     return (
@@ -156,11 +159,14 @@ export function NewSongSheet({ kind: kind0 = null, quick = false }) {
           <span class="row-main"><span class="row-title">{t('quickStart')}</span><span class="row-sub">{t('quickStartSub')}</span></span>
           <Icon name="play" size={18} fill />
         </button>}
+        <input ref={importRef} type="file" class="hidden-input" id="wiz-import-file" accept={`${ACCEPT},image/*`} multiple
+          onChange={(e) => { const f = [...(e.currentTarget.files || [])]; e.currentTarget.value = ''; if (f.length) { closeSheet(); setTimeout(() => openFiles(f), 0); } }} aria-label={t('wizImport')} />
         <div class="wiz-big" id="wiz-kinds">
           {big.map((id) => (
-            <button type="button" class={`wiz-card wiz-opt k-${id}`} key={id} id={`wiz-${id}`} onClick={() => { tick(); choose(id); }}>
+            <button type="button" class={`wiz-card wiz-opt k-${id}`} key={id} id={`wiz-${id}`} onClick={() => { tick(); if (id === 'import') importRef.current?.click(); else choose(id); }}>
               <WizArt kind={id} />
-              <span class="wiz-t"><strong>{t(WIZ_LABEL[id])}</strong><span>{t(`${WIZ_LABEL[id]}Sub`)}</span></span>
+              <span class="wiz-t"><strong>{t(WIZ_LABEL[id])}</strong><span>{t(`${WIZ_LABEL[id]}Sub`)}</span>
+                {id === 'import' && <span class="wiz-kinds">{['MIDI', 'MusicXML', 'PDF', t('wizPhoto')].map((x) => <b key={x}>{x}</b>)}</span>}</span>
               {id === forYou && <span class="wiz-rec">{t('wizForYou')}</span>}
               <span class="wiz-go"><Icon name="chevronR" size={18} stroke={2.6} /></span>
             </button>

@@ -321,3 +321,84 @@ def test_photo_cleanup_evens_out_a_shadow():
     out = np.asarray(clean_photo(img), dtype=np.float32)
     assert out[50, 60] > 215 and out[50, 540] > 215                     # paper is white on both sides
     assert out[102, 60] < 120 and out[102, 540] < 120                   # the line is dark on both sides
+
+
+# ---------------------------------------------------------------- Part 6: what the page shows vs what was read
+def test_layout_measures_ink_per_bar_and_staff(minuet):
+    _, bars, meta, pdf = minuet
+    pages = [analyse_page(img, i) for i, img in enumerate(load_pages(pdf, "m.pdf"))]
+    ink = pages[0].ink[0]
+    assert len(ink) == 4 and all(len(row) == len(meta["parts"]) for row in ink)
+    assert all(row[0] > 2.6 for row in ink)                             # the right hand's bars of notes
+    assert all(0.6 < row[1] < 2.6 for row in ink)                       # half and quarter notes in the bass
+
+
+def test_bars_read_empty_while_notes_are_printed_are_found_and_read_again_as_a_line(minuet):
+    """The most common reading error (Beautiful in White: violin bars 20-25, piano 50-61): a staff written as a
+    whole-bar rest. It used to count as a complete bar, so nobody looked again. The ink on the page gives it away."""
+    from ai_fixtures import FakeReaderClient
+    path, bars, meta, pdf = minuet
+    wrong = {bi: [["R"], bars[bi][1]] for bi in (4, 5, 6)}             # line 2: three bars of the right hand left out
+    fake = FakeReaderClient(bars, meta, bars_per_line=4, mistakes=wrong)
+    result = Reader(Claude(client=fake), workers=4).read(pdf, "minuet.pdf")
+    assert fake.line_rereads == {1: 1}                                  # one request for the whole line
+    assert fake.calls.count("reread") == 0
+    assert result.flags == []
+    got = load_musicxml(result.musicxml.encode())
+    original = load_musicxml(path)
+    assert sorted((n.pitch, round(n.onset, 3)) for n in got.notes) == sorted((n.pitch, round(n.onset, 3)) for n in original.notes)
+    assert all(result.doc.bars[bi].fixed for bi in (4, 5, 6))
+
+
+def test_one_empty_bar_is_read_again_on_its_own(minuet):
+    from ai_fixtures import FakeReaderClient
+    path, bars, meta, pdf = minuet
+    fake = FakeReaderClient(bars, meta, bars_per_line=4, mistakes={9: [bars[9][0], ["R"]]})
+    result = Reader(Claude(client=fake), workers=4).read(pdf, "minuet.pdf")
+    assert fake.calls.count("reread") == 1 and not fake.line_rereads
+    assert result.flags == []
+
+
+def test_a_staff_left_out_of_the_answer_is_not_taken_for_a_rest(minuet):
+    from ai_fixtures import FakeReaderClient
+    path, bars, meta, pdf = minuet
+    fake = FakeReaderClient(bars, meta, bars_per_line=4, mistakes={2: [bars[2][0], None]})
+    result = Reader(Claude(client=fake), workers=4).read(pdf, "minuet.pdf")
+    assert fake.calls.count("reread") == 1 and result.flags == []
+
+
+def test_doubts_that_the_second_reading_confirms_are_not_shown(minuet):
+    """Sonnet marked almost every bar "uncertain" although most were right, so players got a list of every bar.
+    A bar the re-read model reads the same way is confirmed and no longer listed."""
+    from ai_fixtures import FakeReaderClient
+    path, bars, meta, pdf = minuet
+    fake = FakeReaderClient(bars, meta, bars_per_line=4, unsure={1, 7, 13})
+    result = Reader(Claude(client=fake), workers=4).read(pdf, "minuet.pdf")
+    assert result.flags == []
+    assert all(result.doc.bars[bi].confirmed for bi in (1, 7, 13))
+
+
+def test_a_bar_still_empty_after_the_second_look_is_listed_as_check_with_the_staff(minuet):
+    from ai_fixtures import FakeReaderClient
+    path, bars, meta, pdf = minuet
+    fake = FakeReaderClient(bars, meta, bars_per_line=4)
+    fake.bars = [row[:] for row in bars]
+    fake.bars[10] = [["R"], bars[10][1]]                                # both readers miss it
+    result = Reader(Claude(client=fake), workers=4).read(pdf, "minuet.pdf")
+    assert [f["bar"] for f in result.flags] == [11]
+    f = result.flags[0]
+    assert f["level"] == "check" and f["issues"][0]["code"] == "empty"
+    assert f["issues"][0]["where"] == result.doc.parts[0].name
+
+
+def test_the_same_notes_on_two_staves_that_look_different_are_flagged(minuet):
+    from ai_fixtures import FakeReaderClient
+    path, bars, meta, pdf = minuet
+    fake = FakeReaderClient(bars, meta, bars_per_line=4)
+    fake.bars = [row[:] for row in bars]
+    top = bars[0][0]
+    fake.bars[0] = [top, top]                                           # the bass staff given the treble's notes
+    result = Reader(Claude(client=fake), workers=4).read(pdf, "minuet.pdf")
+    codes = [i["code"] for f in result.flags for i in f["issues"]]
+    if len(top[0].split()) >= 3:
+        assert "copied" in codes or "range" in codes

@@ -202,7 +202,8 @@ class Reader:
                               "box": self._box_json(j.box, pages[j.page])} for j in failed],
             "short_lines": [{"page": j.page + 1, "line": j.line, "read": len(j.result.get("measures", [])), "expected": j.expect}
                             for j in jobs if j.result and j.short],
-            "rereads": len(rereads), "seconds": round(_time.time() - t0, 1), "model": self.ai.model,
+            "rereads": len(rereads), "fixed": sum(1 for b in doc.bars if b.fixed), "confirmed": sum(1 for b in doc.bars if b.confirmed),
+            "seconds": round(_time.time() - t0, 1), "model": self.ai.model,
             "usage": self.ai.usage.to_json(),
             **({"reread_model": self.reread_ai.model, "reread_usage": self.reread_ai.usage.to_json()} if self.reread_ai is not self.ai else {}),
             "skew": [round(p.skew, 2) for p in pages],
@@ -272,7 +273,8 @@ class Reader:
     # ------------------------------------------------------------------ reading one line
     retry_wait = 1.5               # seconds between tries of a line that failed (tests set 0)
 
-    def _ask_crop(self, job: _Job, pg: Page, box: tuple[int, int, int, int], hints: Hints, gate, extra: str = "") -> dict:
+    def _ask_crop(self, job: _Job, pg: Page, box: tuple[int, int, int, int], hints: Hints, gate, extra: str = "",
+                  ai: Claude | None = None, effort: str = "medium") -> dict:
         """Reads one cut-out of a page. Every bar comes back with `_px`: its left and right edge in page pixels."""
         from PIL import Image
         import io
@@ -294,8 +296,8 @@ class Reader:
         if extra:
             ctx += " " + extra
         prompt = SYSTEM_PROMPT_TMPL.format(staves_text=staves_text, context=ctx.strip())
-        res = self.ai.ask_json(READER_SYSTEM, [image_block(png), text_block(prompt)], SYSTEM_SCHEMA,
-                               effort="medium", max_tokens=32000, started=gate)
+        res = (ai or self.ai).ask_json(READER_SYSTEM, [image_block(png), text_block(prompt)], SYSTEM_SCHEMA,
+                                       effort=effort, max_tokens=32000, started=gate)
         for m in res.get("measures") or []:
             x0, x1 = m.get("x0") or 0, m.get("x1") or 0
             m["_px"] = (box[0] + x0 / scale, box[0] + x1 / scale) if x1 > x0 >= 0 and scale > 0 else None
@@ -448,6 +450,7 @@ class Reader:
                     bar.uncertain = True
                     bar.unread = True
                     bar.box = self._bar_box(job, {}, pages)
+                    bar.ink = self._ink_of(job, k, max(1, job.expect), pages, total)
                     doc.bars.append(bar)
                     raws.append(_RawBar(job=job, k=k, data={}, staff_count=total, clefs=[], key=key))
                 continue
@@ -484,18 +487,8 @@ class Reader:
                 staves = sorted(m.get("staves", []), key=lambda s: s.get("staff", 0))
                 if len(staves) != total:
                     bar.flags.append(f"{len(staves)} staves read, {total} expected")
-                for idx, slot in enumerate(slots):
-                    if idx < len(staves):
-                        voices = staves[idx].get("voices") or ["R"]
-                    else:
-                        voices = ["R"]
-                    parsed = []
-                    for v in voices[:4]:
-                        evs, errs = parse_voice(v)
-                        if errs:
-                            bar.flags.extend(errs[:3])
-                        parsed.append(evs or [Ev(kind="mrest", source="R")])
-                    bar.parts[slot[0]][slot[1]] = BarStaff(voices=parsed)
+                bar.parts, errs = self._parts_of(staves, parts, slots)
+                bar.flags.extend(errs)
                 if m.get("uncertain"):
                     bar.uncertain = True
                     if m.get("comment"):
@@ -503,11 +496,42 @@ class Reader:
                     else:
                         bar.flags.append("reader unsure")
                 bar.box = self._bar_box(job, m, pages)
+                bar.ink = self._ink_of(job, k, len(res.get("measures", [])), pages, total)
                 doc.bars.append(bar)
                 raws.append(_RawBar(job=job, k=k, data=m, staff_count=staff_count, clefs=sys_clefs, key=key))
         if not any(not getattr(b, "unread", False) for b in doc.bars):
             raise AIError("No bars of music were found.")
         return doc, raws
+
+    @staticmethod
+    def _parts_of(staves: list[dict], parts: list[PartInfo], slots: list[tuple[int, int]]):
+        """The staves of one bar as read -> [part][staff] BarStaff, and parse errors. A staff the answer left
+        out (or left blank) becomes a whole-bar rest marked `missing`, so it is never mistaken for a printed rest."""
+        out = [[BarStaff() for _ in range(p.staves)] for p in parts]
+        errs: list[str] = []
+        for idx, slot in enumerate(slots):
+            given = staves[idx].get("voices") if idx < len(staves) else None
+            given = [v for v in (given or []) if isinstance(v, str) and v.strip()]
+            parsed = []
+            for v in (given or ["R"])[:4]:
+                evs, e = parse_voice(v)
+                errs.extend(e[:3])
+                parsed.append(evs or [Ev(kind="mrest", source="R")])
+            if not given:
+                parsed = [[Ev(kind="mrest", source="missing")]]
+            out[slot[0]][slot[1]] = BarStaff(voices=parsed)
+        return out, errs
+
+    @staticmethod
+    def _ink_of(job: _Job, k: int, n_read: int, pages: list[Page], total: int) -> list[float] | None:
+        """What is printed on each staff of bar k of a line (layout.bar_ink), when the reading and the barlines
+        agree on how many bars the line holds and how many staves it has."""
+        if job.kind != "system" or job.system is None:
+            return None
+        ink = pages[job.page].ink.get(job.system) or []
+        if n_read != len(ink) or k >= len(ink) or len(ink[k]) != total or min(ink[k]) < 0:
+            return None
+        return list(ink[k])
 
     @staticmethod
     def _bar_box(job: _Job, m: dict, pages: list[Page]):
@@ -527,11 +551,20 @@ class Reader:
         clefs = {(pi, si): (p.clefs[si] if si < len(p.clefs) else "treble") for pi, p in enumerate(doc.parts) for si in range(p.staves)}
         n = len(doc.bars)
         pickup = False
+        slots = [(pi, si) for pi, p in enumerate(doc.parts) for si in range(p.staves)]
+        rest_ink = sorted(b.ink[i] for b in doc.bars if b.ink and not b.unread for i, (pi, si) in enumerate(slots)
+                          if _is_rest(b.parts[pi][si]) and not _is_missing(b.parts[pi][si]))
+        # what a printed whole-bar rest measures on these pages (0.5-1); a few rests read where notes are printed
+        # must not raise it, so it needs several and stays within what a rest can measure
+        base = min(1.2, max(0.4, rest_ink[len(rest_ink) // 3])) if len(rest_ink) >= 4 else 0.7
         for bi, bar in enumerate(doc.bars):
             if bar.time:
                 time = bar.time
             need = measure_length(time)
             reasons = [r for r in bar.flags if not r.startswith(("bar has", "voice", "a note"))]
+            if bar.confirmed:                                             # the stronger reading agreed
+                reasons = [r for r in reasons if not r.startswith(SOFT)]
+            reasons += self._content(doc, bi, bar, slots, base)
             for (pi, si), c in bar.clefs.items():
                 clefs[(pi, si)] = c
             longest = Fraction(0)
@@ -568,24 +601,76 @@ class Reader:
                     reasons.append(f"bar has {_beats(ln)} of music on {where}; {time[0]}/{time[1]} needs {_beats(target)}")
             if bi == 0 and longest and longest < need:
                 pickup = True
+            if bar.confirmed:
+                reasons = [r for r in reasons if not r.startswith(SOFT)]
             if reasons:
                 flags[bi] = list(dict.fromkeys(reasons))
         for bi, bar in enumerate(doc.bars):
             bar.number = bi if pickup else bi + 1
         return flags
 
+    @staticmethod
+    def _where(doc: ReadDoc, pi: int, si: int) -> str:
+        p = doc.parts[pi]
+        if p.staves == 1:
+            return p.name or f"staff {pi + 1}"
+        if p.staves == 2 and p.instrument in ("piano", "organ", "harpsichord", "keyboard", "accordion", "harp", "celesta"):
+            return f"{p.name} {'right' if si == 0 else 'left'} hand"
+        return f"{p.name} staff {si + 1}"
+
+    def _content(self, doc: ReadDoc, bi: int, bar: Bar, slots: list[tuple[int, int]], base: float) -> list[str]:
+        """Compares the reading with the page: a staff read as a rest where notes are printed (the most common
+        reading error), notes read where the page is empty, the same notes on two staves that look different
+        on the page, and a staff the answer left out."""
+        if bar.unread:
+            return []
+        out: list[str] = []
+        strong, mild = max(2.6, 3.2 * base), max(1.3, 1.9 * base)
+        sig = {}
+        for i, (pi, si) in enumerate(slots):
+            st = bar.parts[pi][si]
+            where = self._where(doc, pi, si)
+            if _is_missing(st):
+                out.append(f"missing: {where} was left out of the reading")
+                continue
+            ink = bar.ink[i] if bar.ink else None
+            notes = _note_count(st)
+            if ink is not None:
+                if notes == 0 and ink >= strong:
+                    out.append(f"empty: {where}: notes are printed here but none were read")
+                elif notes == 0 and ink >= mild:
+                    out.append(f"maybe-empty: {where}: something is printed here (a long note?) but a rest was read")
+                elif notes >= 3 and ink < max(1.0, 1.3 * base):
+                    out.append(f"sparse: {where}: {notes} notes were read but this staff looks empty here")
+            elif notes == 0 and doc.parts[pi].staves > 1:
+                # no measurement (a photo): a hand that rests while the other hand plays, between bars where it plays
+                other = [bar.parts[pi][x] for x in range(doc.parts[pi].staves) if x != si]
+                near = [doc.bars[j].parts[pi][si] for j in (bi - 1, bi + 1) if 0 <= j < len(doc.bars)]
+                if any(_note_count(o) >= 2 for o in other) and near and all(_note_count(x) > 0 for x in near):
+                    out.append(f"silent: {where} rests while the other hand plays")
+            if notes >= 3:
+                sig.setdefault(_signature(st), []).append((i, where))
+        for same in sig.values():
+            if len(same) > 1 and bar.ink:
+                inks = [bar.ink[i] for i, _ in same]
+                if max(inks) > 2.0 * max(0.5, min(inks)):
+                    out.append(f"copied: {same[0][1]} and {same[1][1]}: the same notes were read on both, but the page shows different music on them")
+        return out
+
     def _pick_rereads(self, doc: ReadDoc, flags: dict[int, list[str]]) -> list[int]:
-        def weight(reasons):
-            w = 0
-            for r in reasons:
-                w += 3 if ("bar has" in r or "long;" in r or "can't read" in r) else 2 if "staves read" in r else 1
-            return w
-        ranked = sorted(((bi, r) for bi, r in flags.items() if not getattr(doc.bars[bi], "unread", False)),
-                        key=lambda kv: -weight(kv[1]))
-        limit = max(self.max_rereads, min(48, len(doc.bars) // 5))       # long pieces get more second looks
-        return [bi for bi, reasons in ranked[:limit] if weight(reasons) >= 1]
+        """Every bar with a real problem gets a second look (up to 60, or half the piece); bars the first reader
+        was only unsure about get what is left of a smaller allowance."""
+        ranked = sorted(((bi, r) for bi, r in flags.items() if not doc.bars[bi].unread), key=lambda kv: -_weight(kv[1]))
+        n = len(doc.bars)
+        strong = [bi for bi, r in ranked if _weight(r) >= 2][:max(self.max_rereads, min(60, n // 2))]
+        soft = [bi for bi, r in ranked if _weight(r) == 1][:max(6, n // 8)]
+        return strong + soft
 
     def _reread(self, doc: ReadDoc, raws: list[_RawBar], targets: list[int], pages: list[Page], hints: Hints, say: Progress):
+        """Second looks by the re-read model. A line with three or more doubtful bars (or half of its bars) is read
+        again whole, in one request (a run of missing bars or swapped staves is a line problem, and one request
+        is cheaper than several); single doubtful bars are cut out and read zoomed in. A second reading that
+        agrees with the first confirms the bar; one that differs and checks out at least as well replaces it."""
         time_at = {}
         t = doc.time
         for bi, bar in enumerate(doc.bars):
@@ -593,84 +678,125 @@ class Reader:
                 t = bar.time
             time_at[bi] = t
         flags_before = self._validate(doc)
+        by_line: dict[int, list[int]] = {}
+        for bi in targets:
+            by_line.setdefault(id(raws[bi].job), []).append(bi)
+        line_jobs, single = [], []
+        for bis in by_line.values():
+            job = raws[bis[0]].job
+            in_line = [i for i, r in enumerate(raws) if r.job is job]
+            if job.kind == "system" and (len(bis) >= 3 or len(bis) * 2 >= len(in_line) >= 2):
+                line_jobs.append((job, in_line, bis))
+            else:
+                single.extend(bis)
+        total = len(line_jobs) + len(single)
         done = [0]
         first_reread = _CacheGate()
+
+        def tick():
+            done[0] += 1
+            say("checking", 0.76 + 0.18 * done[0] / max(1, total), f"Checked {done[0]} of {total}")
+
+        def line(item):
+            job, in_line, bis = item
+            gate = first_reread.enter()
+            problems = "; ".join(f"bar {raws[bi].k + 1}: " + "; ".join(flags_before.get(bi, [])[:2]) for bi in bis)
+            extra = (f"Look again: a first reading of this line had problems ({problems[:900]}). Read every staff of "
+                     f"every bar from its own staff lines, all {len(in_line)} bars from left to right.")
+            try:
+                res = self._ask_crop(job, pages[job.page], job.box, hints, gate, extra, ai=self.reread_ai, effort="high")
+            except AIError:
+                res = None
+            finally:
+                if gate is not None:
+                    gate.set()
+            tick()
+            return item, res
 
         def one(bi: int):
             gate = first_reread.enter()
             try:
-                return _one(bi, gate)
+                return bi, self._reread_bar(doc, raws, bi, pages, hints, time_at, flags_before, gate)
             finally:
                 if gate is not None:
                     gate.set()
-
-        def _one(bi: int, gate: threading.Event | None):
-            raw = raws[bi]
-            job = raw.job
-            pg = pages[job.page]
-            bx0, by0, bx1, by1 = job.box
-            px = raw.data.get("_px")
-            if px and job.kind == "system":
-                sp = job.space or 20
-                left = px[0] - 1.2 * sp
-                right = px[1] + 1.2 * sp
-                box = (max(bx0, int(left)), by0, min(bx1, int(right)), by1)
-                what = f"one bar (bar {doc.bars[bi].number}) cut out of line {job.line} on page {job.page + 1}; the image shows {raw.staff_count} staves"
-                target = "this bar"
-            else:
-                box = job.box
-                what = f"line {job.line} on page {job.page + 1}"
-                target = f"bar {raw.k + 1} of this line (count bars from the left)"
-            img = pg.image.crop(box)
-            png = encode_png(img, min_space=30, space=job.space or None)
-            tm = time_at[bi]
-            clefs = ", ".join(raw.clefs) or "see image"
-            ctx = (f"Time signature: {tm[0]}/{tm[1]}. Key signature: {_key_text(raw.key)}. Clefs top to bottom: {clefs}. "
-                   + self._hint_text(hints))
-            first = "\n".join(f"staff {s.get('staff')}: " + " | ".join(s.get("voices") or []) for s in raw.data.get("staves", []))
-            problem = "; ".join(flags_before.get(bi, [])) or "it needs checking"
-            prompt = REREAD_PROMPT_TMPL.format(what=what, context=ctx, first=first or "(nothing)", problem=problem,
-                                               target=target, count_text="exactly one bar in measures")
-            try:
-                res = self.reread_ai.ask_json(READER_SYSTEM, [image_block(png), text_block(prompt)], REREAD_SCHEMA,
-                                              effort="high", max_tokens=16000, started=gate)
-            except AIError:
-                res = None
-            done[0] += 1
-            say("checking", 0.76 + 0.18 * done[0] / max(1, len(targets)), f"Checked {done[0]} of {len(targets)} bars")
-            return bi, res
+                tick()
 
         with ThreadPoolExecutor(max_workers=self.workers) as pool:
-            results = list(pool.map(one, targets))
-        for bi, res in results:
-            if not res or not res.get("measures"):
-                continue
-            m = res["measures"][0]
-            bar = doc.bars[bi]
-            old_parts = bar.parts
-            old_flags = list(bar.flags)
-            slots = [(pi, si) for pi, p in enumerate(doc.parts) for si in range(p.staves)]
-            staves = sorted(m.get("staves", []), key=lambda s: s.get("staff", 0))
-            new_parts = [[BarStaff() for _ in range(p.staves)] for p in doc.parts]
-            new_flags = []
-            for idx, slot in enumerate(slots):
-                voices = (staves[idx].get("voices") if idx < len(staves) else None) or ["R"]
-                parsed = []
-                for v in voices[:4]:
-                    evs, errs = parse_voice(v)
-                    new_flags.extend(errs[:3])
-                    parsed.append(evs or [Ev(kind="mrest", source="R")])
-                new_parts[slot[0]][slot[1]] = BarStaff(voices=parsed)
-            if len(staves) != len(slots):
-                new_flags.append(f"{len(staves)} staves read, {len(slots)} expected")
-            if m.get("uncertain"):
-                new_flags.append("reader unsure" + (f": {m['comment'][:160]}" if m.get("comment") else ""))
-            bar.parts, bar.flags = new_parts, new_flags
-            after = self._validate(doc).get(bi, [])
-            if len(after) > len(flags_before.get(bi, [])):
-                bar.parts, bar.flags = old_parts, old_flags          # the second reading was worse: keep the first
-            else:
-                raws[bi].data = {**raws[bi].data, "staves": m.get("staves", [])}
+            line_results = list(pool.map(line, line_jobs))
+            bar_results = list(pool.map(one, single))
+        for (job, in_line, bis), res in line_results:
+            measures = (res or {}).get("measures") or []
+            if len(measures) == len(in_line):
+                for bi, m in zip(in_line, measures):
+                    self._take(doc, raws, bi, m, strict=bi not in bis)
+            else:                                     # the second reading counted the bars differently: bar by bar
+                for bi in bis:
+                    m = self._reread_bar(doc, raws, bi, pages, hints, time_at, flags_before, None)
+                    if m:
+                        self._take(doc, raws, bi, m)
+        for bi, m in bar_results:
+            if m:
+                self._take(doc, raws, bi, m)
+
+    def _reread_bar(self, doc, raws, bi, pages, hints, time_at, flags_before, gate) -> dict | None:
+        raw = raws[bi]
+        job = raw.job
+        pg = pages[job.page]
+        bx0, by0, bx1, by1 = job.box
+        px = raw.data.get("_px")
+        if px and job.kind == "system":
+            sp = job.space or 20
+            box = (max(bx0, int(px[0] - 1.2 * sp)), by0, min(bx1, int(px[1] + 1.2 * sp)), by1)
+            what = f"one bar (bar {doc.bars[bi].number}) cut out of line {job.line} on page {job.page + 1}; the image shows {raw.staff_count} staves"
+            target = "this bar"
+        else:
+            box = job.box
+            what = f"line {job.line} on page {job.page + 1}"
+            target = f"bar {raw.k + 1} of this line (count bars from the left)"
+        png = encode_png(pg.image.crop(box), min_space=30, space=job.space or None)
+        tm = time_at[bi]
+        ctx = (f"Time signature: {tm[0]}/{tm[1]}. Key signature: {_key_text(raw.key)}. Clefs top to bottom: "
+               f"{', '.join(raw.clefs) or 'see image'}. " + self._hint_text(hints))
+        first = "\n".join(f"staff {s.get('staff')}: " + " | ".join(s.get("voices") or []) for s in raw.data.get("staves", []))
+        problem = "; ".join(flags_before.get(bi, [])) or "it needs checking"
+        prompt = REREAD_PROMPT_TMPL.format(what=what, context=ctx, first=first or "(nothing)", problem=problem,
+                                           target=target, count_text="exactly one bar in measures")
+        try:
+            res = self.reread_ai.ask_json(READER_SYSTEM, [image_block(png), text_block(prompt)], REREAD_SCHEMA,
+                                          effort="high", max_tokens=16000, started=gate)
+        except AIError:
+            return None
+        return (res.get("measures") or [None])[0]
+
+    def _take(self, doc: ReadDoc, raws: list[_RawBar], bi: int, m: dict, strict: bool = False) -> None:
+        """Puts a second reading of bar bi in place when it is at least as good: fewer real problems, or as few
+        (the stronger reader is trusted). `strict` (a bar nobody doubted, read again with its line): only when it
+        has no real problem at all. Agreement marks the bar confirmed; a change that checks out marks it fixed."""
+        bar = doc.bars[bi]
+        slots = [(pi, si) for pi, p in enumerate(doc.parts) for si in range(p.staves)]
+        staves = sorted(m.get("staves", []) or [], key=lambda s: s.get("staff", 0))
+        new_parts, errs = self._parts_of(staves, doc.parts, slots)
+        new_flags = list(errs)
+        if len(staves) != len(slots):
+            new_flags.append(f"{len(staves)} staves read, {len(slots)} expected")
+        if m.get("uncertain"):
+            new_flags.append("reader unsure" + (f": {m['comment'][:160]}" if m.get("comment") else ""))
+        old_parts, old_flags = bar.parts, list(bar.flags)
+        before = _strong(self._validate(doc).get(bi, []))
+        if _same(old_parts, new_parts):
+            bar.confirmed = not m.get("uncertain")
+            if bar.confirmed:
+                bar.flags = [f for f in bar.flags if not f.startswith(SOFT)]
+            return
+        bar.parts, bar.flags = new_parts, new_flags
+        after_all = self._validate(doc).get(bi, [])
+        after = _strong(after_all)
+        if after > before or (strict and after > 0):
+            bar.parts, bar.flags = old_parts, old_flags          # the second reading was worse: keep the first
+            return
+        bar.fixed = after == 0
+        raws[bi].data = {**raws[bi].data, "staves": m.get("staves", [])}
 
     def _finish(self, doc: ReadDoc) -> None:
         """Octave clefs, key signatures and carried accidentals, ties across bars."""
@@ -705,9 +831,20 @@ class Reader:
 
     @staticmethod
     def _flag_json(doc: ReadDoc, bi: int, reasons: list[str]) -> dict:
+        """One bar for the player to look at. level: "check" (something is wrong or missing: look at it),
+        "unsure" (only the reader's own doubt; it is probably right). issues: [{code, where, text}] for the app."""
         bar = doc.bars[bi]
+        issues = []
+        for r in reasons:
+            code, _, rest = r.partition(": ")
+            if code in ISSUE_CODES:
+                where, _, text = rest.partition(": ")
+                issues.append({"code": code, "where": where if text else "", "text": text or rest})
+            else:
+                issues.append({"code": _code_of(r), "where": "", "text": r})
+        level = "check" if bar.unread or _strong(reasons) else "unsure"
         return {"index": bi, "bar": bar.number, "page": bar.page + 1, "line": bar.system + 1, "box": bar.box,
-                "reasons": reasons, **({"unread": True} if getattr(bar, "unread", False) else {})}
+                "level": level, "reasons": reasons, "issues": issues, **({"unread": True} if bar.unread else {})}
 
 
 def _beats(q: Fraction) -> str:
@@ -720,3 +857,60 @@ def _key_text(fifths: int) -> str:
     if fifths == 0:
         return "no sharps or flats"
     return f"{abs(fifths)} {'sharp' if fifths > 0 else 'flat'}{'s' if abs(fifths) != 1 else ''}"
+
+
+# ---------------------------------------------------------------------- what kind of problem a reason is
+SOFT = ("reader unsure", "maybe-empty:", "silent:")          # doubts; the rest are real problems
+ISSUE_CODES = ("empty", "maybe-empty", "sparse", "copied", "missing", "silent")
+
+
+def _code_of(r: str) -> str:
+    if r.startswith("bar has") or "long;" in r:
+        return "length"
+    if r.startswith("can't read"):
+        return "unread"
+    if "staves read" in r:
+        return "staves"
+    if r.startswith("a note ("):
+        return "range"
+    if r.startswith("reader unsure"):
+        return "unsure"
+    return "notation"
+
+
+def _strong(reasons: list[str]) -> int:
+    return sum(1 for r in reasons if not r.startswith(SOFT))
+
+
+def _weight(reasons: list[str]) -> int:
+    w = 0
+    for r in reasons:
+        if r.startswith(("empty:", "missing:", "copied:", "sparse:")):
+            w += 4
+        elif r.startswith("bar has") or "long;" in r or r.startswith("can't read"):
+            w += 3
+        elif r.startswith(("maybe-empty:", "silent:")) or "staves read" in r or r.startswith("a note ("):
+            w += 2
+        else:
+            w += 1
+    return w
+
+
+def _is_rest(st: BarStaff) -> bool:
+    return all(e.kind in ("rest", "mrest", "clef") for v in st.voices for e in v)
+
+
+def _is_missing(st: BarStaff) -> bool:
+    return any(e.source == "missing" for v in st.voices for e in v)
+
+
+def _note_count(st: BarStaff) -> int:
+    return sum(1 for v in st.voices for e in v if e.kind == "note" and not e.grace)
+
+
+def _signature(st: BarStaff) -> tuple:
+    return tuple(tuple((tuple(p.midi for p in e.pitches), e.dur) for e in v if e.kind in ("note", "rest")) for v in st.voices)
+
+
+def _same(a: list[list[BarStaff]], b: list[list[BarStaff]]) -> bool:
+    return [[_signature(st) for st in part] for part in a] == [[_signature(st) for st in part] for part in b]

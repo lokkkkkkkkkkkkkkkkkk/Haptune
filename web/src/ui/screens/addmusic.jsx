@@ -4,6 +4,7 @@ import { useApp, push, openSheet, closeSheet, toast, addScore, getState, updateP
 import { t, getLang, instrumentName } from '../../core/i18n.js';
 import { Icon, List, Row, Chip, Button, Card, Section, Toggle } from '../components.jsx';
 import { SheetFrame } from './common.jsx';
+import { issueLines } from '../readflags.js';
 import { importFile, ACCEPT, openPdf } from '../importer.js';
 import { parseMusicXML } from '../../core/musicxml.js';
 import { performance as perfOf, secondsAt } from '../../core/score.js';
@@ -18,6 +19,8 @@ const isPdf = (f) => /\.pdf$/i.test(f?.name || '') || f?.type === 'application/p
 const isImage = (f) => /^image\//.test(f?.type || '') || /\.(png|jpe?g|heic|heif|webp|gif|bmp|tiff?)$/i.test(f?.name || '');
 
 // ---------------------------------------------------------------------------- the Add sheet
+
+
 export function AddSheet() {
   const fileRef = useRef(null);
   const camRef = useRef(null);
@@ -192,6 +195,11 @@ export function ImportWizardSheet({ files: initial = [], title = '', youtube = n
   const [ai, setAi] = useState(null);
   const [svg, setSvg] = useState('');
   const [peek, setPeek] = useState({});
+  const [showMaybe, setShowMaybe] = useState(false);
+  // "check": something is wrong or missing (look at it); "unsure": only the reader's own doubt (probably fine)
+  const flagsAll = result?.flags || [];
+  const toCheck = flagsAll.filter((f) => (f.level || 'check') === 'check');
+  const maybe = flagsAll.filter((f) => f.level === 'unsure');
   const addRef = useRef(null);
   const abort = useRef(null);
   const boxRef = useRef(null);
@@ -212,7 +220,7 @@ export function ImportWizardSheet({ files: initial = [], title = '', youtube = n
     const box = boxRef.current;
     if (!box || !svg || !result) return;
     const measures = box.querySelectorAll('g.measure');
-    for (const f of result.flags || []) measures[f.index]?.classList.add('flagged');
+    for (const f of result.flags || []) if ((f.level || 'check') === 'check') measures[f.index]?.classList.add('flagged');
   }, [svg, result]);
 
   const set = (patch) => setHints((h) => ({ ...h, ...patch }));
@@ -240,7 +248,7 @@ export function ImportWizardSheet({ files: initial = [], title = '', youtube = n
     if (hints.title) score.title = hints.title;
     const pdf = files.find(isPdf);
     const extra = {
-      aiFlags: (result.flags || []).map((f) => ({ bar: f.bar, page: f.page, line: f.line, box: f.box, reasons: f.reasons, unread: !!f.unread })),
+      aiFlags: (result.flags || []).map((f) => ({ bar: f.bar, page: f.page, line: f.line, box: f.box, reasons: f.reasons, unread: !!f.unread, level: f.level || 'check', issues: f.issues || [] })),
       aiPages: thumbs.pages, youtube: youtube || null,
     };
     if (pdf && files.length === 1) extra.pdf = await pdf.arrayBuffer();
@@ -385,13 +393,14 @@ export function ImportWizardSheet({ files: initial = [], title = '', youtube = n
       )}
 
       {phase === 'check' && result && <>
-        {!(result.flags || []).length && <Confetti />}
+        {!toCheck.length && <Confetti />}
         <div class="with-mascot">
           <Mascot mood="cheer" size={64} />
           <div class="bubble left">
             <strong>{t('readDone')}</strong><br />
             <span class="sub">{result.report?.bars} {t('bars').toLowerCase()} · {(result.report?.parts || []).map((p) => p.name).join(', ')}
-              {' · '}{(result.flags || []).length === 0 ? t('allBarsOk') : result.flags.length === 1 ? t('oneBarToCheck') : t('barsToCheck', { n: result.flags.length })}</span>
+              {' · '}{toCheck.length === 0 ? t('allBarsOk') : toCheck.length === 1 ? t('oneBarToCheck') : t('barsToCheck', { n: toCheck.length })}</span>
+            {result.report?.rereads > 0 && <span class="sub" id="read-double">{t('rdDoubleChecked', { n: result.report.rereads, f: result.report.fixed || 0 })}</span>}
           </div>
         </div>
         {(result.report?.failed_lines || []).length > 0 && (
@@ -405,14 +414,16 @@ export function ImportWizardSheet({ files: initial = [], title = '', youtube = n
         )}
         <div class="score-box vrv" ref={boxRef} dangerouslySetInnerHTML={{ __html: svg }} />
         {!svg && <div class="loading"><div class="spinner" /></div>}
-        {(result.flags || []).length > 0 && (
-          <Section title={t('barsToCheck', { n: result.flags.length })}>
-            <div class="list">
-              {result.flags.map((f) => (
-                <div class="flag-row" key={f.index}>
+        {[[toCheck, 'check'], [maybe, 'unsure']].map(([list, level]) => list.length > 0 && (level === 'unsure' && !showMaybe
+          ? <button type="button" class="rd-maybe-btn" key={level} id="rd-maybe" onClick={() => setShowMaybe(true)}><Mascot mood="happy" size={34} /><span><strong>{t('rdMaybeT', { n: list.length })}</strong><span>{t('rdMaybeS')}</span></span><Icon name="chevronR" size={15} /></button>
+          : <Section key={level} title={level === 'check' ? t('rdCheckT', { n: list.length }) : t('rdMaybeT', { n: list.length })} footer={level === 'check' ? t('rdCheckFoot') : ''}>
+            <div class="list" id={`rd-${level}`}>
+              {list.map((f) => (
+                <div class={`flag-row lv-${level}`} key={f.index}>
                   <span class="n">{t('bar', { n: f.bar })}</span>
                   <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <span style={{ fontSize: 14 }}>{(f.reasons || [])[0]}</span>
+                    {issueLines(f).map((x, k) => <span key={k} class="rd-issue">{x.where && <strong>{x.where}: </strong>}{x.text}</span>)}
+                    <span class="tiny muted">{t('pageLine', { p: f.page, l: f.line })}</span>
                     <div class="btn-row">
                       <Button small kind="secondary" icon="eye" onClick={async () => {
                         if (peek[f.index]) { setPeek((p) => ({ ...p, [f.index]: null })); return; }
@@ -427,7 +438,7 @@ export function ImportWizardSheet({ files: initial = [], title = '', youtube = n
               ))}
             </div>
           </Section>
-        )}
+        ))}
         <Button kind="brand" full onClick={save} icon="check">{t('saveToLibrary')}</Button>
         <Button kind="plain" full onClick={() => setPhase('setup')}>{t('tryAgain')}</Button>
       </>}

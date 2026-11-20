@@ -170,6 +170,7 @@ only the AI features say they are not switched on yet.
 | Live chord feedback (piano/guitar) | beta: some false taps in noisy rooms; the post-take report is reliable |
 | AI reader (Claude Opus 5.5), engraved pages with known answers: Minuet in G for violin, for piano, and the piano page as a tilted, blurred, unevenly lit photo-like JPEG | 64/64, 94/94 and 94/94 notes exact; 12-33 s and about $0.17 a page |
 | AI reader, denser 12-bar pages: Mozart K. 545 (piano), Maple Leaf Rag (piano), Schumann *Dichterliebe* No. 2 (voice + piano, lyrics) | 189/191, 185/193 and 134/146 notes exact. Slips: a whole-note chord, a natural sign on the wrong chord note, a clef change in mid-line, missed ties. Most wrong bars were marked as unsure. 22-90 s, $0.23-0.65 a page |
+| AI reader, Sonnet 5.5 reading + Opus 5.5 re-reading, *Beautiful in White* (violin + piano, 5 pages, 71 bars), before Part 6 | about 80 % of bars right (171/213 bar-staves); 70 % of the errors were whole bars left empty and not flagged. Part 6 measures the ink of every bar on the page, flags empty/missing/copied staves and re-reads them (whole lines when several); not re-measured on this score yet (needs the API) |
 | Song finder, "Ode to Joy easy piano" (web search only) | 7 free, legitimate sources with licence and level in 48 s; about $0.28 |
 
 ## Run it
