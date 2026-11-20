@@ -1,5 +1,7 @@
 # Builds the iPhone/iPad, Mac (Catalyst) and Apple Watch apps, runs the Swift tests and takes
 # screenshots of every screen on GitHub's macOS runners, so you can check everything without a Mac.
+# Runner: GitHub's Apple-silicon pool (macos-15) is often full and drops jobs ("not acquired by Runner"), so this
+# uses the Intel pool. To switch back, set the repository variable APPLE_RUNNER=macos-15.
 name: apple-build
 on:
   push:
@@ -10,7 +12,7 @@ on:
 
 jobs:
   practice-core-tests:
-    runs-on: macos-15
+    runs-on: ${{ vars.APPLE_RUNNER || 'macos-15-intel' }}
     steps:
       - uses: actions/checkout@v4
       - name: Swift tests (score parser, MIDI, DSP, live follower)
@@ -18,7 +20,7 @@ jobs:
         run: swift test
 
   build-apps:
-    runs-on: macos-15
+    runs-on: ${{ vars.APPLE_RUNNER || 'macos-15-intel' }}
     steps:
       - uses: actions/checkout@v4
       - name: Install XcodeGen
@@ -62,7 +64,7 @@ jobs:
   # The app you install on your own iPhone / iPad with Sideloadly and a free Apple ID (see apple/README.md).
   # Built unsigned here; Sideloadly signs it with your Apple ID. TESTER unlocks every Plus feature.
   test-app:
-    runs-on: macos-15
+    runs-on: ${{ vars.APPLE_RUNNER || 'macos-15-intel' }}
     steps:
       - uses: actions/checkout@v4
       - name: Install XcodeGen
