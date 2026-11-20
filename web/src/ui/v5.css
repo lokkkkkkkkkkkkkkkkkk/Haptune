@@ -1,0 +1,173 @@
+/* Haptune, Part 4 (loaded last): Home and Browse shaped like Apple Health, a Health-style sidebar with
+   Categories (a drawer on phones), soft colour behind every page instead of plain white or black, and motion:
+   View Transitions between tabs (browser built-in) and AutoAnimate (github.com/formkit/auto-animate, MIT) on
+   lists that change. All motion stops with "reduce motion". */
+
+/* ---------- the page: never plain. A soft wash of colour that drifts very slowly ---------- */
+:root {
+  --wash-1: #EEE8FF; --wash-2: #FFE9F1; --wash-3: #E3F4FF; --wash-4: #FFF3E0; --wash-base: #F7F6FB;
+  --glow: rgba(140, 92, 246, .20); --glow-2: rgba(255, 128, 92, .16);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --wash-1: #1E1636; --wash-2: #2A1424; --wash-3: #0F2233; --wash-4: #2A1C10; --wash-base: #0E0D14;
+    --glow: rgba(140, 92, 246, .30); --glow-2: rgba(255, 120, 60, .22); }
+}
+:root[data-theme="dark"] { --wash-1: #1E1636; --wash-2: #2A1424; --wash-3: #0F2233; --wash-4: #2A1C10; --wash-base: #0E0D14;
+  --glow: rgba(140, 92, 246, .30); --glow-2: rgba(255, 120, 60, .22); }
+
+.app.v3 { background: var(--wash-base); position: relative; isolation: isolate; }
+.app.v3::before { content: ""; position: fixed; inset: -20%; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(40% 35% at 15% 10%, var(--wash-1), transparent 70%),
+    radial-gradient(35% 30% at 85% 15%, var(--wash-2), transparent 70%),
+    radial-gradient(45% 40% at 80% 85%, var(--wash-3), transparent 70%),
+    radial-gradient(40% 35% at 10% 90%, var(--wash-4), transparent 70%);
+  animation: wash 40s ease-in-out infinite alternate; will-change: transform; }
+@keyframes wash { from { transform: translate3d(-3%, -2%, 0) scale(1); } to { transform: translate3d(3%, 2%, 0) scale(1.06); } }
+.app.v3 .content, .app.v3 .tab-pane, .app.v3 .scroll, .app.v3 .view { background: transparent; }
+.app.v3 .side { background: color-mix(in srgb, var(--card) 78%, transparent); backdrop-filter: blur(18px) saturate(1.2); -webkit-backdrop-filter: blur(18px) saturate(1.2); }
+.app.v3 .tabbar { background: color-mix(in srgb, var(--bar, var(--card)) 94%, transparent); backdrop-filter: blur(20px) saturate(1.3); -webkit-backdrop-filter: blur(20px) saturate(1.3); }
+.app.v3 .side > * { flex-shrink: 0; }
+
+/* ---------- Home: Health's header (a colour glow behind who you are, and a status card) ---------- */
+.home4 { isolation: isolate; }
+.home-glow { position: absolute; left: 0; right: 0; top: 0; height: 380px; pointer-events: none; z-index: 0;
+  background: radial-gradient(70% 90% at 20% 0%, var(--glow), transparent 70%), radial-gradient(60% 80% at 90% 0%, var(--glow-2), transparent 70%); }
+.home4 > .wrap { position: relative; z-index: 1; }
+.home-head { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding-top: 18px; align-items: start; }
+@media (min-width: 900px) { .home-head { grid-template-columns: minmax(0, 1fr) minmax(280px, 400px); padding-top: 26px; } }
+.hh-menu { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--card) 80%, transparent); border: 1px solid var(--line); color: var(--ink); backdrop-filter: blur(10px); }
+.hh-who { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.hh-avatar { width: 92px; height: 92px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; font: 800 34px/1 var(--display); color: #fff; letter-spacing: -.02em;
+  background: linear-gradient(145deg, #A9A4FF, #6E56CF 60%, #4B3CA8); box-shadow: 0 10px 30px rgba(80, 60, 200, .3), inset 0 1px 0 rgba(255,255,255,.4); transition: transform .2s var(--ease-spring); }
+.hh-avatar:active { transform: scale(.95); }
+@media (max-width: 520px) { .hh-avatar { width: 74px; height: 74px; font-size: 28px; } }
+.hh-text { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
+.hh-date { font-size: 12.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: color-mix(in srgb, var(--violet) 70%, var(--ink)); }
+.hh-text h1 { font: 800 34px/1.08 var(--display); letter-spacing: -.03em; margin: 0; }
+.hh-profile { display: inline-flex; align-items: center; gap: 3px; font-size: 16px; font-weight: 700; color: color-mix(in srgb, #E8590C 75%, var(--ink)); padding: 2px 0; }
+.hh-sub { font-size: 13.5px; color: var(--ink2); }
+.hh-acts { align-self: flex-start; display: flex; flex-direction: column; gap: 8px; }
+.hh-status { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 14px 16px 14px; border-radius: 22px;
+  background: color-mix(in srgb, var(--card) 88%, transparent); border: 1px solid var(--line); box-shadow: var(--shadow-up); backdrop-filter: blur(14px); }
+.hh-status .hs-top { display: flex; align-items: center; justify-content: space-between; }
+.hh-status .hs-k { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--ink2); }
+.hh-status .hs-x { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--fill2); color: var(--ink2); }
+.hh-status strong { font-size: 17px; line-height: 1.25; }
+.hh-status > span { font-size: 14px; color: var(--ink2); line-height: 1.4; }
+.hh-status .hs-act { align-self: flex-start; margin-top: 6px; padding: 7px 14px; border-radius: 999px; font-size: 14.5px; font-weight: 700; color: #fff;
+  background: color-mix(in srgb, var(--blue) 85%, #000); }
+
+/* Pinned (Health tiles) */
+.link-btn { font-size: 16px; font-weight: 600; color: color-mix(in srgb, var(--blue) 80%, var(--ink)); padding: 4px 2px; }
+.pin-edit { display: flex; flex-wrap: wrap; gap: 8px; }
+.pin-edit .chip { gap: 4px; }
+.sum-tile.none .st-none { font: 800 22px/1.1 var(--display); color: var(--ink3); letter-spacing: -.01em; }
+.sum-tile { min-height: 116px; justify-content: space-between; border-radius: 20px; background: color-mix(in srgb, var(--card) 92%, transparent); }
+.show-all { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; border-radius: 18px; text-align: left; font-size: 16px; font-weight: 600;
+  background: color-mix(in srgb, var(--card) 92%, transparent); border: 1px solid var(--line); transition: transform .15s var(--ease-out); }
+.show-all:active { transform: scale(.985); }
+.show-all .sa-ic { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; color: #fff; background: linear-gradient(to top right, #D12A58, #FF7E9C); }
+.show-all > svg:last-child { margin-left: auto; color: var(--ink3); }
+
+/* Get more from Haptune (Health's suggestion cards) */
+.gm-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+@media (min-width: 700px) { .gm-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.gm-card { position: relative; border-radius: 22px; background: color-mix(in srgb, var(--card) 92%, transparent); border: 1px solid var(--line); }
+.gm-main { display: flex; align-items: flex-start; gap: 14px; width: 100%; padding: 16px 40px 16px 16px; text-align: left; }
+.gm-ic { width: 64px; height: 64px; flex-shrink: 0; border-radius: 18px; display: grid; place-items: center; color: #fff; box-shadow: 0 8px 18px rgba(0,0,0,.14); }
+.gm-t { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.gm-t strong { font-size: 17px; line-height: 1.25; }
+.gm-t span { font-size: 14px; color: var(--ink2); line-height: 1.4; }
+.gm-x { position: absolute; right: 10px; top: 10px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--fill2); color: var(--ink2); z-index: 1; }
+
+/* Articles */
+.art-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (min-width: 900px) { .art-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 420px) { .art-grid { grid-template-columns: minmax(0, 1fr); } }
+.art-card { display: flex; flex-direction: column; border-radius: 22px; overflow: hidden; text-align: left; background: color-mix(in srgb, var(--card) 94%, transparent); border: 1px solid var(--line);
+  transition: transform .2s var(--ease-out), box-shadow .2s; }
+.art-card:active { transform: scale(.98); }
+@media (hover: hover) { .art-card:hover { box-shadow: var(--shadow-up); transform: translateY(-2px); } }
+.art-cover { display: block; width: 100%; height: auto; aspect-ratio: 32 / 15; }
+.art-t { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px 16px; }
+.art-t strong { font-size: 17px; line-height: 1.25; letter-spacing: -.01em; }
+.art-t span { font-size: 14px; color: var(--ink2); line-height: 1.4; }
+
+/* quick start tiles look like Browse tiles */
+.home4 .hero-tile { min-height: 104px; border-radius: 20px; }
+@media (min-width: 900px) { .home4 .hero-tile { min-height: 120px; } }
+
+/* ---------- Browse (Health's Browse) ---------- */
+.browse-search { display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 14px; border-radius: 14px; background: color-mix(in srgb, var(--card) 88%, transparent);
+  border: 1px solid var(--line); color: var(--ink2); }
+.browse-search input { flex: 1; min-width: 0; border: 0; background: none; font: inherit; font-size: 16px; color: var(--ink); outline: none; }
+.browse-h { font: 800 22px/1.2 var(--display); letter-spacing: -.02em; margin: 8px 0 0; }
+.browse-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (min-width: 700px) { .browse-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.browse-tile { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; gap: 18px; min-height: 104px; padding: 16px; border-radius: 22px;
+  color: #fff; text-align: left; box-shadow: 0 8px 22px rgba(0,0,0,.12); transition: transform .2s var(--ease-spring), box-shadow .2s; }
+.browse-tile strong { font-size: 17px; font-weight: 800; letter-spacing: -.01em; text-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.browse-tile svg { filter: drop-shadow(0 1px 2px rgba(0,0,0,.2)); }
+.browse-tile:active { transform: scale(.96); }
+@media (hover: hover) { .browse-tile:hover { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(0,0,0,.18); } }
+
+/* ---------- the sidebar: Home · Friends · Browse, then Categories (Health's sidebar) ---------- */
+.side-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.side-top .brand { flex: 1; min-width: 0; }
+.side-toggle { width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; color: var(--ink2); background: var(--fill); }
+.side-toggle:hover { color: var(--ink); background: var(--fill2); }
+.side .side-main button, .side .side-cats button { display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 12px; border-radius: 14px; color: var(--ink2);
+  font-weight: 650; font-size: 15px; text-align: left; transition: background .15s; }
+.side .side-main button:hover, .side .side-cats button:hover { background: var(--fill); color: var(--ink); }
+.side .side-main button .tab-ic { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 10px; color: var(--c); }
+.side .side-main button.on { background: color-mix(in srgb, var(--c) 14%, var(--card)); color: var(--ink); }
+.side-sec { display: flex; flex-direction: column; gap: 2px; margin-top: 10px; }
+.side-sec-h { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; font-size: 14px; font-weight: 700; color: var(--ink2); border-radius: 10px; }
+.side-sec-h:hover { background: var(--fill); }
+.side-cats { display: flex; flex-direction: column; gap: 1px; }
+.side .side-cats button { height: 40px; font-size: 14.5px; }
+.side .side-cats button .tab-ic { position: relative; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 9px; color: #fff;
+  background: linear-gradient(to top right, var(--g1), var(--g2)); }
+.side .side-cats button.on { background: color-mix(in srgb, var(--g1) 14%, var(--card)); color: var(--ink); }
+/* folded to icons (the sidebar button, like iPad) */
+@media (min-width: 900px) {
+  .app.v3 .side.small { --side-w: 76px; width: 76px; padding-left: 10px; padding-right: 10px; }
+  .app.v3:has(.side.small) { --side-w: 76px; }
+  .side.small .tab-label, .side.small .brand span, .side.small .side-pro, .side.small .side-me .who, .side.small .side-me > svg:last-child, .side.small .side-sec-h { display: none; }
+  .side.small .side-top { flex-direction: column; }
+  .side.small .side-create { width: 46px; padding: 0; margin: 0 auto 10px; }
+  .side.small .side-main button, .side.small .side-cats button { justify-content: center; padding: 0; }
+}
+/* phones: the same sidebar as a drawer from the left */
+@media (max-width: 899px) {
+  .app.v3 .side.drawer-open { display: flex; flex-direction: column; gap: 6px; position: fixed; left: 0; top: 0; bottom: 0; width: min(300px, 84vw); z-index: 70; overflow-y: auto;
+    padding: max(16px, var(--sa-top)) 12px max(16px, var(--sa-bottom)); background: color-mix(in srgb, var(--card) 94%, transparent); backdrop-filter: blur(20px);
+    border-right: 1px solid var(--line); box-shadow: 10px 0 40px rgba(0,0,0,.2); animation: drawer-in .28s var(--ease-out); }
+  .side.drawer-open .side-toggle { display: none; }
+  .drawer-bg { position: fixed; inset: 0; z-index: 69; background: rgba(10, 8, 20, .36); animation: fade .2s; }
+}
+@keyframes drawer-in { from { transform: translateX(-100%); } to { transform: none; } }
+.native-android .side.drawer-open { width: min(320px, 86vw); }
+
+/* ---------- Sign in with Google: our own button (Google's branding guidelines: white, the G, "Continue with Google") ---------- */
+.g-btn { display: inline-flex; align-items: center; justify-content: center; gap: 12px; width: 100%; max-width: 360px; height: 48px; padding: 0 18px; border-radius: 999px;
+  background: #fff; color: #1F1F1F; border: 1px solid #747775; font: 600 15.5px/1 Roboto, var(--font); letter-spacing: .01em; transition: background .15s, box-shadow .15s; }
+.g-btn:hover { background: #F7F8FA; box-shadow: 0 1px 3px rgba(60,64,67,.3); }
+.g-btn:disabled { opacity: .7; }
+:root[data-theme="dark"] .g-btn { background: #131314; color: #E3E3E3; border-color: #8E918F; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .g-btn { background: #131314; color: #E3E3E3; border-color: #8E918F; } }
+
+/* ---------- motion: tabs cross-fade (View Transitions), cards rise in ---------- */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .22s; animation-timing-function: cubic-bezier(.22, 1, .36, 1); }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.home4 .sum-tile, .home4 .gm-card, .home4 .art-card, .browse-tile { animation: rise .45s var(--ease-out) both; }
+.home4 .sum-grid > :nth-child(2), .browse-grid > :nth-child(2) { animation-delay: .03s; } .home4 .sum-grid > :nth-child(3), .browse-grid > :nth-child(3) { animation-delay: .06s; }
+.home4 .sum-grid > :nth-child(4), .browse-grid > :nth-child(4) { animation-delay: .09s; } .home4 .sum-grid > :nth-child(5), .browse-grid > :nth-child(5) { animation-delay: .12s; }
+.home4 .sum-grid > :nth-child(n+6), .browse-grid > :nth-child(n+6) { animation-delay: .15s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .app.v3::before, .home4 .sum-tile, .home4 .gm-card, .home4 .art-card, .browse-tile, .side.drawer-open, .drawer-bg { animation: none !important; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none !important; }
+}

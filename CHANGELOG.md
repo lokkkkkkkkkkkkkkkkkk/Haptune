@@ -1,5 +1,24 @@
 # Changelog
 
+## Part 4: Home, Browse, Google sign-in that finishes, back to Haptune (November 2026)
+- **Google sign-in finishes.** The "Continue as …" button was Google's iframe, which hands the answer back from a popup;
+  when the browser blocks that hand-back nothing happens. Haptune now has its own **Continue with Google** button that
+  opens Google's sign-in window (OAuth code, checked by the server at `/c/auth/google/code`). If the window can't open
+  it goes to Google in the same tab and comes back (`/c/auth/google/start` → `/callback` → `/finish`); the Android app
+  uses the same path in the phone's browser and pairs itself. Errors are said in words (for example "only test users
+  can sign in while the Google app is in Testing"). SETUP §3f lists the two console settings everyone-sign-in needs.
+- **Home** (was Summary), after Apple Health: profile header with date and streak, a status card, Pinned tiles with
+  Edit, "Show all" into **Browse**, "Get more from Haptune" cards and short guides. The rings are gone.
+- **Browse**: search plus colour category tiles for every part of Haptune.
+- **Sidebar** with Home / Friends / Browse and a folding Categories list; it shrinks to an icon rail. On phones the
+  same list opens as a drawer from the side.
+- **Background**: a slow, soft colour wash instead of plain white or black (stops for reduced motion).
+- **Motion**: tab changes use the browser's View Transitions; lists animate with AutoAnimate (MIT, 3 KB).
+- **Name back to Haptune** everywhere (app, site, Android label, server mails). The Android App ID stays
+  `com.sloky.melovyn`, so installed copies update.
+- **Search**: clearer title and description, WebSite structured data with alternate names, absolute favicon links
+  (48, 96, 192 px and SVG) so Google can show the icon.
+
 ## Part 3: Summary, one-tap Google, the microphone, brand, Melovyn 4 look (November 2026)
 - **Play Along hears you again.** Two causes found and fixed in the detector (`core/detect.js`): playing (or a count-in)
   while the room was measured made it deaf to that instrument, and phone microphones with their gain control off

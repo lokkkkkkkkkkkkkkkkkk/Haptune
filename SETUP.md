@@ -1,4 +1,4 @@
-# Putting Melovyn online: what only you can do
+# Putting Haptune online: what only you can do
 
 The code is ready. These steps need your accounts, so they are yours. Do them in this order.
 
@@ -28,8 +28,8 @@ around it; **A** takes two minutes:
    `CLOUDFLARE_ACCOUNT_ID` (on the right of the Cloudflare dashboard home). Every push then also publishes there.
 
 ## 3. Sign in with Google (teachers, students and Stage need an account)
-1. https://console.cloud.google.com → create a project "Melovyn" → **APIs & Services → OAuth consent screen**:
-   External, app name Melovyn, your support email, authorised domain `haptune.name.my`, scopes: email, profile, openid.
+1. https://console.cloud.google.com → create a project "Haptune" → **APIs & Services → OAuth consent screen**:
+   External, app name Haptune, your support email, authorised domain `haptune.name.my`, scopes: email, profile, openid.
 2. **Credentials → Create credentials → OAuth client ID → Web application**. Authorised JavaScript origins:
    `https://haptune.name.my` and `https://www.haptune.name.my` (and `http://localhost:8080` for testing). No redirect URI needed.
 3. Copy the **Client ID** (it ends in `.apps.googleusercontent.com`; it is public, not a secret).
@@ -37,6 +37,25 @@ around it; **A** takes two minutes:
 5. Re-run **Actions → server** and **Actions → Web app (GitHub Pages)** (or push anything): the website shows
    "Continue with Google" and the server checks it. The Android app signs in through the website with a code.
 Until this is done people can still make an account with a username and password.
+
+### 3f. Google sign-in that works for everyone (fixes "Continue as … does nothing")
+Haptune no longer uses Google's "Continue as …" button (an iframe that hands the answer back from a popup; some
+browsers block that hand-back, so the click opened and closed Google's window and nothing happened). The
+**Continue with Google** button now opens Google's own sign-in window and the server checks the answer.
+1. Google Cloud → **Google Auth Platform → Clients → your Web client**:
+   - *Authorised JavaScript origins*: `https://haptune.name.my`
+   - *Authorised redirect URIs*: add `https://haptune-lok.fly.dev/c/auth/google/callback` (used when a popup is
+     blocked, and by the Android app, which signs in through the phone's browser). Save.
+2. **Audience**: while the status is **Testing**, only the Google accounts in *Test users* can sign in (others see
+   "access blocked"; Haptune now says so). To let **everyone** sign in, press **Publish app** (In production).
+   Signing in asks only for name and email, which needs no Google review. Calendar and Contacts are asked for
+   separately, after sign-in; until Google has verified them, people see Google's "unverified app" notice there.
+3. Fly secrets: `GOOGLE_CLIENT_IDS` must start with this Web client's ID, and `GOOGLE_CLIENT_SECRET` must be this
+   same client's secret.
+4. Check: open `https://haptune-lok.fly.dev/c/auth/google/status`: it should say `"configured": true` and show the
+   callback address from step 1.
+5. Developer mode: `HAPTUNE_OWNER_EMAILS` must be the Gmail you sign in with (e.g. the one on the "Continue with
+   Google" screen). Settings → "Why can't I open Developer mode?" tells you which email the server sees.
 
 ### 3b. Google Calendar + Meet, Drive and Contacts (class sessions, Save to Drive, invite from Contacts)
 Each feature asks people only for the one permission it needs, when they first use it. To switch them on:
@@ -55,7 +74,7 @@ Without these, everything else works; the Connections screen says Google connect
 
 ### 3c. Email for class notices (optional)
 Announcements, new assignments and grades are always in the app's notifications. To also email them:
-`fly secrets set SMTP_HOST=smtp.gmail.com SMTP_PORT=587 SMTP_USER=you@gmail.com SMTP_PASSWORD=<app password> SMTP_FROM="Melovyn <you@gmail.com>" -a haptune-lok`
+`fly secrets set SMTP_HOST=smtp.gmail.com SMTP_PORT=587 SMTP_USER=you@gmail.com SMTP_PASSWORD=<app password> SMTP_FROM="Haptune <you@gmail.com>" -a haptune-lok`
 (for Gmail, make an **App password** under Google Account → Security → 2-Step Verification).
 
 ### 3d. Verified teachers
@@ -90,8 +109,8 @@ To approve a music school's teachers at once, list its email domains:
 3. **URL inspection** → `https://haptune.name.my/` → **Request indexing**; do the same for `/teachers.html`,
    `/sheet-music-writer.html` and `/play-along.html`.
 New sites take days to a few weeks to appear. What helps most after that: links to the site from music schools,
-teachers' pages, your social media and the Google Play listing, and a name people search for. Melovyn is a new word, so
-searches for "Melovyn" will find you quickly; generic words like "sheet music app" take longer.
+teachers' pages, your social media and the Google Play listing, and a name people search for. Haptune is a new word, so
+searches for "Haptune" will find you quickly; generic words like "sheet music app" take longer.
 
 ## 5. The server (Fly)
 Check it is alive at `https://haptune-lok.fly.dev/health`.
@@ -125,11 +144,11 @@ Prices are sent with each checkout (RM 14.90 / 99.90 for Plus, RM 29.90 / 229.90
    ```bash
    fly secrets set HAPTUNE_OWNER_EMAILS=you@gmail.com -a haptune-lok
    ```
-   Then sign in to Melovyn with **that Google account**. (Once an owner is set, the old developer code no longer works;
+   Then sign in to Haptune with **that Google account**. (Once an owner is set, the old developer code no longer works;
    accounts that used it stay developers until you revoke them in Access.)
 2. **Me → Developer mode**: the first time it asks you to set up 2-step verification with an authenticator app
    (Google Authenticator, Microsoft Authenticator, 1Password). Save the recovery codes it shows. After that, each
-   switch-on asks for a code and lasts 8 hours on that device. With it off you use Melovyn like everyone else.
+   switch-on asks for a code and lasts 8 hours on that device. With it off you use Haptune like everyone else.
 3. The dashboard: **Overview** (people active, sign-ups, sessions, practice, retention, devices, countries), **Users**
    (search, one person's timeline, give a plan, verify a teacher, suspend, message, export, delete), **Activity**
    (live feed and where people drop out), **Features** (time per screen; switch unfinished features off or to Beta
@@ -141,11 +160,11 @@ Prices are sent with each checkout (RM 14.90 / 99.90 for Plus, RM 29.90 / 229.90
    Settings, download their data and delete their account. Raw events are kept 180 days, then only daily totals.
 
 ## 9. Google Play
-Follow `web/ANDROID.md`. The app is now **Melovyn** with the app ID **`com.sloky.melovyn`** (changed from the earlier test IDs before anything was published;
+Follow `web/ANDROID.md`. The app is now **Haptune** with the app ID **`com.sloky.melovyn`** (changed from the earlier test IDs before anything was published;
 it can never change once it is on Google Play). **Check before uploading:** if you had already created an app in the Play
 Console under the old ID, tell me and I will switch the ID back. In short:
-1. Play Console account (US$25, one time) → **Create app** "Melovyn", category *Education*.
-2. Make the upload key and add the four `HAPTUNE_KEYSTORE…` secrets → the next build makes `Melovyn.aab`.
+1. Play Console account (US$25, one time) → **Create app** "Haptune", category *Education*.
+2. Make the upload key and add the four `HAPTUNE_KEYSTORE…` secrets → the next build makes `Haptune.aab`.
 3. Upload it to **Testing → Closed testing**, invite 12+ testers, wait 14 days (Google's rule for new personal accounts).
 4. Store listing text is in `web/ANDROID.md`; privacy policy URL: `https://haptune.name.my/privacy.html`.
 5. Data safety form: the app collects name, email (Google sign-in), audio recordings (only when sent to a teacher or

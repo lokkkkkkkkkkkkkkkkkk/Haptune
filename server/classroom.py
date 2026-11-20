@@ -109,7 +109,7 @@ def send_email(to: list[str], subject: str, body: str) -> int:
     if not host or not to:
         return 0
     msg = EmailMessage()
-    msg["From"] = os.environ.get("SMTP_FROM", "Melovyn <no-reply@haptune.name.my>")
+    msg["From"] = os.environ.get("SMTP_FROM", "Haptune <no-reply@haptune.name.my>")
     msg["Bcc"] = ", ".join(to)
     msg["Subject"] = subject[:200]
     msg.set_content(body[:8000])
@@ -368,7 +368,7 @@ class InviteIn(BaseModel):
 
 @router.post("/classes/{cid}/invite")
 def invite(cid: str, body: InviteIn, me: dict = Depends(current_user)):
-    """Invites people by email: anyone with a Melovyn account on that email gets a notification; an email goes
+    """Invites people by email: anyone with a Haptune account on that email gets a notification; an email goes
     out to all when SMTP is set up. The reply always has the join link and a WhatsApp share link as well."""
     from urllib.parse import quote
     emails = sorted({e.strip().lower() for e in body.emails if "@" in e and len(e) <= 200})
@@ -379,7 +379,7 @@ def invite(cid: str, body: InviteIn, me: dict = Depends(current_user)):
         _require(c, cid, me["id"], "teacher")
         cl = c.execute(select(classes.c.name, classes.c.join_code).where(classes.c.id == cid)).mappings().first()
         link = f"{site}/app/#join/{cl['join_code']}"
-        text = f"Join my class \"{cl['name']}\" on Melovyn: {link} (code {cl['join_code']})"
+        text = f"Join my class \"{cl['name']}\" on Haptune: {link} (code {cl['join_code']})"
         found = c.execute(select(A.accounts.c.user_id).where(func.lower(A.accounts.c.email).in_(emails))).scalars().all()
         for uid in found:
             A.notify(c, uid, "class_invite", class_id=cid, class_name=cl["name"], code=cl["join_code"])
@@ -591,7 +591,7 @@ def add_session(cid: str, body: SessionIn, me: dict = Depends(current_user)):
     ev = {"event_id": "", "meet_url": ""}
     if G.has(me["id"], "calendar"):
         ev = G.calendar_event(me["id"], title=f"{cname}: {body.title}", start=start, minutes=body.minutes,
-                              description="A Melovyn class session.", attendees=emails, meet=body.meet)
+                              description="A Haptune class session.", attendees=emails, meet=body.meet)
     sid = str(uuid.uuid4())
     with engine().begin() as c:
         c.execute(insert(sessions_t).values(id=sid, class_id=cid, title=body.title.strip(), start=start, minutes=body.minutes, meet_url=ev["meet_url"],
@@ -673,7 +673,7 @@ def ics_text(cal_name: str, items: list[dict]) -> str:
     stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     fmt = lambda t: time.strftime("%Y%m%dT%H%M%SZ", time.gmtime(t))  # noqa: E731
     esc = lambda x: str(x).replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")  # noqa: E731
-    out = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Melovyn//Classes//EN", "CALSCALE:GREGORIAN", f"X-WR-CALNAME:{esc(cal_name)}"]
+    out = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Haptune//Classes//EN", "CALSCALE:GREGORIAN", f"X-WR-CALNAME:{esc(cal_name)}"]
     for s in items:
         out += ["BEGIN:VEVENT", f"UID:{s['id']}@melovyn", f"DTSTAMP:{stamp}", f"DTSTART:{fmt(s['start'])}", f"DTEND:{fmt(s['start'] + s['minutes'] * 60)}",
                 f"SUMMARY:{esc(s['title'])}", *( [f"URL:{s['meet_url']}", f"LOCATION:{esc(s['meet_url'])}"] if s.get("meet_url") else []),

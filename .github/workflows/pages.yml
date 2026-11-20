@@ -1,4 +1,4 @@
-# Builds the Melovyn web app (web/) and publishes it to GitHub Pages.
+# Builds the Haptune web app (web/) and publishes it to GitHub Pages.
 # One-time setup: Settings -> Pages -> Build and deployment -> Source: GitHub Actions.
 name: Web app (GitHub Pages)
 

@@ -19,7 +19,7 @@ let state = {
     server: '', showRoles: true, chordView: 'guitar', syncMs: 0, haptics: true,
   },
   plus: false,          // a paid plan (Plus, Pro) or the developer, from the account on the server
-  me: null,             // the Melovyn account (community, classes, plan), see account.js
+  me: null,             // the Haptune account (community, classes, plan), see account.js
   communitySeg: 'home',
   pieces: [],
   history: [],
@@ -45,7 +45,20 @@ export function useApp() {
 // ---------- navigation ----------
 const TAB_IDS = ['summary', 'library', 'community', 'academy', 'write', 'me'];
 /** Goes to a tab; anything else (improvise, tools...) is a screen opened on top of the current tab. */
-export function go(tab) { if (TAB_IDS.includes(tab)) setState({ tab }); else push(tab); }
+/**
+ * Switching tabs cross-fades with the browser's View Transitions (no library: Chrome, Edge, Safari 18, Firefox
+ * 144+; others switch at once, as does anyone who asks for reduced motion).
+ */
+export function withTransition(fn) {
+  const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce || typeof document === 'undefined' || !document.startViewTransition || document.hidden) { fn(); return; }
+  try { document.startViewTransition(() => { fn(); return new Promise((r) => setTimeout(r, 0)); }); } catch { fn(); }
+}
+export function go(tab) {
+  if (!TAB_IDS.includes(tab)) { push(tab); return; }
+  if (state.tab === tab) { setState({ tab }); return; }
+  withTransition(() => setState({ tab }));
+}
 /** Learn: courses, classes, tutors. */
 export function goLearn() { setState({ tab: 'academy' }); }
 /** Hooks the app shell fills in (keeps this file free of network code). */
@@ -313,12 +326,12 @@ const fromB64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0)).buffer;
 export async function makeBackup() {
   const pieces = (await db.all('pieces')).map((p) => (p.pdf ? { ...p, pdf: toB64(p.pdf) } : p));
   const history = await db.all('history');
-  return JSON.stringify({ app: 'Melovyn', version: 1, created: new Date().toISOString(), settings: state.settings, progress: state.progress, pieces, history });
+  return JSON.stringify({ app: 'Haptune', version: 1, created: new Date().toISOString(), settings: state.settings, progress: state.progress, pieces, history });
 }
 
 export async function restoreBackup(text) {
   const data = JSON.parse(text);
-  if (!['Melovyn', 'Haptune'].includes(data.app)) throw new Error('This is not a Melovyn backup.');
+  if (!['Haptune', 'Haptune'].includes(data.app)) throw new Error('This is not a Haptune backup.');
   for (const p of data.pieces || []) await db.put('pieces', p.pdf ? { ...p, pdf: fromB64(p.pdf) } : p);
   for (const h of data.history || []) await db.put('history', h);
   if (data.progress) saveProgress({ ...state.progress, ...data.progress });

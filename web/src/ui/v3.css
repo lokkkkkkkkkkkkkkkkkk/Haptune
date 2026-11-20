@@ -1,4 +1,4 @@
-/* Melovyn look (loaded after styles.css and theme.css).
+/* Haptune look (loaded after styles.css and theme.css).
    One idea: an app, not a web page. A sidebar on computers and a tab bar on phones, a colour for each place
    (Practice violet, Learn amber, Write teal, Stage pink, Library blue), big friendly type, soft cards that
    lift a little under the pointer, and the one thing to do on each page shown first and largest. */
@@ -449,7 +449,7 @@ button.card, .card[role="button"], .lift { transition: transform .22s var(--spri
 .signin-card > div span { color: var(--ink2); font-size: 14px; }
 .signed-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; color: var(--green); font-weight: 700; font-size: 14px; padding: 0 4px; }
 
-/* ---------------- Melovyn v3: the feel of Apple's own apps ----------------
+/* ---------------- Haptune v3: the feel of Apple's own apps ----------------
    Large titles that become a small frosted title bar on scroll, iOS search fields, three big tiles on Home,
    grouped inset lists with chevrons, More tools folded at the bottom, and spring push/pop between screens. */
 .lt-bar { position: sticky; top: 0; z-index: 30; height: 46px; margin: 0 -16px -46px; padding: 0 8px;

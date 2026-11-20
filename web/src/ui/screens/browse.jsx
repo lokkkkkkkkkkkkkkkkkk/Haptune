@@ -1,0 +1,39 @@
+// Browse (Apple Health's Browse): a search box, then every part of Haptune as a colour tile, then the everyday
+// settings. The same places as the sidebar's Categories (places.js).
+import { useState } from 'preact/hooks';
+import { push, openSheet } from '../state.js';
+import { t } from '../../core/i18n.js';
+import { Icon, List, Row } from '../components.jsx';
+import { NavBar } from './common.jsx';
+import { PLACES, gradOf } from '../places.js';
+import { tick } from '../native.js';
+
+export function BrowseView() {
+  const [q, setQ] = useState('');
+  const find = (e) => { e.preventDefault(); if (q.trim()) push('find', { q: q.trim() }); };
+  return (
+    <div class="scroll" id="browse">
+      <NavBar title={t('browse')} backLabel={t('homeTab')} color="teal" />
+      <div class="wrap">
+        <form class="browse-search" onSubmit={find} role="search">
+          <Icon name="search" size={18} />
+          <input id="browse-q" type="search" value={q} onInput={(e) => setQ(e.currentTarget.value)} placeholder={t('browseSearch')} aria-label={t('browseSearch')} />
+        </form>
+        <h2 class="browse-h">{t('categoriesT')}</h2>
+        <div class="browse-grid" id="browse-grid">
+          {PLACES.map((p) => (
+            <button type="button" key={p.id} class="browse-tile" id={`browse-${p.id}`} style={{ background: gradOf(p) }} onClick={() => { tick(); p.to(); }}>
+              <Icon name={p.icon} size={30} stroke={2} /><strong>{t(p.label)}</strong>
+            </button>
+          ))}
+        </div>
+        <h2 class="browse-h">{t('everydayT')}</h2>
+        <List>
+          <Row icon="gear" color="gray" title={t('settings')} onClick={() => openSheet('account')} />
+          <Row icon="link" color="blue" title={t('connectionsT')} onClick={() => openSheet('connections')} />
+          <Row icon="crown" color="orange" title={t('seePlans')} onClick={() => openSheet('plans')} />
+        </List>
+      </div>
+    </div>
+  );
+}

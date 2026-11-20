@@ -30,7 +30,7 @@ p{position:absolute;left:70px;top:420px;margin:0;font-size:24px;color:#c9c6d8;wi
 .ph img{width:100%;display:block}
 .a{left:690px;top:90px;transform:rotate(-6deg)}.b{left:910px;top:40px;transform:rotate(5deg)}
 </style></head><body>
-<div class="brand"><img src="data:image/png;base64,${icon}">Melovyn</div>
+<div class="brand"><img src="data:image/png;base64,${icon}">Haptune</div>
 <h1>Get the sheet. <em>Practise it</em> with an app that listens.</h1>
 <p>Marks every wrong note, even in a noisy room. Learn with your teacher, create and share on Stage.</p>
 <div class="chips"><span>🎹 Practice</span><span>🎓 Learn</span><span>✏️ Create</span><span>Free</span></div>

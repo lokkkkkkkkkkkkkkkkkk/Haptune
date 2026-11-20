@@ -45,3 +45,14 @@ What we took, and from where (all MIT licensed; values copied, no code dependenc
 - **Guides instead of explanations**: a three-step "Welcome" card on Summary for someone new (find a song, play
   along, join your class), closed for good with one tap; Play Along shows a live microphone level and, after 6
   silent seconds, says what to do; Settings → "Why can't I open Developer mode?" says what the server sees.
+
+
+## Part 4 (November 2026)
+- Reference: Apple Health on iPad (Summary with profile header, Pinned + Edit, Show All, Get More cards, Articles;
+  Browse with colour category tiles; sidebar with Summary / Sharing / Browse and folding categories).
+- [@formkit/auto-animate](https://github.com/formkit/auto-animate) (MIT, ~3 KB): one call per list adds smooth
+  add/remove/move animation; used for pinned tiles, Get more cards and sidebar categories.
+- [View Transitions API](https://developer.mozilla.org/docs/Web/API/View_Transition_API) (built into Chrome, Edge,
+  Safari 18, Android WebView): cross-fades tab changes without a library; skipped for reduced motion.
+- Considered and not used: Framer Motion / Motion One (React-first or larger), GSAP (licence and size), Lottie
+  (needs authored animation files).

@@ -10,9 +10,9 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const root = path.dirname(new URL(import.meta.url).pathname);
-// the name and icon (web/brand.json, see tools/brand.cjs): a new name replaces "Melovyn" in every text
+// the name and icon (web/brand.json, see tools/brand.cjs): a new name replaces "Haptune" in every text
 const BRAND = JSON.parse(fs.readFileSync(path.join(root, 'brand.json'), 'utf8'));
-const rename = (text) => (BRAND.name && BRAND.name !== 'Melovyn' ? text.replaceAll('Melovyn', BRAND.name) : text);
+const rename = (text) => (BRAND.name && BRAND.name !== 'Haptune' ? text.replaceAll('Haptune', BRAND.name) : text);
 const BRAND_SVG = (() => { try { return fs.readFileSync(path.join(root, BRAND.icon || 'assets/brand/icon.svg'), 'utf8'); } catch { return ''; } })();
 const out = (...p) => path.join(root, 'dist', ...p);
 fs.rmSync(out(), { recursive: true, force: true });
@@ -37,8 +37,8 @@ const englishOnly = {
   setup(b) {
     b.onLoad({ filter: /src[\\/]core[\\/]i18n-\w+\.js$/ }, async (args) => {
       const mod = await import(pathToFileURL(args.path).href);
-      const code = Object.entries(mod).map(([name, table]) => `export const ${name} = ${JSON.stringify(Object.fromEntries(Object.entries(table).map(([k, row]) => [k, [row[0]]])))};`).join('\n');
-      return { contents: rename(code), loader: 'js' };
+      const code = Object.entries(mod).map(([name, table]) => `export const ${name} = ${JSON.stringify(Object.fromEntries(Object.entries(table).map(([k, row]) => [k, [rename(row[0])]])))};`).join('\n');
+      return { contents: code, loader: 'js' };
     });
   },
 };
@@ -62,8 +62,8 @@ const START = (() => {
 })();
 const CHUNKS = slim.outputFiles.filter((f) => f !== slimMain && f.path.endsWith('.js')).map((f) => path.relative(out('pages', 'app'), f.path).split(path.sep).join('/'));
 const LANG_PACKS = ['ms', 'zh-Hans', 'zh-Hant'];
-// styles.css: layout and every component; theme.css: the Melovyn 2 look on top of it
-const css = ['styles.css', 'theme.css', 'v3.css', 'v4.css'].map((f) => fs.readFileSync(path.join(root, 'src/ui', f), 'utf8')).join('\n');
+// styles.css: layout and every component; theme.css: the Haptune 2 look on top of it
+const css = ['styles.css', 'theme.css', 'v3.css', 'v4.css', 'v5.css'].map((f) => fs.readFileSync(path.join(root, 'src/ui', f), 'utf8')).join('\n');
 const VERSION = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version;
 // The server address is built in (GitHub variable HAPTUNE_SERVER_URL -> HAPTUNE_SERVER), so people never type it.
 const SERVER = (process.env.HAPTUNE_SERVER || '').trim().replace(/\/+$/, '');
@@ -77,10 +77,10 @@ const PLAY = (process.env.HAPTUNE_PLAY_URL || '').trim();           // the Googl
 const GOOGLE = (process.env.HAPTUNE_GOOGLE_CLIENT_ID || '').trim();
 // Sign in with Apple on the web: the Services ID from the Apple Developer account (GitHub variable APPLE_SERVICES_ID).
 const APPLE = (process.env.HAPTUNE_APPLE_SERVICES_ID || '').trim();
-const CONFIG = (extra) => JSON.stringify({ version: VERSION, build: BUILD, server: SERVER, site: SITE, play: PLAY, google: GOOGLE, apple: APPLE, ...extra });
+const CONFIG = (extra) => JSON.stringify({ brand: BRAND.name, version: VERSION, build: BUILD, server: SERVER, site: SITE, play: PLAY, google: GOOGLE, apple: APPLE, ...extra });
 
 // ---- artifact page (the publish skeleton adds doctype/head/body) ----
-const artifact = `<title>Melovyn</title>
+const artifact = `<title>Haptune</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Music practice coach: exact imports, key change, chords, AI improviser and a teaching academy.">
 <style>${css}</style>
@@ -96,15 +96,15 @@ const page = (config, { pwa }) => `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Melovyn: practise, learn and write sheet music</title>
-<meta name="description" content="Melovyn listens while you play and marks every wrong note. Teachers run classes and hear their students' practice. Write and scan sheet music, and share it on Stage.">
+<title>Haptune: practise, learn and write sheet music</title>
+<meta name="description" content="Haptune listens while you play and marks every wrong note. Teachers run classes and hear their students' practice. Write and scan sheet music, and share it on Stage.">
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#F5F5FA" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0E0D15" media="(prefers-color-scheme: dark)">
 ${pwa ? `<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Melovyn">
+<meta name="apple-mobile-web-app-title" content="Haptune">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 ` : ''}<link rel="icon" href="icons/icon-48.png" sizes="48x48"><link rel="icon" href="icons/icon-192.png" sizes="192x192">
@@ -127,8 +127,8 @@ fs.mkdirSync(app('i18n'), { recursive: true });
 {
   const { S, INSTR } = allRows();
   LANG_PACKS.forEach((l, j) => {
-    const pick = (table) => Object.fromEntries(Object.entries(table).filter(([, row]) => row[j + 1]).map(([k, row]) => [k, row[j + 1]]));
-    fs.writeFileSync(app('i18n', `${l}.json`), rename(JSON.stringify({ s: pick(S), i: pick(INSTR) })));
+    const pick = (table) => Object.fromEntries(Object.entries(table).filter(([, row]) => row[j + 1]).map(([k, row]) => [k, rename(row[j + 1])]));
+    fs.writeFileSync(app('i18n', `${l}.json`), JSON.stringify({ s: pick(S), i: pick(INSTR) }));
   });
 }
 fs.copyFileSync(path.join(root, 'node_modules/verovio/dist/verovio-toolkit-wasm.js'), app('vendor', 'verovio-toolkit-wasm.js'));
@@ -158,7 +158,7 @@ fs.writeFileSync(app('manifest.webmanifest'), JSON.stringify({
   icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }, { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' }, { src: 'icons/icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }],
 }, null, 2));
 const cacheList = ['./', 'index.html', `app.js?v=${BUILD}`, ...CHUNKS, ...LANG_PACKS.map((l) => `i18n/${l}.json?v=${BUILD}`), 'manifest.webmanifest', 'fonts/jakarta-latin.woff2', 'vendor/verovio-toolkit-wasm.js', 'vendor/pdf.min.js', 'vendor/pdf.worker.min.js', 'icons/apple-touch-icon.png', 'icons/icon-192.png'];
-fs.writeFileSync(app('sw.js'), `// Offline cache for Melovyn (cache-first for the app shell, network-first for index.html)
+fs.writeFileSync(app('sw.js'), `// Offline cache for Haptune (cache-first for the app shell, network-first for index.html)
 const CACHE = 'melovyn-app-${BUILD}';
 const FILES = ${JSON.stringify(cacheList)};
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting())); });

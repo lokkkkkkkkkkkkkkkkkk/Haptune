@@ -80,7 +80,7 @@ export const dateLabel = (lang) => {
   try { return new Date().toLocaleDateString(lang, { weekday: 'long', day: 'numeric', month: 'long' }); } catch { return ''; }
 };
 
-/** The Melovyn mark: Hapi, the app icon (made from web/brand.json by tools/brand.cjs, so it follows a new icon). */
+/** The Haptune mark: Hapi, the app icon (made from web/brand.json by tools/brand.cjs, so it follows a new icon). */
 export function Logo({ size = 30 }) {
   return <img class="logo-svg" src="icons/icon-96.png" width={size} height={size} alt="" style={{ borderRadius: Math.round(size * 0.24) }} />;
 }

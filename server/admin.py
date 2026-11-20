@@ -200,7 +200,7 @@ def message(handle: str, body: MessageIn, me: A.Me = Depends(A.require_scope("ma
     sent = 0
     if body.email and acc["email"]:
         import classroom
-        sent = classroom.send_email([acc["email"]], "A message from Melovyn", body.text.strip())
+        sent = classroom.send_email([acc["email"]], "A message from Haptune", body.text.strip())
     return {"ok": True, "emailed": bool(sent)}
 
 
@@ -296,7 +296,7 @@ def grant_access(body: AccessIn, request: Request, me: A.Me = Depends(A.require_
                 after={"scopes": scopes, "expires": expires}, note=body.reason.strip())
     if acc["email"]:
         import classroom
-        classroom.send_email([acc["email"]], "You have developer access to Melovyn",
+        classroom.send_email([acc["email"]], "You have developer access to Haptune",
                              f"The owner gave you developer access ({', '.join(scopes)})" + (f" until {_iso(expires)[:10]}" if expires else "") +
                              ".\n\nTo use it: Me > Developer mode. You'll set up 2-step verification the first time.\n\nReason: " + body.reason.strip())
     return {"ok": True}

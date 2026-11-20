@@ -80,7 +80,7 @@ def _write(path: str, data: bytes, message: str) -> None:
 def get_brand(me: A.Me = Depends(A.require_scope("owner"))):
     """The name and icon now (read from the repository when the server may, else the defaults)."""
     cfg = _cfg()
-    out = {"configured": bool(cfg), "repo": cfg[1] if cfg else "", "name": "Melovyn", "short_name": "Melovyn", "icon_svg": "", "icon_png": ""}
+    out = {"configured": bool(cfg), "repo": cfg[1] if cfg else "", "name": "Haptune", "short_name": "Haptune", "icon_svg": "", "icon_png": ""}
     if cfg:
         _, raw = _read("web/brand.json")
         if raw:

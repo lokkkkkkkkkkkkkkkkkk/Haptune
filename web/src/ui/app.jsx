@@ -5,6 +5,8 @@ import { t } from '../core/i18n.js';
 import { Icon } from './components.jsx';
 import { Logo } from './screens/common.jsx';
 import { HomeView } from './screens/home.jsx';
+import { PLACES, MAIN } from './places.js';
+import { local as storeLocal } from './storage.js';
 import { Cover } from './cover.jsx';
 import { AIChatSheet, AIFab } from './screens/aichat.jsx';
 import { Boundary } from './boundary.jsx';
@@ -85,6 +87,8 @@ const SoundCheckView = lazy(m_soundcheck, 'SoundCheckView');
 const m_report = () => import('./screens/report.jsx');
 const ReportView = lazy(m_report, 'ReportView');
 const m_staff = () => import('./screens/staff.jsx');
+const m_browse = () => import('./screens/browse.jsx');
+const BrowseView = lazy(m_browse, 'BrowseView');
 const TwoStepSheet = lazy(m_staff, 'TwoStepSheet');
 const DevModeSheet = lazy(m_staff, 'DevModeSheet');
 const SessionsSheet = lazy(m_staff, 'SessionsSheet');
@@ -207,7 +211,7 @@ const MoreSheet = lazy(m_social, 'MoreSheet');
 // Me holds your account, plan and settings. On a computer they sit in a sidebar; on a phone four of them are
 // in the tab bar with Write raised in the middle, and Me is the picture at the top of each page.
 export const TABS = [
-  { id: 'summary', icon: 'summary', color: 'violet', label: 'summaryTab' },
+  { id: 'summary', icon: 'home', color: 'violet', label: 'homeTab' },
   { id: 'academy', icon: 'academy', color: 'orange', label: 'hub' },
   { id: 'write', icon: 'pencil', color: 'teal', label: 'create', center: true },
   { id: 'community', icon: 'stage', color: 'pink', label: 'stage' },
@@ -221,7 +225,7 @@ const VIEWS = {
   post: PostView, daily: DailyView, profile: ProfileView, leaderboard: LeaderboardView, notifications: NotificationsView, wallet: WalletView, challenge: ChallengeView,
   editProfile: EditProfileView, help: HelpView, admin: AdminView, adminUser: AdminUserView, find: FindView, newSongs: NewSongsView, soundPage: SoundPageView, guardian: GuardianView, friends: FriendsView, messages: MessagesView, chat: ChatView, duel: DuelView,
   __crash: () => { throw new Error('test crash'); },           // the click-through test checks the error boundary with it
-  practice: PracticeView, soundCheck: SoundCheckView, report: ReportView, sound: SoundView, vary: VaryView, chordEditor: ChordEditorView, learnMore: (p) => <LearnMoreView {...p} pushed />,
+  browse: BrowseView, practice: PracticeView, soundCheck: SoundCheckView, report: ReportView, sound: SoundView, vary: VaryView, chordEditor: ChordEditorView, learnMore: (p) => <LearnMoreView {...p} pushed />,
 };
 const SHEETS = {
   add: AddSheet, paste: PasteSheet, findSong: FindSongSheet, scale: ScaleSheet, report: ImportReportSheet, chord: ChordSheet, findKey: FindKeySheet,
@@ -239,6 +243,7 @@ const SHEETS = {
 /** Android back button: close a sheet, go back a screen, go Home, then leave the app. */
 function onBack() {
   const st = getState();
+  if (st.drawer) { setState({ drawer: false }); return true; }
   if (st.sheet) { closeSheet(); return true; }
   if (st.stacks[st.tab]?.length) { pop(); return true; }
   if (st.tab !== 'summary') { go('summary'); return true; }
@@ -297,6 +302,8 @@ function openHash() {
   const jn = /^join\/([A-Za-z0-9]{4,12})$/.exec(h);
   if (jn) { go('academy'); openSheet('joinLink', { code: jn[1].toUpperCase() }); history.replaceState(null, '', location.pathname); return; }
   // the app asks the website to sign it in: …/app/#pair=ABCD2345
+  // back from Google's sign-in page: …/app/#gsignin=CODE (or #gsignin_error=…)
+  if (/^gsignin/.test(h)) { import('./google.js').then((G) => G.finishGoogleRedirect(h)); return; }
   // the phone app asks the website to allow Google features for its account: …/app/#gconnect/TICKET/all
   const gc = /^gconnect\/([A-Za-z0-9_-]{20,60})\/(all|calendar|drive|contacts)$/.exec(h);
   if (gc) { history.replaceState(null, '', location.pathname); openSheet('googleTicket', { ticket: gc[1], feature: gc[2] }); return; }
@@ -399,6 +406,10 @@ function App() {
   }, []);
   useEffect(() => { setSyncOffset(s.settings.syncMs || 0); }, [s.settings.syncMs]);
   const visited = useRef(new Set());                    // a tab is built the first time it is opened (faster start)
+  const [sideSmall, setSideSmall] = useState(() => storeLocal.get('sideSmall', false));   // the sidebar folded to icons
+  const [catsOpen, setCatsOpen] = useState(() => storeLocal.get('sideCats', true));       // Categories open
+  const catsRef = useRef(null);
+  useEffect(() => { if (catsRef.current) import('@formkit/auto-animate').then((m) => m.default(catsRef.current)).catch(() => {}); }, [catsOpen]);
   const [soundTap, setSoundTap] = useState(null);       // the phone paused the sound and wants a tap to carry on
   useEffect(() => onAudioProblem(setSoundTap), []);
   const shown = s.stacks[s.tab]?.[s.stacks[s.tab].length - 1]?.view || s.tab;
@@ -422,10 +433,36 @@ function App() {
   const sec = TABS.find((x) => x.id === s.tab)?.color || 'violet';
   return (
     <div class={`app v3 sec-${sec}${immersive ? ' immersive' : ''}${s.nowPlaying && !immersive ? ' has-mini' : ''}`}>
-      <aside class="side" aria-label="Sections">
-        <button type="button" class="brand" onClick={() => { popToRoot('summary'); go('summary'); }}><Logo /><span>Melovyn</span></button>
-        <button type="button" class="side-create" onClick={() => openSheet('newSong')} id="side-newsong"><Icon name="plus" size={18} stroke={2.6} />{t('newSongT')}</button>
-        <nav>{TABS.filter((x) => x.side !== false).map((tab) => tabBtn(tab, 'side'))}</nav>
+      {s.drawer && <div class="drawer-bg" onClick={() => setState({ drawer: false })} aria-hidden="true" />}
+      <aside class={`side${sideSmall ? ' small' : ''}${s.drawer ? ' drawer-open' : ''}`} aria-label="Sections" onClick={(e) => { if (e.target.closest('button') && !e.target.closest('.side-toggle, .side-sec-h')) setState({ drawer: false }); }}>
+        <div class="side-top">
+          <button type="button" class="brand" onClick={() => { popToRoot('summary'); go('summary'); }}><Logo /><span>{globalThis.HAPTUNE_CONFIG?.brand || 'Haptune'}</span></button>
+          <button type="button" class="side-toggle" onClick={() => { const v = !sideSmall; setSideSmall(v); storeLocal.set('sideSmall', v); }} aria-label={t('sidebarToggle')} id="side-toggle"><Icon name="sidebar" size={19} /></button>
+        </div>
+        <button type="button" class="side-create" onClick={() => openSheet('newSong')} id="side-newsong"><Icon name="plus" size={18} stroke={2.6} /><span class="tab-label">{t('newSongT')}</span></button>
+        <nav class="side-main">{MAIN.map((x) => {
+          const on = x.tab ? (s.tab === x.tab && top !== 'browse') : (x.id === 'browse' ? top === 'browse' : top === x.id);
+          return (
+            <button type="button" key={x.id} id={`side-${x.label}`} class={`c-${x.color}${on ? ' on' : ''}`} aria-current={on ? 'page' : undefined}
+              onClick={() => { tick(); if (x.tab) { if (s.tab === x.tab) popToRoot(x.tab); go(x.tab); } else x.to(); }}>
+              <span class="tab-ic"><Icon name={x.icon} size={20} stroke={on ? 2.4 : 2} /></span><span class="tab-label">{t(x.label)}</span>
+            </button>
+          );
+        })}</nav>
+        <div class="side-sec">
+          <button type="button" class="side-sec-h" onClick={() => { const v = !catsOpen; setCatsOpen(v); storeLocal.set('sideCats', v); }} aria-expanded={catsOpen} id="side-cats-toggle">
+            <span class="tab-label">{t('categoriesT')}</span><Icon name="chevronR" size={14} style={{ transform: catsOpen ? 'rotate(90deg)' : 'none', transition: 'transform .2s' }} />
+          </button>
+          {catsOpen && <nav class="side-cats" ref={catsRef}>{PLACES.map((p) => {
+            const on = p.tab && s.tab === p.tab;
+            return (
+              <button type="button" key={p.id} id={`side-${p.label}`} class={`cat${on ? ' on' : ''}`} style={{ '--g1': p.grad[0], '--g2': p.grad[1] }} aria-current={on ? 'page' : undefined}
+                onClick={() => { tick(); if (p.tab && s.tab === p.tab) popToRoot(p.tab); p.to(); }}>
+                <span class="tab-ic"><Icon name={p.icon} size={17} stroke={2.2} />{p.id === 'stage' && s.me?.unread > 0 && <span class="tab-dot" />}</span><span class="tab-label">{t(p.label)}</span>
+              </button>
+            );
+          })}</nav>}
+        </div>
         <div class="side-foot">
           {(tier === 'free' || tier === 'plus') && (
             <button type="button" class="side-pro" onClick={() => openSheet('plans')}>

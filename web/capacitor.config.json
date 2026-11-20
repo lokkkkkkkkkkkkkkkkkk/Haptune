@@ -1,6 +1,6 @@
 {
   "appId": "com.sloky.melovyn",
-  "appName": "Melovyn",
+  "appName": "Haptune",
   "webDir": "dist/native",
   "server": {
     "androidScheme": "https"

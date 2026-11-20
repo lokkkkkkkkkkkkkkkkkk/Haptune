@@ -3,22 +3,22 @@
 export const V11 = {
   // microphone
   micLevel: ['Microphone level', 'Paras mikrofon', '麦克风音量', '麥克風音量'],
-  micQuietHint: ['I can’t hear you yet. Play a little louder or bring the phone closer, and check that Melovyn may use the microphone.', 'Saya belum dapat mendengar anda. Main lebih kuat sedikit atau dekatkan telefon, dan pastikan Melovyn dibenarkan menggunakan mikrofon.', '还没听到你的声音。弹大声一点或把手机放近些，并确认已允许 Melovyn 使用麦克风。', '還沒聽到你的聲音。彈大聲一點或把手機放近些，並確認已允許 Melovyn 使用麥克風。'],
+  micQuietHint: ['I can’t hear you yet. Play a little louder or bring the phone closer, and check that Haptune may use the microphone.', 'Saya belum dapat mendengar anda. Main lebih kuat sedikit atau dekatkan telefon, dan pastikan Haptune dibenarkan menggunakan mikrofon.', '还没听到你的声音。弹大声一点或把手机放近些，并确认已允许 Haptune 使用麦克风。', '還沒聽到你的聲音。彈大聲一點或把手機放近些，並確認已允許 Haptune 使用麥克風。'],
 
   // Google
   onT: ['On', 'Hidup', '已开启', '已開啟'],
   offT: ['Off', 'Mati', '未开启', '未開啟'],
-  gNeedSignIn: ['Sign in with Google first. Then Melovyn can add class sessions to your Calendar, save to Drive and invite from Contacts.', 'Log masuk dengan Google dahulu. Kemudian Melovyn boleh menambah sesi kelas ke Kalendar anda, menyimpan ke Drive dan menjemput daripada Kenalan.', '请先用 Google 登录。之后 Melovyn 就能把课堂加入你的日历、保存到云端硬盘，并从联系人邀请。', '請先用 Google 登入。之後 Melovyn 就能把課堂加入你的日曆、儲存到雲端硬碟，並從聯絡人邀請。'],
+  gNeedSignIn: ['Sign in with Google first. Then Haptune can add class sessions to your Calendar, save to Drive and invite from Contacts.', 'Log masuk dengan Google dahulu. Kemudian Haptune boleh menambah sesi kelas ke Kalendar anda, menyimpan ke Drive dan menjemput daripada Kenalan.', '请先用 Google 登录。之后 Haptune 就能把课堂加入你的日历、保存到云端硬盘，并从联系人邀请。', '請先用 Google 登入。之後 Haptune 就能把課堂加入你的日曆、儲存到雲端硬碟，並從聯絡人邀請。'],
   gAllSet: ['All set: Calendar, Drive and Contacts are connected', 'Siap: Kalendar, Drive dan Kenalan disambungkan', '全部完成：日历、云端硬盘和联系人已连接', '全部完成：日曆、雲端硬碟和聯絡人已連接'],
   gSomeOff: ['Some Google features are off', 'Sesetengah ciri Google dimatikan', '部分 Google 功能未开启', '部分 Google 功能未開啟'],
   gAllowAll: ['Allow with Google', 'Benarkan dengan Google', '用 Google 允许', '用 Google 允許'],
   gManage: ['Manage or remove', 'Urus atau buang', '管理或移除', '管理或移除'],
   gAllowOnSite: ['Finish in the browser that just opened, then come back here.', 'Selesaikan dalam pelayar yang baru dibuka, kemudian kembali ke sini.', '请在刚打开的浏览器中完成，然后回到这里。', '請在剛打開的瀏覽器中完成，然後回到這裡。'],
   gAllowT: ['One more tap', 'Satu ketikan lagi', '再点一下', '再點一下'],
-  gAllowSub: ['Let Melovyn use these with {email}, so everything works without asking again:', 'Benarkan Melovyn menggunakan ini dengan {email}, supaya semuanya berfungsi tanpa ditanya lagi:', '允许 Melovyn 通过 {email} 使用以下功能，之后无需再问：', '允許 Melovyn 透過 {email} 使用以下功能，之後無需再問：'],
-  gAllowPrivacy: ['Melovyn only sees files it makes in Drive and only reads names and emails from Contacts. You can remove this any time in Settings → Connections.', 'Melovyn hanya melihat fail yang dibuatnya dalam Drive dan hanya membaca nama dan e-mel daripada Kenalan. Anda boleh membuangnya bila-bila masa dalam Tetapan → Sambungan.', 'Melovyn 只能看到它在云端硬盘里创建的文件，只读取联系人的姓名和邮箱。你随时可以在 设置 → 连接 中移除。', 'Melovyn 只能看到它在雲端硬碟裡建立的檔案，只讀取聯絡人的姓名和電子郵件。你隨時可以在 設定 → 連接 中移除。'],
-  gBackToApp: ['You can close this page and go back to the Melovyn app.', 'Anda boleh tutup halaman ini dan kembali ke aplikasi Melovyn.', '你可以关闭此页面，回到 Melovyn App。', '你可以關閉此頁面，回到 Melovyn App。'],
-  gTicketFor: ['For {name} ({email}) in the Melovyn app:', 'Untuk {name} ({email}) dalam aplikasi Melovyn:', '为 Melovyn App 中的 {name}（{email}）：', '為 Melovyn App 中的 {name}（{email}）：'],
+  gAllowSub: ['Let Haptune use these with {email}, so everything works without asking again:', 'Benarkan Haptune menggunakan ini dengan {email}, supaya semuanya berfungsi tanpa ditanya lagi:', '允许 Haptune 通过 {email} 使用以下功能，之后无需再问：', '允許 Haptune 透過 {email} 使用以下功能，之後無需再問：'],
+  gAllowPrivacy: ['Haptune only sees files it makes in Drive and only reads names and emails from Contacts. You can remove this any time in Settings → Connections.', 'Haptune hanya melihat fail yang dibuatnya dalam Drive dan hanya membaca nama dan e-mel daripada Kenalan. Anda boleh membuangnya bila-bila masa dalam Tetapan → Sambungan.', 'Haptune 只能看到它在云端硬盘里创建的文件，只读取联系人的姓名和邮箱。你随时可以在 设置 → 连接 中移除。', 'Haptune 只能看到它在雲端硬碟裡建立的檔案，只讀取聯絡人的姓名和電子郵件。你隨時可以在 設定 → 連接 中移除。'],
+  gBackToApp: ['You can close this page and go back to the Haptune app.', 'Anda boleh tutup halaman ini dan kembali ke aplikasi Haptune.', '你可以关闭此页面，回到 Haptune App。', '你可以關閉此頁面，回到 Haptune App。'],
+  gTicketFor: ['For {name} ({email}) in the Haptune app:', 'Untuk {name} ({email}) dalam aplikasi Haptune:', '为 Haptune App 中的 {name}（{email}）：', '為 Haptune App 中的 {name}（{email}）：'],
 
   // signed in / out
   viaGoogle: ['Signed in with Google', 'Log masuk dengan Google', '已用 Google 登录', '已用 Google 登入'],
@@ -51,12 +51,12 @@ export const V11 = {
   gNeedSignInShort: ['Sign in with Google to connect', 'Log masuk dengan Google untuk menyambung', '用 Google 登录以连接', '用 Google 登入以連接'],
   discoverMusic: ['Discover music', 'Teroka muzik', '发现音乐', '發現音樂'],
   summaryTab: ['Summary', 'Ringkasan', '摘要', '摘要'],
-  guideT: ['Welcome to Melovyn', 'Selamat datang ke Melovyn', '欢迎来到 Melovyn', '歡迎來到 Melovyn'],
+  guideT: ['Welcome to Haptune', 'Selamat datang ke Haptune', '欢迎来到 Haptune', '歡迎來到 Haptune'],
   guideSub: ['Three steps to get going. Tap one to start.', 'Tiga langkah untuk bermula. Ketik satu untuk mula.', '三步上手，点一项开始。', '三步上手，點一項開始。'],
   guide1T: ['Find a song', 'Cari lagu', '找一首歌', '找一首歌'],
   guide1S: ['Search 6,000+ free pieces or add your own PDF or photo', 'Cari 6,000+ karya percuma atau tambah PDF atau foto anda', '搜索 6000 多首免费乐曲，或添加你的 PDF/照片', '搜尋 6000 多首免費樂曲，或加入你的 PDF/照片'],
   guide2T: ['Play along', 'Main bersama', '跟着弹', '跟著彈'],
-  guide2S: ['Tap the mic: Melovyn listens and turns each right note green', 'Ketik mikrofon: Melovyn mendengar dan menghijaukan setiap not yang betul', '点麦克风：Melovyn 会听你弹，弹对的音符变绿', '點麥克風：Melovyn 會聽你彈，彈對的音符變綠'],
+  guide2S: ['Tap the mic: Haptune listens and turns each right note green', 'Ketik mikrofon: Haptune mendengar dan menghijaukan setiap not yang betul', '点麦克风：Haptune 会听你弹，弹对的音符变绿', '點麥克風：Haptune 會聽你彈，彈對的音符變綠'],
   guide3T: ['Join your class', 'Sertai kelas anda', '加入你的班级', '加入你的班級'],
   guide3tT: ['Make your class', 'Buat kelas anda', '创建你的班级', '建立你的班級'],
   guide3tS: ['Students join with a code; assignments, takes and grades in one place', 'Pelajar menyertai dengan kod; tugasan, rakaman dan gred di satu tempat', '学生用代码加入；作业、练习录音和成绩都在一处', '學生用代碼加入；作業、練習錄音和成績都在一處'],

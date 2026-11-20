@@ -334,7 +334,7 @@ def guardian_summary(c, student_id: str, days: int = 7) -> dict:
 
 
 def summary_text(s: dict, link: str) -> str:
-    lines = [f"{s['student']}'s week on Melovyn" + (f" ({', '.join(s['classes'])})" if s["classes"] else ""), "",
+    lines = [f"{s['student']}'s week on Haptune" + (f" ({', '.join(s['classes'])})" if s["classes"] else ""), "",
              f"Practice: {s['minutes']} min, {s['takes']} take{'s' if s['takes'] != 1 else ''}" + (f", best {s['best']}%" if s["best"] is not None else "")]
     if s["done"]:
         lines += ["", "Done:"] + [f"  - {x['title']} ({x['class']})" + (f" {x['best']}%" if x["best"] is not None else "") for x in s["done"]]
@@ -344,7 +344,7 @@ def summary_text(s: dict, link: str) -> str:
         lines += ["", "Coming up:"] + [f"  - {x['title']} ({x['class']}), due {x['due_at'][:10]}" for x in s["todo"]]
     if s["teacher_notes"]:
         lines += ["", "From the teacher:"] + [f"  \"{x['text']}\"" for x in s["teacher_notes"]]
-    lines += ["", f"See it any time: {link}", "", "You get this because a teacher or your child added your email in Melovyn. Reply STOP to be removed."]
+    lines += ["", f"See it any time: {link}", "", "You get this because a teacher or your child added your email in Haptune. Reply STOP to be removed."]
     return "\n".join(lines)
 
 
@@ -421,7 +421,7 @@ def send_summaries(cid: str, me: dict = Depends(current_user)):
         emailed = 0
         for g in gs:
             s = guardian_summary(c, g["student_id"])
-            emailed += CR.send_email([g["email"]], f"{s['student']}'s week on Melovyn", summary_text(s, _guardian_json(g)["link"]))
+            emailed += CR.send_email([g["email"]], f"{s['student']}'s week on Haptune", summary_text(s, _guardian_json(g)["link"]))
             c.execute(update(guardians).where(guardians.c.id == g["id"]).values(last_sent=now))
     return {"students": len(sts), "guardians": len(gs), "emailed": emailed}
 

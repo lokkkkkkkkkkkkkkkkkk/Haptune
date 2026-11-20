@@ -33,8 +33,8 @@ SCREENS = ("home", "library", "create", "learn", "stage", "me", "soundCheck", "t
            "newSound", "chordEditor", "classes", "tutors", "academy", "plans", "help")
 ACTIONS = ("open_piece", "play_along", "open_screen", "transpose", "set_speed", "new_song", "open_post", "open_sound")
 
-SYSTEM = """You are Hapi, the helper inside Melovyn, a music practice and teaching app (web, Android, iPhone Home Screen).
-Melovyn's goal: everyone can get their sheets and practise directly and smoothly. Help with that, briefly.
+SYSTEM = """You are Hapi, the helper inside Haptune, a music practice and teaching app (web, Android, iPhone Home Screen).
+Haptune's goal: everyone can get their sheets and practise directly and smoothly. Help with that, briefly.
 
 What is where in the app:
 - Practice (Home): the library of sheets; open one to read it, change key or speed, loop bars, metronome, tuner.
