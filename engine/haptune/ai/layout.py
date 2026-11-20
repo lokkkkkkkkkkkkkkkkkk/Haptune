@@ -43,6 +43,7 @@ class Page:
     barlines: dict = field(default_factory=dict)      # system index -> x of each barline
     regions: list = field(default_factory=list)       # inked areas outside every system: (x0, y0, x1, y1)
     photo: bool = False
+    ink: dict = field(default_factory=dict)           # system index -> [bar][staff] ink (see bar_ink)
 
     @property
     def size(self) -> tuple[int, int]:
@@ -364,6 +365,34 @@ def uncovered_regions(dark: np.ndarray, systems: list[System]) -> list[tuple[int
     return out
 
 
+def bar_ink(dark: np.ndarray, system: System, barlines: list[int]) -> list[list[float]]:
+    """How much is printed in each bar of each staff of a system, in staff spaces squared, with the staff lines
+    left out: [bar][staff]. A bar holding only a whole-bar rest measures about 0.5-1, half and whole notes 1-2.5,
+    bars of quarter and eighth notes 3-25. The reader compares this with what it read, so a bar read as empty
+    while notes are printed (the most common reading error) is found without asking the model again.
+    The first bar of a line is measured on its right half only (the clef and key signature are on the left)."""
+    if not system.staves or not barlines:
+        return []
+    x0 = min(st.x0 for st in system.staves)
+    starts = [x0] + barlines[:-1]
+    out: list[list[float]] = []
+    for k, (a, b) in enumerate(zip(starts, barlines)):
+        row = []
+        for st in system.staves:
+            sp = max(2.0, st.space)
+            aa = a + int(0.45 * (b - a)) if k == 0 else a
+            aa, bb = aa + int(0.4 * sp), b - int(0.4 * sp)
+            top, bot = int(st.top - 1.5 * sp), int(st.bottom + 1.5 * sp)
+            band = dark[max(0, top):max(0, bot), max(0, aa):max(0, bb)]
+            if band.size == 0 or bb - aa < 2 * sp:
+                row.append(-1.0)
+                continue
+            band = band[band.mean(axis=1) < 0.6]                   # staff lines (and ledger-free rows) out
+            row.append(round(float(band.sum()) / (sp * sp), 2))
+        out.append(row)
+    return out
+
+
 def analyse_page(img: Image.Image, index: int = 0) -> Page:
     dark = binarize(img)
     skew = estimate_skew(dark)
@@ -374,6 +403,7 @@ def analyse_page(img: Image.Image, index: int = 0) -> Page:
     page = Page(index=index, image=img, systems=systems, skew=skew)
     page.bars = {s.index: len(find_barlines(dark, s)) for s in systems}
     page.barlines = {s.index: find_barlines(dark, s) for s in systems}
+    page.ink = {s.index: bar_ink(dark, s, page.barlines[s.index]) for s in systems}
     page.regions = uncovered_regions(dark, systems)
     page.photo = is_photo(img)
     return page

@@ -118,7 +118,7 @@ class FakeReaderClient:
     """Answers like a model that reads perfectly, except for the bars in `mistakes` on the first pass."""
 
     def __init__(self, bars, meta, bars_per_line=4, mistakes=None, instrument="piano", fail_lines=(), short_lines=(),
-                 locate=None):
+                 locate=None, unsure=()):
         self.bars, self.meta, self.per_line = bars, meta, bars_per_line
         self.fail_lines = set(fail_lines)       # 0-based lines that can never be read (the request fails)
         self.short_lines = set(short_lines)     # 0-based lines whose first answer stops after one bar
@@ -126,6 +126,8 @@ class FakeReaderClient:
         self.line_asks: dict[int, int] = {}
         self.mistakes = mistakes or {}          # bar index -> list of voice strings per part (first reading)
         self.instrument = instrument
+        self.unsure = set(unsure)               # bars the first reading marks "uncertain" (but reads right)
+        self.line_rereads: dict[int, int] = {}  # 0-based line -> times read again whole
         self.calls: list[str] = []
         self.lock = threading.Lock()
         self.beta = SimpleNamespace(messages=SimpleNamespace(stream=self._stream))
@@ -134,8 +136,8 @@ class FakeReaderClient:
         row = self.mistakes.get(bi, self.bars[bi]) if first_pass else self.bars[bi]
         return {"number": bi + 1, "time": self.meta["time"] if bi == 0 else None, "key_fifths": None,
                 "repeat_start": False, "repeat_end": False, "ending": None, "barline": "final" if bi == len(self.bars) - 1 else "regular",
-                "x0": 0, "x1": 0, "staves": [{"staff": i + 1, "voices": v} for i, v in enumerate(row)],
-                "uncertain": False, "comment": ""}
+                "x0": 0, "x1": 0, "staves": [{"staff": i + 1, "voices": v} for i, v in enumerate(row) if v is not None],
+                "uncertain": first_pass and bi in self.unsure, "comment": ""}
 
     def _stream(self, **kw):
         schema = kw["output_config"]["format"]["schema"]
@@ -155,8 +157,12 @@ class FakeReaderClient:
                                           "clefs": ["treble" if i == 0 or n == 1 else "bass"]} for i, name in enumerate(self.meta["parts"])]})
         if "staff_count" in req:
             k = int(re.search(r"This is line (\d+) of page (\d+)", text).group(1)) - 1
+            again = "Look again" in text                   # the re-read model reading a doubtful line whole
             with self.lock:
-                asked = self.line_asks[k] = self.line_asks.get(k, 0) + 1
+                if again:
+                    self.line_rereads[k] = self.line_rereads.get(k, 0) + 1
+                    self.calls[-1] = "line-reread"
+                asked = self.line_asks[k] = self.line_asks.get(k, 0) + (0 if again else 1)
             if k in self.fail_lines:
                 raise RuntimeError("the reader is down")
             lo, hi = k * self.per_line, min(len(self.bars), (k + 1) * self.per_line)
@@ -165,7 +171,7 @@ class FakeReaderClient:
             n = len(self.meta["parts"])
             return FakeStream({"staff_count": n, "clefs": ["treble" if i == 0 or n == 1 else "bass" for i in range(n)],
                                "key_fifths": self.meta["fifths"], "warnings": [],
-                               "measures": [self._measure(bi, True) for bi in range(lo, hi)]})
+                               "measures": [self._measure(bi, not again) for bi in range(lo, hi)]})
         m = re.search(r"bar (\d+) of this line", text)
         if m:                                    # whole line sent: "bar k of this line" on "line n on page p"
             line = int(re.search(r"line (\d+) on page", text).group(1))

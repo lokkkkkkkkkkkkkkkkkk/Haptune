@@ -370,3 +370,30 @@ def test_moments_are_everyday_posts_with_photos_and_recordings():
     feed = client.get("/c/posts", params={"type": "moment"}).json()
     assert feed["items"][0]["id"] == p["id"]
 
+
+
+def test_comments_carry_a_photo_and_your_own_version_of_the_song():
+    """Stage, Part 6: a comment can hold a photo (a page of music, anything) and the commenter's own version of the
+    song, made in Haptune: everyone who can see the post can open it and play it."""
+    import base64 as b64
+    def registered(name, handle):
+        h, _ = person(name)
+        assert client.post("/c/auth/password", json={"handle": handle, "password": "a-long-password"}, headers=h).status_code == 200
+        return h
+    a = registered("Aina", "aina_v")
+    b = registered("Ben", "ben_v")
+    post = client.post("/c/posts", json={"type": "moment", "body": "Beautiful in White, my recital piece"}, headers=a).json()
+    png = b64.b64encode(b"\x89PNG\r\n\x1a\n" + b"\x00" * 200).decode()
+    r = client.post(f"/c/posts/{post['id']}/replies", json={"kind": "comment", "body": "", "image": f"data:image/png;base64,{png}",
+                                                           "version_xml": XML, "version_title": "My violin version"}, headers=b)
+    assert r.status_code == 200, r.text
+    rep = r.json()["replies_list"][0]
+    assert rep["image"]["id"] and rep["version"]["title"] == "My violin version" and rep["version"]["bars"] > 0
+    assert client.get(f"/c/files/{rep['image']['id']}").status_code == 200
+    v = client.get(f"/c/files/{rep['version']['id']}")                              # anyone who sees the post can open it
+    assert v.status_code == 200 and b"score-partwise" in v.content
+    # not a picture, too big, or nothing at all: refused
+    bad = b64.b64encode(b"hello there").decode()
+    assert client.post(f"/c/posts/{post['id']}/replies", json={"kind": "comment", "image": bad}, headers=b).status_code == 400
+    assert client.post(f"/c/posts/{post['id']}/replies", json={"kind": "comment", "body": ""}, headers=b).status_code == 400
+    assert client.post(f"/c/posts/{post['id']}/replies", json={"kind": "comment", "version_xml": "<html/>"}, headers=b).status_code == 400

@@ -189,6 +189,7 @@ const AcceptSheet = lazy(m_post, 'AcceptSheet');
 const ChangesSheet = lazy(m_post, 'ChangesSheet');
 const AddCreditsSheet = lazy(m_post, 'AddCreditsSheet');
 const SubmitScoreSheet = lazy(m_post, 'SubmitScoreSheet');
+const PickVersionSheet = lazy(m_post, 'PickVersionSheet');
 const ImageSheet = lazy(m_post, 'ImageSheet');
 const m_compose = () => import('./screens/compose.jsx');
 const ComposeSheet = lazy(m_compose, 'ComposeSheet');
@@ -239,7 +240,7 @@ const SHEETS = {
   export: ExportSheet, lesson: LessonSheet, challenge: ChallengeSheet, account: AccountSheet, paywall: PaywallSheet,
   importWizard: ImportWizardSheet, finder: FinderSheet, welcome: WelcomeSheet, playAlong: PlayAlongSheet, keySheet: KeySheet, details: DetailsSheet,
   joinClass: JoinClassSheet, newClass: NewClassSheet, newAssignment: NewAssignmentSheet, review: ReviewSheet,
-  plans: PlansSheet, manualPay: ManualPaySheet, compose: ComposeSheet, accept: AcceptSheet, changes: ChangesSheet, addCredits: AddCreditsSheet, submitScore: SubmitScoreSheet,
+  plans: PlansSheet, manualPay: ManualPaySheet, compose: ComposeSheet, accept: AcceptSheet, changes: ChangesSheet, addCredits: AddCreditsSheet, submitScore: SubmitScoreSheet, pickVersion: PickVersionSheet,
   image: ImageSheet, reportPost: ReportSheet, more: MoreSheet, feedback: FeedbackSheet, guidelines: GuidelinesSheet, about: AboutSheet, installHelp: InstallHelpSheet, stageGuide: StageGuideSheet, mixer: MixerSheet, instrumentPick: InstrumentPickSheet, lessonAsk: LessonAskSheet, lessonRate: LessonRateSheet,
   newSong: NewSongSheet, hubRole: HubRoleSheet, classQR: ClassQRSheet, pair: PairSheet, take: TakeSheet, joinLink: JoinLinkSheet, moment: MomentSheet,
   setPassword: SetPasswordSheet, signIn: SignInSheet, deleteAccount: DeleteAccountSheet, devCode: DevCodeSheet,
@@ -298,7 +299,7 @@ async function openLink(l) {
   }
   if (l.route === 'assignment') { go('academy'); push('assignment', { id: l.id }, 'academy'); return; }
   if (l.route === 'class') { go('academy'); push('classView', { id: l.id }, 'academy'); return; }
-  if (l.route === 'post') { go('community'); push('post', { id: l.id }, 'community'); return; }
+  if (l.route === 'post') { go('community'); push('post', { id: l.id, ...(l.version ? { openVersion: l.version } : {}) }, 'community'); return; }
   if (l.route === 'sound') { go('community'); push('soundPage', { id: l.id }, 'community'); return; }
   if (l.route === 'person') { go('community'); push('profile', { handle: l.id }, 'community'); }
 }
@@ -492,9 +493,9 @@ function App() {
       <MiniPlayer s={s} immersive={immersive} />
       {!immersive && !s.sheet && hasServer() && flag('hapi') && <AIFab />}
       {s.sheet && <SheetHost sheet={s.sheet} />}
-      {s.coach && !s.sheet && <Coach key={s.coach} />}
+      {s.coach && !s.sheet && <Coach key={s.coach} from={s.coachFrom} />}
       {soundTap && <button type="button" class="sound-pill" id="sound-pill"><Icon name="speaker" size={18} stroke={2.3} />{t('tapForSound')}</button>}
-      {s.toast && <div class={`toast${s.toast.kind === 'err' ? ' err' : ''}`} role="status"><Icon name={s.toast.kind === 'err' ? 'info' : 'check'} size={18} stroke={2.4} />{s.toast.text}</div>}
+      {s.toast && <div class={`toast${s.toast.kind === 'err' ? ' err' : ''}`} role="status">{s.toast.kind === 'err' ? <Icon name="info" size={18} stroke={2.4} /> : <span class="toast-hapi"><Mascot mood="happy" size={26} animate={false} /></span>}{s.toast.text}</div>}
     </div>
   );
 }

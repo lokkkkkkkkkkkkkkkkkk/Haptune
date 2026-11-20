@@ -17,6 +17,7 @@ import { midiOf, pitchName } from '../../core/pitch.js';
 import { audioContext, note, Transport } from '../audio.js';
 import { soundOf } from '../../core/instruments.js';
 import { difficulty } from '../../core/analysis.js';
+import { issueLines } from '../readflags.js';
 
 const TYPE_LABEL = { whole: '𝅝', half: '𝅗𝅥', quarter: '♩', eighth: '♪', '16th': '𝅘𝅥𝅯', '32nd': '𝅘𝅥𝅰' };
 
@@ -175,11 +176,11 @@ export function EditorView({ id, bar = 0, onSaved, active }) {
         {flags.length > 0 && (
           <div class="chips">
             <span class="sub" style={{ alignSelf: 'center', fontWeight: 700 }}>{t('edToCheck')}</span>
-            {flags.slice(0, 40).map((f) => <Chip key={f.bar} color="orange" on={here.includes(f)} onClick={() => { setSel(null); setWin(Math.max(0, f.bar - 1 - ((f.bar - 1) % N))); }}>{f.bar}</Chip>)}
+            {flags.slice(0, 40).map((f) => <Chip key={f.bar} color={(f.level || 'check') === 'check' ? 'orange' : 'gray'} on={here.includes(f)} onClick={() => { setSel(null); setWin(Math.max(0, f.bar - 1 - ((f.bar - 1) % N))); }}>{f.bar}</Chip>)}
           </div>
         )}
         {here.length > 0 && (
-          <div class="banner warn"><Icon name="info" size={18} stroke={2.2} /><div class="sub" style={{ flex: 1 }}>{here.map((f) => (f.unread ? t('edUnread', { n: f.bar }) : `${t('bar', { n: f.bar })}: ${(f.reasons || [])[0] || ''}`)).join(' · ')}</div>
+          <div class="banner warn"><Icon name="info" size={18} stroke={2.2} /><div class="sub" style={{ flex: 1 }}>{here.map((f) => (f.unread ? t('edUnread', { n: f.bar }) : `${t('bar', { n: f.bar })}: ${issueLines(f).map((x) => (x.where ? `${x.where}: ${x.text}` : x.text)).join('; ')}`)).join(' · ')}</div>
             <button type="button" class="ptag" onClick={checked} id="ed-checked"><Icon name="check" size={15} stroke={2.6} />{t('edChecked')}</button></div>
         )}
         <div class="score-box vrv ed-score" ref={boxRef} onClick={onClick} dangerouslySetInnerHTML={{ __html: svg }} />

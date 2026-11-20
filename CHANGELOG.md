@@ -1,5 +1,29 @@
 # Changelog
 
+## Part 6: a reader that checks itself against the page, Import in Create, versions on Stage (November 2026)
+- **Score reader accuracy.** A test score (Beautiful in White, violin + piano, 71 bars) read about 80% right; most
+  errors were whole bars left empty, which the checker counted as "complete" (a skipped staff was silently turned
+  into a rest). Now:
+  - the page itself is measured: how much is printed in every bar of every staff (`layout.bar_ink`). A staff read
+    as a rest where notes are printed, notes read where the staff is empty, and the same notes on two staves that
+    look different on the page are found without asking the model;
+  - a staff the model leaves out is marked missing, never a rest;
+  - every bar with a real problem gets a second look by the re-read model (up to 60, or half the piece); a line
+    with three or more problems is read again whole in one request (runs of missing bars, swapped staves);
+  - a second reading that agrees with the first confirms the bar; one that differs and checks out replaces it;
+  - the reader's own "uncertain" no longer lists the bar when the second reading agrees (players were shown
+    almost every bar); instructions tell the model when R is allowed, to read each staff from its own lines and
+    to count lines for long notes.
+  - Players see "Please check (n)": the bar, the staff and what is wrong ("Violin: notes are printed here, but
+    none were read"), and "Hapi double-checked N bars and corrected M". Small doubts are folded away.
+- **Create: a 4th card, Import a file** (MIDI, MusicXML, PDF or a photo), with its own little animation.
+- **Stage comments: photos and your own version.** Attach a photo, and/or one of your scores as "My version".
+  Under the post, "Versions made in Haptune" lists them: Play, Play Along, or copy a link
+  (`#stage/post/ID/v/REPLY`) that opens the version straight away.
+- **First run:** one clean welcome card (Hapi, what you play, Show me around / Maybe later); Settings has a
+  Guide section (Show me around, Welcome card).
+- **Hapi everywhere:** tip of the day on Home, Me page, Settings, every confirmation message.
+
 ## Part 5: Learning hub, Friends with chats, Show me around, Create, smooth playback (November 2026)
 - **Google sign-in "Error 401: invalid_client, no registered origin"**: the server handed the website the first ID in
   `GOOGLE_CLIENT_IDS`, which can be the Android client. The website now uses its own Web client ID and tells the

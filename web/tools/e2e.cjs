@@ -93,8 +93,8 @@ async function run(mode, base, browser) {
       return r.width > 0 && r.height > 0 && r.top >= 0 && r.bottom <= innerHeight;
     }).length;
   }).then((n) => { if (n > 6) errors.push(`${where} shows ${n} primary actions above the fold (max 6)`); return n; });
-  await step('first-run tour (3 cards)', async () => {
-    for (let i = 0; i < 2; i++) { await p.locator('.welcome .btn.brand:visible').click(); await p.waitForTimeout(250); }
+  await step('first run: one welcome card, then on to the song searched on the website', async () => {
+    await p.waitForSelector('.welcome #tour-start'); await shot('00b-welcome');
     await p.locator('#tour-start').click(); await p.waitForTimeout(500);
     await p.waitForSelector('#find-q');
     if ((await p.inputValue('#find-q')) !== 'ode to joy') throw new Error('the song typed on the website did not arrive in Find songs');

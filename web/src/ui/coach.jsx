@@ -32,15 +32,15 @@ const find = (sels = []) => {
   return null;
 };
 
-/** Starts the guide from the top of Home. */
-export function startCoach() {
+/** Starts the guide from the top of Home. From the welcome card, Hapi has already said hello. */
+export function startCoach({ from = '' } = {}) {
   popToRoot('summary'); go('summary');
-  setState({ drawer: false, sheet: null, coach: Date.now() });
+  setState({ drawer: false, sheet: null, coach: Date.now(), coachFrom: from });
 }
 export const coachDone = () => local.get('coachDone', false);
 
-export function Coach() {
-  const steps = STEPS.filter((s) => !s.optional || find(s.sel));
+export function Coach({ from = '' }) {
+  const steps = STEPS.filter((s) => (!s.optional || find(s.sel)) && !(from === 'welcome' && s.id === 'hello'));
   const [i, setI] = useState(0);
   const [box, setBox] = useState(null);
   const st = steps[Math.min(i, steps.length - 1)];

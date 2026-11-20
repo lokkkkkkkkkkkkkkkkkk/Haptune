@@ -1,0 +1,71 @@
+/* Haptune, Part 6 (loaded last): the score reader's clearer review, the Import card in Create, photos and
+   versions in Stage comments, a cleaner first-run card and Hapi in more places. */
+
+/* ---------- Create: the 4th card, Import ---------- */
+.wiz-card.k-import { background: linear-gradient(135deg, #4B2BC9, #8B5CF6); box-shadow: 0 12px 26px -16px #4B2BC9; }
+@media (min-width: 700px) { .sheet .wiz-big { grid-template-columns: repeat(2, 1fr); } .sheet .wiz-card { min-height: 180px; } }
+.wiz-kinds { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.wiz-kinds b { padding: 1px 7px; border-radius: 99px; background: rgba(255, 255, 255, .22); font-size: 11px; font-weight: 750; letter-spacing: .01em; }
+.k-import .wiz-art .page { position: absolute; left: 26%; top: 8px; width: 48%; bottom: 8px; border-radius: 5px; background: #fff;
+  background-image: repeating-linear-gradient(to bottom, transparent 0 7px, rgba(75, 43, 201, .35) 7px 8px); background-size: 100% 28px; background-repeat: repeat-y; }
+.k-import .wiz-art .scan { position: absolute; left: 20%; right: 20%; height: 3px; top: 10px; border-radius: 2px; background: #FFD84D;
+  box-shadow: 0 0 10px 2px rgba(255, 216, 77, .8); animation: wz-scan 2.2s ease-in-out infinite; }
+@keyframes wz-scan { 0%, 100% { top: 10px; } 50% { top: calc(100% - 13px); } }
+.k-import .wiz-art .nt { background: #4B2BC9; left: calc(34% + var(--i) * 12%); top: calc(12px + var(--y) * 5px); width: 8px; height: 6px; }
+
+/* ---------- reading a score: what to check ---------- */
+.flag-row.lv-check { border-left: 4px solid var(--orange, #F07B1F); }
+.flag-row.lv-unsure { border-left: 4px solid var(--line); opacity: .92; }
+.rd-issue { font-size: 14px; line-height: 1.35; }
+.rd-issue strong { font-weight: 750; }
+.rd-maybe-btn { display: flex; align-items: center; gap: 10px; width: 100%; margin: 6px 0; padding: 10px 14px; border-radius: 16px; text-align: left;
+  background: var(--card); border: 1px solid var(--line); color: var(--ink); }
+.rd-maybe-btn > span { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.rd-maybe-btn span span { font-size: 13px; color: var(--ink2); }
+#read-double { display: block; margin-top: 4px; color: var(--ink2); }
+
+/* ---------- Stage: photos and versions in comments ---------- */
+.composer.c2 { align-items: flex-end; }
+.composer-in { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.composer-tools { display: flex; gap: 6px; flex-wrap: wrap; }
+.ctool { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 99px; background: var(--fill); color: var(--ink2); font-size: 13px; font-weight: 650; }
+.attach-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.attach-chip { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 4px 30px 4px 4px; border-radius: 12px; background: var(--fill); font-size: 13px; font-weight: 650; max-width: 100%; }
+.attach-chip.v { padding-left: 10px; color: var(--ink); }
+.attach-chip img { width: 46px; height: 46px; object-fit: cover; border-radius: 9px; }
+.attach-chip button { position: absolute; right: 6px; top: 50%; translate: 0 -50%; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; background: var(--card); color: var(--ink2); }
+.r-photo { display: block; margin: 6px 0; max-width: min(100%, 420px); border-radius: 14px; overflow: hidden; background: var(--fill); }
+.r-photo img { display: block; width: 100%; height: auto; }
+.r-photo.loading { height: 140px; }
+.versions { display: grid; gap: 10px; }
+.version-card { display: flex; align-items: center; gap: 12px; padding: 12px; margin: 6px 0; border-radius: 16px; background: linear-gradient(120deg, color-mix(in srgb, #18A894 14%, var(--card)), var(--card));
+  border: 1px solid color-mix(in srgb, #18A894 30%, var(--line)); }
+.version-card.big { margin: 0; }
+.vc-art { width: 42px; height: 42px; flex-shrink: 0; border-radius: 12px; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, #08695C, #18A894); }
+.vc-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.vc-t strong { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vc-t span { font-size: 12.5px; color: var(--ink2); }
+.vc-acts { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+@media (max-width: 520px) { .version-card { flex-wrap: wrap; } .vc-acts { width: 100%; justify-content: flex-end; } }
+
+/* ---------- first run: one clean card ---------- */
+.welcome.w2 .w2-body { align-items: center; text-align: center; justify-content: center; gap: 14px; max-width: 520px; margin: 0 auto; }
+.w2-hapi { display: grid; place-items: center; }
+.welcome.w2 h2 { font: 800 30px/1.1 var(--round, inherit); letter-spacing: -.02em; margin: 0; }
+.w2-lead { margin: 0; color: var(--ink2); font-size: 16.5px; line-height: 1.45; }
+.w2-ways { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.w2-way { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px; font-weight: 700; font-size: 14px;
+  color: var(--c, var(--brand)); background: color-mix(in srgb, var(--c, var(--brand)) 13%, transparent); }
+.w2-way.c-violet { --c: #6B4BE0; } .w2-way.c-orange { --c: #B4560F; } .w2-way.c-teal { --c: #0B7F72; } .w2-way.c-pink { --c: #C02656; }
+.w2-pick { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.w2-pick .choice-chips { justify-content: center; }
+.w2-btns { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+
+/* ---------- Hapi in more places ---------- */
+.toast-hapi { display: grid; place-items: center; margin: -4px 0; }
+.hapi-tip { display: flex; align-items: center; gap: 12px; width: 100%; margin: 4px 0 2px; padding: 10px 14px; border-radius: 20px; text-align: left; color: var(--ink);
+  background: color-mix(in srgb, var(--card) 86%, transparent); border: 1px solid var(--line); }
+.hapi-tip > span { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hapi-tip strong { font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: color-mix(in srgb, var(--brand) 80%, var(--ink)); }
+.hapi-tip .ht-text { font-size: 14.5px; line-height: 1.38; animation: coach-in .3s var(--ease-out) both; }
+@media (prefers-reduced-motion: reduce) { .k-import .wiz-art .scan, .hapi-tip .ht-text { animation: none !important; } }

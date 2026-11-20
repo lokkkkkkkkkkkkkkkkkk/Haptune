@@ -3,6 +3,7 @@ import { useApp, updateSettings, closeSheet, openSheet, toast, makeBackup, resto
 import { t, LANGS, instrumentName, INSTRUMENTS } from '../../core/i18n.js';
 import { Icon, List, Row, Toggle, Segmented, Stepper, Button, Section, Chip } from '../components.jsx';
 import { Mascot } from '../mascot.jsx';
+import { startCoach } from '../coach.jsx';
 import { hasServer } from '../api.js';
 import { C, attempt, ensureAccount } from '../account.js';
 import { isNative, platform } from '../native.js';
@@ -41,6 +42,7 @@ export function AccountSheet() {
   };
   return (
     <SheetFrame title={t('account')} left={false} right={t('done')} onRight={closeSheet}>
+      <div class="page-hapi"><Mascot mood="happy" size={52} /><p>{t('settingsHapi')}</p></div>
       {hasServer() && (
         <button type="button" class="me-card" onClick={() => (me?.handle ? go('profile', { handle: me.handle }) : go('editProfile'))}>
           <Person user={me || { name: st.name || 'Musician', avatar: { color: 'purple' } }} size={58} />
@@ -82,6 +84,12 @@ export function AccountSheet() {
           )}
         </Section>
       )}
+      <Section title={t('guideSecT')} footer={t('guideFoot')}>
+        <List>
+          <Row icon="sparkles" color="violet" title={t('coachReplayT')} subtitle={t('coachReplayS')} onClick={() => { closeSheet(); setTimeout(() => startCoach(), 0); }} id="acc-guide" />
+          <Row icon="star" color="pink" title={t('replayTour')} subtitle={t('replayTourSub')} onClick={() => { closeSheet(); setTimeout(() => openSheet('welcome'), 0); }} id="acc-tour" />
+        </List>
+      </Section>
       <Section title={t('profile')}>
         <List>
           <Row title={t('yourName')} right={<input type="text" id="acc-name" value={st.name} placeholder={t('yourName')} onInput={(e) => updateSettings({ name: e.currentTarget.value })} aria-label={t('yourName')} />} />
@@ -115,7 +123,6 @@ export function AccountSheet() {
         <List>
           <Row icon="bolt" color="orange" title={t('hapticsT')} subtitle={t('hapticsSub')} right={<Toggle id="acc-haptics" checked={st.haptics !== false} onChange={(v) => updateSettings({ haptics: v })} label={t('hapticsT')} />} />
           <Row icon="link" color="blue" title={t('connectionsT')} subtitle={t('connectionsSub')} onClick={() => { closeSheet(); setTimeout(() => openSheet('connections'), 0); }} id="acc-connections" />
-          <Row icon="sparkles" color="violet" title={t('replayTour')} onClick={() => { closeSheet(); setTimeout(() => openSheet('welcome'), 0); }} id="acc-tour" />
         </List>
       </Section>
       <Section title={t('helpAndFeedback')}>

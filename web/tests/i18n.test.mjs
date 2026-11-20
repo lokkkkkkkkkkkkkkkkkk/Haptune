@@ -141,3 +141,16 @@ test('v13 text: four languages, same placeholders; only the reworded labels over
     assert.ok(!older.has(k) || reworded.has(k), `v13 overwrites ${k}`);
   }
 });
+
+test('v14 text: four languages, same placeholders; only the reworded labels overwrite older keys', async () => {
+  const { V14 } = await import('../src/core/i18n-v14.js');
+  const older = new Set();
+  for (const f of ['base', 'community', 'v2', 'v3', 'v4', 'v5', 'v6', 'v7', 'v8', 'v9', 'v10', 'v11', 'v12', 'v13']) for (const tb of Object.values(await import(`../src/core/i18n-${f}.js`))) for (const k of Object.keys(tb)) older.add(k);
+  const reworded = new Set(['replayTour']);
+  for (const [k, v] of Object.entries(V14)) {
+    assert.equal(v.length, 4, k);
+    assert.ok(v.every((x) => typeof x === 'string' && x.trim().length), `empty text in ${k}`);
+    assert.equal(new Set(v.map(ph)).size, 1, `placeholders differ in ${k}`);
+    assert.ok(!older.has(k) || reworded.has(k), `v14 overwrites ${k}`);
+  }
+});

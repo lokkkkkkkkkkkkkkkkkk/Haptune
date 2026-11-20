@@ -67,6 +67,10 @@ class Bar:
     page: int = 0
     system: int = 0
     box: tuple[float, float, float, float] | None = None   # x0, y0, x1, y1 on the page, 0..1
+    ink: list[float] | None = None                    # how much is printed on each staff (layout.bar_ink), flat [slot]
+    unread: bool = False                              # its line could not be read at all
+    confirmed: bool = False                           # the second (stronger) reading agreed with the first
+    fixed: bool = False                               # the second reading changed it and it now checks out
 
 
 @dataclass

@@ -659,7 +659,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
 
   const curKeyText = sheetKey ? keyName(sheetKey) : '';
   const showPlayer = !!tScore || (tSheet && sheetChords(tSheet).length);
-  const flags = rec.aiFlags || [];
+  const flags = (rec.aiFlags || []).filter((f) => (f.level || 'check') === 'check');      // "probably fine" doubts are not listed here
   const t0 = tScore ? timeAt(tScore, 0) : null;
   const handLabel = (c) => (c.hand === 'right' ? t('rightHand') : c.hand === 'left' ? t('leftHand') : c.name);
 
