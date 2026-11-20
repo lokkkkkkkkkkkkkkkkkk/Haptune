@@ -1,5 +1,17 @@
 # Changelog
 
+## Part 7: a phone layout of its own, and Haptune's own sounds (November 2026)
+- **Phones (up to 599 px) get their own layout** (`ui/v8.css`), after Apple Health on iPhone and the iOS sizes used
+  by Konsta UI and Ionic: a floating capsule tab bar with a pill behind the chosen tab, 34 px titles, 17 px text,
+  52 px rows, 22 px corners; Home has a small picture top right, the three ways in as a swipeable row of big cards,
+  Pinned as one big card per row (big number left, chart right), Get more and Articles as swipeable cards.
+- **Background music**: 8 gentle tracks generated on the device (no audio files): Morning Light, Sunny Garden, Paper
+  Boats, Warm Tea for the light theme; Night Lights, Moon Hum, Starfield, Rainy Window for the dark one. A random one
+  each time the app opens (never the same as last time), the melody different every play. It goes quiet by itself
+  while music plays, the microphone listens, a score is open or the app is in the background.
+- **Sound effects**: a soft tick on taps, a rising note on tabs, a whoosh for sheets, a chime for "done", a low blip
+  for problems. Settings › Sounds: Background music on/off, Play another track, Sound effects on/off.
+
 ## Part 6: a reader that checks itself against the page, Import in Create, versions on Stage (November 2026)
 - **Score reader accuracy.** A test score (Beautiful in White, violin + piano, 71 bars) read about 80% right; most
   errors were whole bars left empty, which the checker counted as "complete" (a skipped staff was silently turned

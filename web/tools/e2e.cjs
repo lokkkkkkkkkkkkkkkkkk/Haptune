@@ -54,7 +54,7 @@ async function run(mode, base, browser) {
   const LABEL = { home: 'homeTab', learn: 'hub', stage: 'stage', library: 'library', write: 'create' };
   const tab = async (id) => {
     const wide = await p.evaluate(() => innerWidth >= 900);
-    if (id === 'me') return wide ? p.locator('#top-me').click() : p.locator('.avatar:visible, .hh-avatar:visible').first().click();
+    if (id === 'me') return wide ? p.locator('#top-me').click() : p.locator('.avatar:visible, .hh-avatar:visible, .hh-mini-av:visible').first().click();
     return p.locator(`${wide ? '#side' : '#tab'}-${LABEL[id] || id}:visible`).click();
   };
   const back = () => p.locator('.navbar .back:visible, .back-btn:visible').first().click();
@@ -65,7 +65,7 @@ async function run(mode, base, browser) {
       const out = [];
       document.querySelectorAll('.tab-pane:not([hidden]) .view:not([hidden]) *, .sheet *').forEach((el) => {
         const r = el.getBoundingClientRect();
-        if (r.width && r.right > innerWidth + 1 && !el.closest('.shelf, .roll, .chips, .segmented, .score-box, .kbd-wrap, .helpers-strip, .bar-strip, .hscroll, .jp-box, .art-cover'))
+        if (r.width && r.right > innerWidth + 1 && !el.closest('.shelf, .roll, .chips, .segmented, .score-box, .kbd-wrap, .helpers-strip, .bar-strip, .hscroll, .jp-box, .art-cover, .hero-row, .gm-grid, .art-grid'))
           out.push(`${el.tagName.toLowerCase()}.${[...el.classList].join('.')} → ${Math.round(r.right)}`);
       });
       return out.slice(0, 4);

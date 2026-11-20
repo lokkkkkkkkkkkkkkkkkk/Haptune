@@ -69,10 +69,11 @@ export function push(view, props = {}, tab = state.tab) {
 }
 export function pop(tab = state.tab) { setState((s) => ({ stacks: { ...s.stacks, [tab]: s.stacks[tab].slice(0, -1) } })); }
 export function popToRoot(tab = state.tab) { setState((s) => ({ stacks: { ...s.stacks, [tab]: [] } })); }
-export function openSheet(type, props = {}) { setState({ sheet: { type, props } }); }
+export function openSheet(type, props = {}) { globalThis.__haptuneSfx?.('open'); setState({ sheet: { type, props } }); }
 export function closeSheet() { setState({ sheet: null }); }
 let toastTimer = null;
 export function toast(text, kind = 'ok') {
+  globalThis.__haptuneSfx?.(kind === 'err' ? 'error' : 'success');
   setState({ toast: { text, kind, id: Date.now() } });
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => setState({ toast: null }), 2600);

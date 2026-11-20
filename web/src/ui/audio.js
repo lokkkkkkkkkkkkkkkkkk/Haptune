@@ -86,6 +86,9 @@ function flushWaiting() {
   list.forEach((fn) => { try { fn(); } catch { /* keep the others going */ } });
 }
 const anythingPlaying = () => [...transports].some((t) => t.playing) || waiting.size > 0;
+/** Music, a drone or the microphone is in use: the app's own background music and sound effects keep quiet. */
+export const soundBusy = () => anythingPlaying() || micOpen || !!droneNodes || problem === 'tap'
+  || !!globalThis.document?.querySelector?.('.app.immersive');
 
 function build() {
   const AC = globalThis.AudioContext || globalThis.webkitAudioContext;

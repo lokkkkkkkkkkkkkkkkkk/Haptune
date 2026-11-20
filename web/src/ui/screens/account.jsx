@@ -110,6 +110,7 @@ export function AccountSheet() {
         </div>
         <div class="chips">{[[0, 'syncSpeaker'], [180, 'syncBluetooth'], [250, 'syncAirpods']].map(([v, k]) => <Chip key={k} on={(st.syncMs || 0) === v} onClick={() => updateSettings({ syncMs: v })}>{t(k)}</Chip>)}</div>
       </Section>
+      <SoundsSection st={st} />
       <Section title={t('lightSoundT')} footer={t('lightSoundHelp')}>
         <Segmented id="acc-light" value={st.soundLight || 'auto'} onChange={(v) => updateSettings({ soundLight: v })} options={[{ value: 'auto', label: t('lsAuto') }, { value: 'on', label: t('lsOn') }, { value: 'off', label: t('lsOff') }]} />
       </Section>
@@ -282,5 +283,27 @@ function DevWhy() {
       <List><Row icon="shield" color="gray" title={t('devWhyT')} subtitle={t('devWhySub')} onClick={() => setOpen(!open)} id="acc-devwhy" /></List>
       {open && (r ? <p class="note-text" id="dev-why">{t(`devWhy_${r.reason}`, { email: r.email || '—' })}</p> : <div class="loading"><div class="spinner" /></div>)}
     </>
+  );
+}
+
+/** Settings › Sounds: background music (a random track each time the app opens) and sound effects. */
+function SoundsSection({ st }) {
+  const [tr, setTr] = useState(null);
+  useEffect(() => {
+    let stop = () => {};
+    import('../ambience.js').then((A) => { setTr(A.nowPlaying()); stop = A.onTrack(setTr); });
+    return () => stop();
+  }, []);
+  const next = () => import('../ambience.js').then((A) => A.nextTrack());
+  return (
+    <Section title={t('soundsT')} footer={t('soundsFoot')}>
+      <List>
+        <Row icon="speaker" color="violet" title={t('bgMusicT')} subtitle={st.music !== false && tr ? t('nowPlayingT', { name: t(`trk_${tr.id}`) }) : t('bgMusicSub')}
+          right={<Toggle id="acc-music" checked={st.music !== false} onChange={(v) => updateSettings({ music: v })} label={t('bgMusicT')} />} />
+        {st.music !== false && <Row icon="loop" color="teal" title={t('nextTrackT')} onClick={next} id="acc-music-next" />}
+        <Row icon="sparkle" color="pink" title={t('sfxT')} subtitle={t('sfxSub')}
+          right={<Toggle id="acc-sfx" checked={st.sfx !== false} onChange={(v) => updateSettings({ sfx: v })} label={t('sfxT')} />} />
+      </List>
+    </Section>
   );
 }
