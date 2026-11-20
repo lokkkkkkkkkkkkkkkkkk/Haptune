@@ -84,12 +84,13 @@ const WEB_CLIENT_ID = '441801851459-894b05t66ggvv4f8185ootkpkl9jnn9o.apps.google
 const googleClientId = () => CFG().google || WEB_CLIENT_ID;
 export const nativeGoogleAvailable = () => isNative() && !!(plugin('SocialLogin') || plugin('GoogleAuth'));
 let socialReady = null;
-export async function nativeGoogleSignIn() {
+export async function nativeGoogleSignIn({ fresh = false } = {}) {
   const social = plugin('SocialLogin');
   let tok = null;
   if (social) {
     socialReady ||= social.initialize({ google: { webClientId: googleClientId() } }).catch((e) => { socialReady = null; throw e; });
     await socialReady;
+    if (fresh) { try { await social.logout({ provider: 'google' }); } catch { /* nobody to forget */ } }   // show the account chooser
     try {
       const r = await social.login({ provider: 'google', options: { scopes: ['email', 'profile'] } });
       tok = r?.result?.idToken || null;
@@ -106,5 +107,12 @@ export async function nativeGoogleSignIn() {
   }
   if (!tok) return null;
   track('sign_in', { label: 'google_native' });
-  return C.googleSignIn(tok);
+  return C.googleSignIn(tok, { fresh });
+}
+
+/** Signing out: Google forgets which account it picked last, so the next sign-in shows the chooser. */
+export async function forgetGoogle() {
+  try { globalThis.google?.accounts?.id?.disableAutoSelect?.(); } catch { /* Google not loaded */ }
+  const social = plugin('SocialLogin');
+  if (social && socialReady) { try { await social.logout({ provider: 'google' }); } catch { /* not signed in there */ } }
 }

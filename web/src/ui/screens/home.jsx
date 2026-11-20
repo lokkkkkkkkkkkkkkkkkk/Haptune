@@ -20,6 +20,7 @@ import { tick } from '../native.js';
 import { hasServer, call } from '../api.js';
 import { loadCatalog, searchCatalog, norm } from '../catalog.js';
 import { openFiles } from '../intake.js';
+import { startCoach, coachDone } from '../coach.jsx';
 
 export function dueLabel(iso, lang) {
   if (!iso) return '';
@@ -246,6 +247,7 @@ export function HomeView({ active }) {
   };
   // "Get more from Haptune": the next useful thing for this person, closed for good with ✕
   const more = [
+    !coachDone() && { id: 'tour', icon: 'sparkles', grad: ['#7B3FE4', '#E07BF0'], title: t('gmTourT'), text: t('gmTourS'), go: () => startCoach() },
     !me?.registered && online && { id: 'signin', icon: 'person', grad: ['#5B3FD6', '#9C85FF'], title: t('gmSignInT'), text: t('gmSignInS'), go: () => openSheet('hubRole', {}) },
     !takes.length && { id: 'play', icon: 'mic', grad: ['#E2531F', '#FF9C5B'], title: t('guide2T'), text: t('guide2S'), go: () => push('find', {}, 'summary') },
     online && !L?.classes && { id: 'class', icon: 'academy', grad: ['#B0399C', '#F07BD8'], title: me?.hub_role === 'teacher' ? t('guide3tT') : t('guide3T'), text: me?.hub_role === 'teacher' ? t('guide3tS') : t('guide3S'), go: () => go('academy') },

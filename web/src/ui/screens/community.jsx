@@ -39,7 +39,7 @@ export function CommunityView({ active }) {
   const actions = online ? <>
     <button type="button" class="stage-plus" id="stage-plus" aria-label={t('stageWhatDo')} onClick={() => openSheet('stageNew')}><Icon name="plus" size={24} stroke={2.8} /></button>
     <button type="button" class="hm-pill nts" id="stage-notes" onClick={() => push('wallet')} aria-label={t('rewards')}><Icon name="gift" size={15} stroke={2.2} />{s.me?.credits ?? '·'}</button>
-    <button type="button" class="hm-pill" onClick={() => push('messages')} aria-label={t('messagesT')} id="stage-messages" style={{ padding: '0 9px' }}><Icon name="chat" size={17} /></button>
+    <button type="button" class="hm-pill" onClick={() => push('friends')} aria-label={t('placeFriends')} id="stage-messages" style={{ padding: '0 9px' }}><Icon name="chat" size={17} /></button>
     <button type="button" class="hm-pill" onClick={() => push('notifications')} aria-label={t('notifications')} style={{ position: 'relative', padding: '0 9px' }}>
       <Icon name="bell" size={17} />{s.me?.unread > 0 && <span class="tab-dot" />}
     </button>
@@ -51,7 +51,7 @@ export function CommunityView({ active }) {
   return (
     <div class="scroll" id="stage">
       <div class="wrap">
-        <LargeTitle title="Stage" color="pink" actions={<>{actions}<span class="ph-only"><Avatar /></span></>} />
+        <LargeTitle title={t('stage')} color="pink" hapi="cheer" actions={<>{actions}<span class="ph-only"><Avatar /></span></>} />
         <p class="stage-purpose" id="stage-purpose">{t('stagePurpose')}</p>
         {!online ? <Empty icon="globe" title={t('communityOffline')} sub={t('communityOfflineSub')} /> : <>
           <StageExplainer />

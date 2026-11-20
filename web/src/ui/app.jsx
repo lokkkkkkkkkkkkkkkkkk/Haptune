@@ -5,7 +5,10 @@ import { t } from '../core/i18n.js';
 import { Icon } from './components.jsx';
 import { Logo } from './screens/common.jsx';
 import { HomeView } from './screens/home.jsx';
-import { PLACES, MAIN } from './places.js';
+import { PLACES, MAIN, ON_BAR } from './places.js';
+import { Coach } from './coach.jsx';
+import { Mascot } from './mascot.jsx';
+import { installPress } from './press.js';
 import { local as storeLocal } from './storage.js';
 import { Cover } from './cover.jsx';
 import { AIChatSheet, AIFab } from './screens/aichat.jsx';
@@ -20,7 +23,7 @@ import { hasServer } from './api.js';
 import { ensureAccount, C } from './account.js';
 import { initNative } from './native.js';
 import { warmVerovio } from './verovio.js';
-import { setSyncOffset, onAudioProblem } from './audio.js';
+import { setSyncOffset, onAudioProblem, setLightSound } from './audio.js';
 
 
 // Screens load the first time they are opened (esbuild splits them into chunks/), so the first screen appears sooner.
@@ -210,6 +213,10 @@ const MoreSheet = lazy(m_social, 'MoreSheet');
 // teachers, students), Write (making and fixing scores), Stage (the community) and Library (your scores).
 // Me holds your account, plan and settings. On a computer they sit in a sidebar; on a phone four of them are
 // in the tab bar with Write raised in the middle, and Me is the picture at the top of each page.
+// pages pushed on a tab that have a colour of their own (the rest take their tab's)
+const PLACE_OF = { friends: 'friends', chat: 'friends', messages: 'friends', browse: 'browse', tools: 'tools', tool: 'tools', improvise: 'improvise',
+  history: 'activity', help: 'help', courses: 'courses', course: 'courses', tutors: 'tutors', tutor: 'tutors', find: 'library', profile: 'friends' };
+
 export const TABS = [
   { id: 'summary', icon: 'home', color: 'violet', label: 'homeTab' },
   { id: 'academy', icon: 'academy', color: 'orange', label: 'hub' },
@@ -405,6 +412,7 @@ function App() {
     return () => removeEventListener('hashchange', openHash);
   }, []);
   useEffect(() => { setSyncOffset(s.settings.syncMs || 0); }, [s.settings.syncMs]);
+  useEffect(() => { setLightSound(s.settings.soundLight || 'auto'); }, [s.settings.soundLight]);
   const visited = useRef(new Set());                    // a tab is built the first time it is opened (faster start)
   const [sideSmall, setSideSmall] = useState(() => storeLocal.get('sideSmall', false));   // the sidebar folded to icons
   const [catsOpen, setCatsOpen] = useState(() => storeLocal.get('sideCats', true));       // Categories open
@@ -414,7 +422,7 @@ function App() {
   useEffect(() => onAudioProblem(setSoundTap), []);
   const shown = s.stacks[s.tab]?.[s.stacks[s.tab].length - 1]?.view || s.tab;
   useEffect(() => { if (s.ready) screenShown(shown); }, [shown, s.ready]);
-  if (!s.ready) return <div class="splash"><div class="spinner" /></div>;
+  if (!s.ready) return <div class="splash"><div class="boot-hapi"><Mascot mood="happy" size={92} /><div class="spinner" /></div></div>;
   const tabBtn = (tab, cls) => (
     <button type="button" key={tab.id} id={`${cls === 'bar' ? 'tab' : 'side'}-${tab.label}`} class={`c-${tab.color}${s.tab === tab.id ? ' on' : ''}${tab.center && cls === 'bar' ? ' center' : ''}`} onClick={() => {
       if (s.tab !== tab.id) tick();
@@ -431,8 +439,9 @@ function App() {
   const immersive = top === 'piece' || top === 'editor' || top === 'studio' || top === 'chordEditor' || top === 'sound';
   const name = (s.me?.name && s.me.name !== 'Musician' ? s.me.name : s.settings.name || '').trim();
   const sec = TABS.find((x) => x.id === s.tab)?.color || 'violet';
+  const place = immersive ? 'score' : PLACE_OF[top] || s.tab;          // each place has its own colour (v6.css)
   return (
-    <div class={`app v3 sec-${sec}${immersive ? ' immersive' : ''}${s.nowPlaying && !immersive ? ' has-mini' : ''}`}>
+    <div class={`app v3 sec-${sec}${immersive ? ' immersive' : ''}${s.nowPlaying && !immersive ? ' has-mini' : ''}`} data-place={place}>
       {s.drawer && <div class="drawer-bg" onClick={() => setState({ drawer: false })} aria-hidden="true" />}
       <aside class={`side${sideSmall ? ' small' : ''}${s.drawer ? ' drawer-open' : ''}`} aria-label="Sections" onClick={(e) => { if (e.target.closest('button') && !e.target.closest('.side-toggle, .side-sec-h')) setState({ drawer: false }); }}>
         <div class="side-top">
@@ -441,11 +450,11 @@ function App() {
         </div>
         <button type="button" class="side-create" onClick={() => openSheet('newSong')} id="side-newsong"><Icon name="plus" size={18} stroke={2.6} /><span class="tab-label">{t('newSongT')}</span></button>
         <nav class="side-main">{MAIN.map((x) => {
-          const on = x.tab ? (s.tab === x.tab && top !== 'browse') : (x.id === 'browse' ? top === 'browse' : top === x.id);
+          const on = x.tab ? (s.tab === x.tab && top !== 'browse' && top !== 'friends') : top === x.id || (x.id === 'friends' && (top === 'chat' || top === 'messages'));
           return (
-            <button type="button" key={x.id} id={`side-${x.label}`} class={`c-${x.color}${on ? ' on' : ''}`} aria-current={on ? 'page' : undefined}
+            <button type="button" key={x.id} id={`side-${x.label}`} class={`c-${x.color}${on ? ' on' : ''}${x.bar ? ' in-bar' : ''}`} style={{ '--g1': x.grad[0], '--g2': x.grad[1] }} aria-current={on ? 'page' : undefined}
               onClick={() => { tick(); if (x.tab) { if (s.tab === x.tab) popToRoot(x.tab); go(x.tab); } else x.to(); }}>
-              <span class="tab-ic"><Icon name={x.icon} size={20} stroke={on ? 2.4 : 2} /></span><span class="tab-label">{t(x.label)}</span>
+              <span class="tab-ic"><Icon name={x.icon} size={20} stroke={on ? 2.4 : 2} />{x.id === 'stage' && s.me?.unread > 0 && <span class="tab-dot" />}</span><span class="tab-label">{t(x.label)}</span>
             </button>
           );
         })}</nav>
@@ -456,9 +465,9 @@ function App() {
           {catsOpen && <nav class="side-cats" ref={catsRef}>{PLACES.map((p) => {
             const on = p.tab && s.tab === p.tab;
             return (
-              <button type="button" key={p.id} id={`side-${p.label}`} class={`cat${on ? ' on' : ''}`} style={{ '--g1': p.grad[0], '--g2': p.grad[1] }} aria-current={on ? 'page' : undefined}
+              <button type="button" key={p.id} id={`side-${p.label}`} class={`cat${on ? ' on' : ''}${ON_BAR.has(p.id) ? ' in-bar' : ''}`} style={{ '--g1': p.grad[0], '--g2': p.grad[1] }} aria-current={on ? 'page' : undefined}
                 onClick={() => { tick(); if (p.tab && s.tab === p.tab) popToRoot(p.tab); p.to(); }}>
-                <span class="tab-ic"><Icon name={p.icon} size={17} stroke={2.2} />{p.id === 'stage' && s.me?.unread > 0 && <span class="tab-dot" />}</span><span class="tab-label">{t(p.label)}</span>
+                <span class="tab-ic"><Icon name={p.icon} size={17} stroke={2.2} /></span><span class="tab-label">{t(p.label)}</span>
               </button>
             );
           })}</nav>}
@@ -483,6 +492,7 @@ function App() {
       <MiniPlayer s={s} immersive={immersive} />
       {!immersive && !s.sheet && hasServer() && flag('hapi') && <AIFab />}
       {s.sheet && <SheetHost sheet={s.sheet} />}
+      {s.coach && !s.sheet && <Coach key={s.coach} />}
       {soundTap && <button type="button" class="sound-pill" id="sound-pill"><Icon name="speaker" size={18} stroke={2.3} />{t('tapForSound')}</button>}
       {s.toast && <div class={`toast${s.toast.kind === 'err' ? ' err' : ''}`} role="status"><Icon name={s.toast.kind === 'err' ? 'info' : 'check'} size={18} stroke={2.4} />{s.toast.text}</div>}
     </div>
@@ -494,5 +504,6 @@ export function mount() {
   if (!root) { root = document.createElement('div'); root.id = 'haptune'; document.body.appendChild(root); }
   root.style.height = '100%';
   render(<App />, root);
+  installPress();
   globalThis.__haptune = { getState, push, go, popToRoot, openSheet };
 }

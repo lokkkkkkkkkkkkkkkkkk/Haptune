@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'preact/hooks';
 import { tick } from './native.js';
 import { GLYPHS } from './glyphs.js';
+import { Mascot } from './mascot.jsx';
 import { STEPS, keyAlter, midiOf, nameOf } from '../core/pitch.js';
 import { fretShapes, TUNINGS, pianoVoicing, formatChord, chordPcs, rootPc } from '../core/chords.js';
 
@@ -370,8 +371,14 @@ export function useInterval(fn, ms, deps = []) {
   useEffect(() => { if (ms === null) return undefined; const id = setInterval(() => ref.current(), ms); return () => clearInterval(id); }, [ms, ...deps]);
 }
 
-export function Empty({ icon, title, sub, children }) {
-  return <div class="empty"><Badge icon={icon} color="gray" size={54} solid={false} /><h3>{title}</h3>{sub && <p>{sub}</p>}{children}</div>;
+/** Nothing here yet: Hapi with the place's icon, a line of why, and what to do. */
+export function Empty({ icon, title, sub, children, mood = 'think' }) {
+  return (
+    <div class="empty">
+      <span class="empty-hapi" aria-hidden="true"><Mascot mood={mood} size={88} />{icon && <span class="empty-ic"><Icon name={icon} size={16} stroke={2.3} /></span>}</span>
+      <h3>{title}</h3>{sub && <p>{sub}</p>}{children}
+    </div>
+  );
 }
 
 export { useState, chordPcs, midiOf };

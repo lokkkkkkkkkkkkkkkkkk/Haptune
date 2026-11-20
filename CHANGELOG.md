@@ -1,5 +1,29 @@
 # Changelog
 
+## Part 5: Learning hub, Friends with chats, Show me around, Create, smooth playback (November 2026)
+- **Google sign-in "Error 401: invalid_client, no registered origin"**: the server handed the website the first ID in
+  `GOOGLE_CLIENT_IDS`, which can be the Android client. The website now uses its own Web client ID and tells the
+  server, which swaps the code with that client and remembers it (also for Calendar/Drive/Contacts and the redirect
+  sign-in). `/c/auth/google/status?web=…` says whether the server knows the website's client.
+- **Sign out did nothing**: in the Account sheet a variable named `confirm` hid the browser's `confirm()`, so the tap
+  failed. Sign out now asks in the sheet and works; Google forgets the last account so the chooser shows next time.
+- **Switch account** really switches: Google (web and Android) and new accounts are no longer linked to the account
+  that is signed in.
+- **Navigation**: Learn is now **Learning hub**; Learning hub and Stage sit with Home, Friends and Browse at the top of
+  the sidebar, never repeated in Categories; the phone menu leaves out what the tab bar already has. **Friends** now
+  includes the chats (Messages folded in).
+- **Show me around**: after the welcome cards, Hapi points at each real button (Home, New song, Learning hub, Stage,
+  Friends, Browse, Ask Hapi). Skip any time; replay from Help, Browse, Settings or the Home card.
+- **Create**: three big choices (Chords & lyrics, Melody, Record & mix) with small moving pictures and a "For you"
+  hint from your instrument; Full notation, Improvise and Exercise under "More ways". Chord/rhythm songs are
+  Chords & lyrics without lyrics.
+- **A colour for every page**: each place has its own soft gradient that fades into the next (light and dark).
+- **Hapi everywhere**: page headers, empty pages, Browse, the Create sheet, the loading screen and the Ask button.
+- **Tap feedback**: presses spring, a ripple follows the finger, chosen tabs and chips pop (reduced motion: none).
+- **Smooth playback** on slower phones: a light sound (no room reverb, one compressor, no per-note panning or
+  vibrato, 24 voices, more look-ahead). Auto for small Android phones and whenever playback falls behind;
+  Settings > Smooth playback: Auto / On / Off.
+
 ## Part 4: Home, Browse, Google sign-in that finishes, back to Haptune (November 2026)
 - **Google sign-in finishes.** The "Continue as …" button was Google's iframe, which hands the answer back from a popup;
   when the browser blocks that hand-back nothing happens. Haptune now has its own **Continue with Google** button that

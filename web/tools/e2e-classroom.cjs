@@ -312,8 +312,8 @@ async function person(browser, base, api, { name, role, handle }) {
       await go(t, '#u/ben_violin'); await t.waitForSelector('#friend-message'); await t.locator('#friend-message').click();
       await t.waitForSelector('#chat-text'); await t.fill('#chat-text', 'Great job today!'); await t.locator('#chat-send').click();
       await t.waitForSelector('.chat-list .pt-msg.mine');
-      await esc(s); await tab(s, 'stage'); await s.locator('#stage-messages').click(); await s.waitForSelector('#messages .row');
-      await s.locator('#messages .row').first().click(); await s.waitForSelector('.chat-list .pt-msg');
+      await esc(s); await tab(s, 'stage'); await s.locator('#stage-messages').click(); await s.waitForSelector('#friend-chats .row');
+      await s.locator('#friend-chats .row').first().click(); await s.waitForSelector('.chat-list .pt-msg');
       if (!/Great job today/.test(await s.locator('.chat-list').innerText())) throw new Error('the message did not arrive');
       await s.fill('#chat-text', 'Thank you!'); await s.locator('#chat-send').click(); await s.waitForSelector('.chat-list .pt-msg.mine');
       await s.screenshot({ path: path.join(SHOTS, 'friends-chat.png') });
@@ -518,6 +518,21 @@ async function person(browser, base, api, { name, role, handle }) {
       await s.locator('#community-seg .chip').filter({ hasText: /^Friends$/ }).click(); await s.waitForSelector('#friends-feed .ff-item', { timeout: 15000 });
       if (!/reposted/i.test(await s.locator('#friends-feed').innerText())) throw new Error('the repost is not in the Friends feed');
       await s.screenshot({ path: path.join(SHOTS, 'stage-friends-feed.png') });
+    });
+    await step('Friends shows the chats (Messages is part of Friends)', async () => {
+      await esc(s); await s.evaluate(() => { window.__haptune.go('community'); window.__haptune.push('friends', {}, 'community'); });
+      await s.waitForSelector('#friends'); await s.waitForTimeout(800);
+      await s.screenshot({ path: path.join(SHOTS, 'friends-chats.png') });
+    });
+    await step('Switch account and sign out', async () => {
+      await esc(s); await s.evaluate(() => window.__haptune.openSheet('account')); await s.waitForSelector('#acc-switch');
+      await s.locator('#acc-switch').click(); await s.waitForSelector('.sheet h2');
+      if (!/Switch account/i.test(await s.locator('.sheet h2').first().innerText())) throw new Error('Switch account did not open the account chooser');
+      await esc(s); await s.evaluate(() => window.__haptune.openSheet('account')); await s.waitForSelector('#acc-signout');
+      await s.locator('#acc-signout').click(); await s.locator('#acc-signout-yes').click();
+      await s.waitForFunction(() => { const m = window.__haptune.getState().me; return m && !m.registered; }, null, { timeout: 15000 });
+      const left = await s.evaluate(() => window.__haptune.getState().me.handle);
+      if (left === 'ben_violin') throw new Error('still signed in as ben_violin after Sign out');
     });
   } catch (e) { problems.push(e.message); }
   for (const x of [T, S]) if (x) problems.push(...x.errors);

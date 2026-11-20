@@ -50,8 +50,12 @@ browsers block that hand-back, so the click opened and closed Google's window an
    "access blocked"; Haptune now says so). To let **everyone** sign in, press **Publish app** (In production).
    Signing in asks only for name and email, which needs no Google review. Calendar and Contacts are asked for
    separately, after sign-in; until Google has verified them, people see Google's "unverified app" notice there.
-3. Fly secrets: `GOOGLE_CLIENT_IDS` must start with this Web client's ID, and `GOOGLE_CLIENT_SECRET` must be this
-   same client's secret.
+3. Fly secrets: `GOOGLE_CLIENT_IDS` must contain this Web client's ID (put it first; the Android client IDs come
+   after it, comma-separated), and `GOOGLE_CLIENT_SECRET` must be this same Web client's secret. The website tells
+   the server which client it used, so the order no longer breaks sign-in, but you can also pin it:
+   `fly secrets set GOOGLE_WEB_CLIENT_ID=<the Web client ID> -a haptune-lok`.
+   "Error 401: invalid_client / no registered origin" in Google's window means the client it opened doesn't list
+   `https://haptune.name.my` under Authorised JavaScript origins (usually the Android client was used).
 4. Check: open `https://haptune-lok.fly.dev/c/auth/google/status`: it should say `"configured": true` and show the
    callback address from step 1.
 5. Developer mode: `HAPTUNE_OWNER_EMAILS` must be the Gmail you sign in with (e.g. the one on the "Continue with

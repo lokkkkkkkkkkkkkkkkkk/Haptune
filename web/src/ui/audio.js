@@ -6,7 +6,7 @@ import { buildMicGraph } from './micgraph.js';
 // onsets, median, octave correction, chroma).
 //
 // Why it is built this way (dense scores used to stutter and get "stuck"):
-//  * every voice is 2-4 audio nodes (it was ~11), and at most MAX_VOICES sound at once, so busy piano music
+//  * every voice is 2-4 audio nodes (it was ~11), and at most maxVoices() sound at once, so busy piano music
 //    never overloads a phone;
 //  * notes are scheduled a second ahead, so a busy screen can't make them late or drop them;
 //  * each play gets its own output bus: stopping or jumping to another bar fades that bus out and starts a
@@ -18,10 +18,35 @@ import { buildMicGraph } from './micgraph.js';
 let ctx = null, out = null, verb = null, mainBus = null, vib = null, noiseBuf = null, micOpen = false;
 const waves = {};
 const MASTER = 0.8;
-const LOOKAHEAD = 1.0;          // seconds scheduled ahead of the audio clock (a jump or stop fades the bus, so this costs nothing)
 const TICK_MS = 40;
 const LOW_END = (globalThis.navigator?.hardwareConcurrency || 8) <= 4 || (globalThis.navigator?.deviceMemory || 8) <= 3;
-const MAX_VOICES = LOW_END ? 32 : 64;   // a low-end phone that runs out of time per audio block crackles
+// Light sound (Part 5): some mid-range Android phones (8 cores, but slow ones) still stuttered or "stuck" on dense
+// music. Their audio thread ran out of time on the room reverb (a 1.3 s stereo convolution), two compressors,
+// per-voice stereo panners and audio-rate vibrato. Light sound drops those (the notes are the same), plays at
+// most 24 voices and schedules further ahead. Settings > Sound: Auto (default) / On / Off. Auto turns it on for
+// Android phones with few cores or little memory, and by itself when playback falls behind on any device.
+const IS_ANDROID = /Android/i.test(globalThis.navigator?.userAgent || '');
+const LIKELY_SLOW = LOW_END || (IS_ANDROID && ((globalThis.navigator?.hardwareConcurrency || 8) <= 6 || (globalThis.navigator?.deviceMemory || 8) <= 4));
+let light = false;
+const readSetting = () => { try { return JSON.parse(localStorage.getItem('haptune.settings') || '{}').soundLight || 'auto'; } catch { return 'auto'; } };
+const learnedSlow = () => { try { return localStorage.getItem('haptune.soundLightAuto') === 'true'; } catch { return false; } };
+function decideLight(mode = readSetting()) {
+  light = mode === 'on' || (mode !== 'off' && (LIKELY_SLOW || learnedSlow()));
+  try { globalThis.document?.documentElement.classList.toggle('lite', light); } catch { /* no page */ }
+  return light;
+}
+decideLight();
+const LOOKAHEAD_FULL = 1.0;      // seconds scheduled ahead of the audio clock (a jump or stop fades the bus, so this costs nothing)
+const lookahead = () => (light ? 1.6 : LOOKAHEAD_FULL);
+const maxVoices = () => (light ? 24 : LOW_END ? 32 : 64);   // a phone that runs out of time per audio block crackles
+
+/** Settings > Sound > Light sound: 'auto' | 'on' | 'off'. Rebuilds the sound system when it changes. */
+export function setLightSound(mode) {
+  const was = light;
+  if (mode === 'off') { try { localStorage.removeItem('haptune.soundLightAuto'); } catch { /* fine */ } }
+  if (decideLight(mode) !== was && ctx) rebuildAudio();
+}
+export const isLightSound = () => light;
 const STALL_MS = 1500;          // the audio clock standing still this long while playing = the sound system is stuck
 const stats = { scheduled: 0, dropped: 0, stolen: 0, transports: 0, rebuilds: 0, stalls: 0 };
 let userOffset = 0;              // seconds, from Settings > Sound > Sync (calibration)
@@ -79,7 +104,8 @@ function build() {
   const limit = ctx.createDynamicsCompressor();
   limit.threshold.value = -2; limit.knee.value = 0; limit.ratio.value = 20; limit.attack.value = 0.001; limit.release.value = 0.08;
   const trim = ctx.createGain(); trim.gain.value = 0.9;
-  out.connect(comp); comp.connect(limit); limit.connect(trim); trim.connect(ctx.destination);
+  if (light) out.connect(limit); else { out.connect(comp); comp.connect(limit); }
+  limit.connect(trim); trim.connect(ctx.destination);
   // iOS pauses audio after a call, Siri or another app ("interrupted"): try to carry on, and ask for a tap if it won't
   ctx.onstatechange = () => {
     if (mine !== ctx) return;
@@ -88,17 +114,19 @@ function build() {
     ctx.resume().catch(() => {});
     setTimeout(() => { if (mine === ctx && ctx.state !== 'running' && anythingPlaying()) setProblem('tap'); }, 900);
   };
-  // one shared room reverb, fed by each bus (not by each note)
-  verb = ctx.createConvolver();
-  const len = Math.floor(ctx.sampleRate * 1.3);
-  const ir = ctx.createBuffer(2, len, ctx.sampleRate);
-  for (let c = 0; c < 2; c++) {
-    const d = ir.getChannelData(c);
-    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.4) * 0.5;
+  // one shared room reverb, fed by each bus (not by each note). Light sound: none (a silent sink for the sends)
+  if (light) { verb = ctx.createGain(); verb.gain.value = 0; } else {
+    verb = ctx.createConvolver();
+    const len = Math.floor(ctx.sampleRate * 1.3);
+    const ir = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let c = 0; c < 2; c++) {
+      const d = ir.getChannelData(c);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.4) * 0.5;
+    }
+    verb.buffer = ir;
+    const wet = ctx.createGain(); wet.gain.value = 0.5;
+    verb.connect(wet); wet.connect(comp);
   }
-  verb.buffer = ir;
-  const wet = ctx.createGain(); wet.gain.value = 0.5;
-  verb.connect(wet); wet.connect(comp);
   // one shared vibrato for all sustained voices (in cents, so it suits every pitch)
   vib = ctx.createOscillator(); vib.frequency.value = 5.3;
   const vibDepth = ctx.createGain(); vibDepth.gain.value = 9;
@@ -248,7 +276,7 @@ function track(v) {
   const t = ctx.currentTime;
   for (let i = live.length - 1; i >= 0; i--) if (live[i].end < t) live.splice(i, 1);
   live.push(v);
-  if (live.length > MAX_VOICES) {
+  if (live.length > maxVoices()) {
     // steal the voice that started first (it is the quietest by now)
     let k = 0;
     for (let i = 1; i < live.length; i++) if (live[i].start < live[k].start) k = i;
@@ -282,7 +310,7 @@ export function loadPiano() {
 export const pianoReady = () => !!piano;
 
 function connect(node, dest, pan) {
-  if (pan && ctx.createStereoPanner) {
+  if (pan && !light && ctx.createStereoPanner) {
     const p = ctx.createStereoPanner(); p.pan.value = pan;
     node.connect(p); p.connect(dest);
   } else node.connect(dest);
@@ -300,7 +328,7 @@ export function note(t, midi, dur, vel = 80, inst = 'piano', pan = 0, dest = nul
   let stopAt = end + 0.5;
   // shared vibrato into the oscillator's detune; unhooked when the note ends so stopped notes are freed
   const sustain = (o) => {
-    if (!vib) return;
+    if (!vib || light) return;
     vib.depth.connect(o.detune);
     o.onended = () => { try { vib.depth.disconnect(o.detune); } catch { /* already gone */ } };
   };
@@ -514,6 +542,7 @@ export class Transport {
       this.idx = lowerBound(this.times, from - 1e-6);
       this.ended = false;
       this.clockT = ctx.currentTime; this.clockWall = performance.now();
+      this.lastTick = 0; this.late = 0; this.dropped0 = stats.dropped;
       this.timer = setInterval(() => this.tick(), TICK_MS);
       this.tick();
       const frame = () => {
@@ -539,7 +568,18 @@ export class Transport {
       setProblem('tap');
       return;
     }
-    const horizon = nowT + LOOKAHEAD;
+    // falling behind (the page was too busy to schedule in time): switch to light sound once, carry on from here
+    const gap = this.lastTick ? wall - this.lastTick : 0;
+    this.lastTick = wall;
+    if (gap > 400 && !globalThis.document?.hidden) this.late = (this.late || 0) + 1;
+    if (!light && readSetting() === 'auto' && ((this.late || 0) >= 3 || stats.dropped - (this.dropped0 || 0) >= 6)) {
+      try { localStorage.setItem('haptune.soundLightAuto', 'true'); } catch { /* storage blocked */ }
+      decideLight();
+      stats.lightSwitches = (stats.lightSwitches || 0) + 1;
+      setTimeout(() => rebuildAudio(), 0);
+      return;
+    }
+    const horizon = nowT + lookahead();
     const fireAt = (e) => {
       const at = this.schedAt + (e.time - this.schedOff);
       if (at > horizon) return false;
@@ -812,7 +852,7 @@ export async function soundCheck({ seconds = 1.2 } = {}) {
     at: new Date().toISOString(), roomDb: db(room), feedbackDb: db(back) - db(room), heard: back > Math.max(room * 2, 0.003),
     playbackRate: c.sampleRate, micRate: lastMic?.micRate, micContextRate: lastMic?.sampleRate, ownMicContext: lastMic?.own,
     baseLatencyMs: Math.round((c.baseLatency || 0) * 1000), outputLatencyMs: Math.round((c.outputLatency || 0) * 1000),
-    device: lastMic?.label || '', lowEnd: LOW_END, maxVoices: MAX_VOICES, ua: navigator.userAgent.slice(0, 160),
+    device: lastMic?.label || '', lowEnd: LOW_END, maxVoices: maxVoices(), light, ua: navigator.userAgent.slice(0, 160),
     cores: navigator.hardwareConcurrency || null, memoryGb: navigator.deviceMemory || null, stalls: stats.stalls, rebuilds: stats.rebuilds,
   };
   try { localStorage.setItem('haptune.soundCheck', JSON.stringify(result)); } catch { /* storage blocked */ }
@@ -823,12 +863,12 @@ export async function soundCheck({ seconds = 1.2 } = {}) {
 export function deviceAudioLog() {
   let check = null;
   try { check = JSON.parse(localStorage.getItem('haptune.soundCheck') || 'null'); } catch { check = null; }
-  return { engine: globalThis.__haptuneAudio?.(), lastMic, soundCheck: check, lowEnd: LOW_END };
+  return { engine: globalThis.__haptuneAudio?.(), lastMic, soundCheck: check, lowEnd: LOW_END, light };
 }
 
 globalThis.__haptuneRebuild = () => rebuildAudio();     // for automated checks
 // read-only state for automated checks (smoke tests) and the in-app problem report
 globalThis.__haptuneAudio = () => ({
   state: ctx?.state || 'none', gain: out ? out.gain.value : null, piano: !!piano, voices: live.length, problem,
-  latencyMs: Math.round(outputDelay() * 1000), ...stats,
+  latencyMs: Math.round(outputDelay() * 1000), light, ...stats,
 });

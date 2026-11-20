@@ -59,6 +59,8 @@ async function run(mode, base, browser) {
   };
   const back = () => p.locator('.navbar .back:visible, .back-btn:visible').first().click();
   const overflow = async (where) => {
+    // let a page that is still sliding in (push animation) settle; endless ones (Hapi, the colour wash) don't count
+    await p.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running' || a.effect?.getTiming?.().iterations === Infinity), null, { timeout: 2000 }).catch(() => {});
     const bad = await p.evaluate(() => {
       const out = [];
       document.querySelectorAll('.tab-pane:not([hidden]) .view:not([hidden]) *, .sheet *').forEach((el) => {
@@ -266,6 +268,8 @@ async function run(mode, base, browser) {
     const wide = await p.evaluate(() => innerWidth >= 900);
     await tab('write'); await p.waitForTimeout(300); await shot('06-write'); await overflow('Create'); await primaries('Create');
     await p.locator('#write-new').click(); await p.waitForSelector('#wiz-kinds'); await primaries('new-song wizard');
+    if (!(await p.locator('#wiz-full').count())) { await p.locator('#wiz-more').click(); await p.waitForSelector('#wiz-full'); }
+    await shot('06b-create-sheet');
     await p.locator('#wiz-full').click(); await p.waitForSelector('#new-song-make');
     await p.fill('#new-song-title', 'My first song'); await p.locator('#new-song-make').click();
     await p.waitForSelector('.st-score svg', { timeout: 60000 }); await p.waitForSelector('#st-toolbar'); await p.waitForTimeout(400);
@@ -332,6 +336,23 @@ async function run(mode, base, browser) {
     await p.waitForSelector('.vrv-page svg', { timeout: 60000 });
     if (!/Grace/.test(await p.locator('.piece-head h1').innerText())) throw new Error('Play Along did not open the chord song');
     await back(); await back();
+  });
+  await step('guide: Show me around, every step, then gone', async () => {
+    await tab('home'); await p.evaluate(() => window.__haptune.popToRoot('summary'));
+    await p.evaluate(() => window.__haptune.push('browse', {}, 'summary')); await p.waitForSelector('#browse-tour');
+    await shot('10-browse'); await overflow('browse');
+    await p.locator('#browse-tour').click(); await p.waitForSelector('#coach');
+    let n = 0, spot = 0;
+    for (; n < 12 && await p.locator('#coach').count(); n++) {
+      await p.waitForTimeout(450);
+      if (await p.locator('.coach-hole').count()) spot++;
+      if (n === 2) await shot('11-guide');
+      await p.locator('#coach-next').click();
+    }
+    await p.waitForTimeout(300);
+    if (await p.locator('#coach').count()) throw new Error('the guide did not finish');
+    if (n < 7) throw new Error(`the guide had only ${n} steps`);
+    if (spot < 5) throw new Error(`only ${spot} steps pointed at a button`);
   });
   await step('Stage, Learn, Me, plans', async () => {
     await tab('stage'); await p.waitForTimeout(300); await shot('07-stage'); await overflow('Stage'); await primaries('Stage');

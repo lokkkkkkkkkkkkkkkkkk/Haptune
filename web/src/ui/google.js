@@ -16,9 +16,12 @@ const ALL = Object.values(GOOGLE_SCOPES).join(' ');
 
 // ---------------------------------------------------------------- signing in
 let status = null;
-/** The server's Google client (so the code is always for the client the server swaps it with). */
+const WEB_ID = () => (globalThis.HAPTUNE_CONFIG || {}).google || '';
+/** Whether the server can do Google sign-in, and with which client. The website uses its own Web client ID
+ *  (the one whose JavaScript origins list this site) and tells the server; the server's first ID can be the
+ *  Android one, which Google's window refuses ("Error 401: invalid_client, no registered origin"). */
 export function googleStatus() {
-  if (!status) status = C.googleStatus().catch((e) => { status = null; throw e; });
+  if (!status) status = C.googleStatus(WEB_ID()).then((st) => ({ ...st, web_id: WEB_ID() && st.web_known !== false ? WEB_ID() : st.client_id })).catch((e) => { status = null; throw e; });
   return status;
 }
 
@@ -33,7 +36,8 @@ export function googleError(code) {
 /** The whole page goes to Google and comes back signed in (when a popup can't open). */
 export async function googleRedirect(extra = {}) {
   const ret = `${location.origin}${location.pathname}`;
-  const { url } = await C.googleStart({ return_to: ret, ...extra });
+  const st = await googleStatus().catch(() => ({}));
+  const { url } = await C.googleStart({ return_to: ret, client_id: st.web_id || '', ...extra });
   location.href = url;
 }
 
@@ -42,19 +46,20 @@ export async function googleRedirect(extra = {}) {
  * server checks the answer. Must be called straight from a tap (browsers allow popups only then): Google's script
  * is loaded beforehand by preloadGoogle(). Resolves with the account, or null when the person closed the window.
  */
-export function googleSignInPopup() {
+export function googleSignInPopup({ fresh = false } = {}) {
   const g = globalThis.google;
   return googleStatus().then((st) => new Promise((resolve, reject) => {
     if (!st.configured) { reject(new Error(t('googleNotSetUp'))); return; }
-    if (!g?.accounts?.oauth2) { googleRedirect().catch(reject); return; }
+    if (WEB_ID() && st.web_known === false) { reject(new Error(t('gErrClient'))); return; }
+    if (!g?.accounts?.oauth2) { googleRedirect({ fresh }).catch(reject); return; }
     const client = g.accounts.oauth2.initCodeClient({
-      client_id: st.client_id, scope: 'openid email profile', ux_mode: 'popup', select_account: true, include_granted_scopes: true,
+      client_id: st.web_id, scope: 'openid email profile', ux_mode: 'popup', select_account: true, include_granted_scopes: true,
       callback: (resp) => {
         if (resp.error) { const m = googleError(resp.error); if (m) reject(Object.assign(new Error(m), { code: resp.error })); else resolve(null); return; }
-        C.googleCode(resp.code).then(resolve, reject);
+        C.googleCode(resp.code, { clientId: st.web_id, fresh }).then(resolve, reject);
       },
       error_callback: (e) => {
-        if (e?.type === 'popup_failed_to_open') { googleRedirect().catch(reject); return; }  // blocked: go by redirect
+        if (e?.type === 'popup_failed_to_open') { googleRedirect({ fresh }).catch(reject); return; }  // blocked: go by redirect
         resolve(null);                                                                      // closed: a choice
       },
     });
@@ -94,7 +99,7 @@ export function askGoogle(feature, { clientId, hint = '', ticket = '' }) {
       callback: (resp) => {
         if (resp.error === 'access_denied' || (!resp.error && !resp.code)) { reject(declined(feature)); return; }
         if (resp.error || !resp.code) { reject(new Error(resp.error_description || resp.error || 'Google did not connect')); return; }
-        C.gconn.connect(resp.code, feature, ticket).then(resolve, reject);
+        C.gconn.connect(resp.code, feature, ticket, clientId).then(resolve, reject);
       },
       // the person closed Google's window or said no: not an error, a choice (the caller offers another way)
       error_callback: (e) => reject(e?.type === 'popup_closed' || e?.type === 'popup_failed_to_open' ? declined(feature) : new Error(e?.message || 'Google did not connect')),
@@ -119,7 +124,8 @@ export async function connectGoogle(feature) {
     openExternal(`${site}/app/#gconnect/${ticket}/${feature}`);
     return { ...info, opened: true };
   }
-  return askGoogle(feature, { clientId: info.client_id, hint: info.email });
+  const st = await googleStatus().catch(() => ({}));
+  return askGoogle(feature, { clientId: st.web_id || info.client_id, hint: info.email });
 }
 
 /** Saying no to a Google permission: `code: 'google_declined'`, with a friendly message for that feature. */

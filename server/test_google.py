@@ -16,6 +16,8 @@ from fastapi.testclient import TestClient
 import academy
 import accounts
 import google_link as G
+import accounts as A
+from sqlalchemy import select
 from app import app
 
 client = TestClient(app)
@@ -281,3 +283,43 @@ def test_sign_in_by_redirect_and_for_the_phone_app(monkeypatch, fresh):
     p = client.get(f"/c/auth/pair/{code}").json()
     assert p["status"] == "done" and p["me"]["email"] == "new@gmail.com"
     assert client.get("/c/auth/google/status").json()["configured"] is True
+
+
+def test_the_website_says_which_google_client_it_used(monkeypatch, fresh):
+    # GOOGLE_CLIENT_IDS also holds the Android client; it may even come first. The website's popup only works with
+    # the Web client, so the website says which one it used and the server swaps the code with that one.
+    ids = A.google_client_ids()
+    web = ids[0]
+    monkeypatch.setenv("GOOGLE_CLIENT_IDS", ",".join(["android-1.apps.googleusercontent.com", *ids]))
+    seen = {}
+    real = fresh.__call__
+    def fake(method, url, **kw):
+        if url == G.TOKEN_URL and kw["form"].get("code") == "code-web-client-1":
+            seen["cid"] = kw["form"]["client_id"]
+            return {"access_token": "at-w", "expires_in": 3600, "id_token": "idtok", "scope": "openid email profile"}
+        return real(method, url, **kw)
+    monkeypatch.setattr(G, "_http", fake)
+    st = client.get(f"/c/auth/google/status?web={web}").json()
+    assert st["web_known"] is True
+    assert client.get("/c/auth/google/status?web=someone-else").json()["web_known"] is False
+    _fake_id(monkeypatch, "g-webclient", "web@gmail.com")
+    r = client.post("/c/auth/google/code", json={"code": "code-web-client-1", "client_id": web})
+    assert r.status_code == 200, r.text
+    assert seen["cid"] == web
+    # remembered: refreshing tokens and the redirect sign-in use the Web client from now on
+    assert G.web_client_id() == web
+    assert client.get("/c/auth/google/status").json()["client_id"] == web
+    # a client the server doesn't know is refused with words the owner can act on
+    bad = client.post("/c/auth/google/code", json={"code": "code-web-client-1", "client_id": "nope"})
+    assert bad.status_code == 400 and "GOOGLE_CLIENT_IDS" in bad.text
+
+
+def test_switching_account_by_redirect_does_not_link(monkeypatch, fresh):
+    monkeypatch.setenv("HAPTUNE_SITE_URL", "https://haptune.name.my")
+    h = {"Authorization": "Bearer " + client.post("/c/auth/guest", json={"name": "A"}).json()["token"]}
+    client.post("/c/auth/password", json={"handle": "first_one", "password": "a-long-password"}, headers=h)
+    url = client.post("/c/auth/google/start", json={"return_to": "https://haptune.name.my/app/", "fresh": True}, headers=h).json()["url"]
+    state = dict(x.split("=", 1) for x in url.split("?", 1)[1].split("&"))["state"]
+    with academy.engine().connect() as c:
+        st = json.loads(c.execute(select(A.kv.c.v).where(A.kv.c.k == f"gstate:{state}")).scalar())
+    assert st["uid"] is None

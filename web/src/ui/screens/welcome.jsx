@@ -1,9 +1,11 @@
 // First-run tour: three cards (Practice; Learn; Create and Stage), skippable and shown once. Replay it from Settings.
 import { useState } from 'preact/hooks';
-import { useApp, updateSettings, closeSheet, go } from '../state.js';
+import { useApp, updateSettings, closeSheet, go, getState } from '../state.js';
 import { t, instrumentName } from '../../core/i18n.js';
 import { Chip, Button, Icon } from '../components.jsx';
 import { local } from '../storage.js';
+import { Mascot } from '../mascot.jsx';
+import { startCoach } from '../coach.jsx';
 
 const PICK = ['piano', 'guitar', 'violin', 'voice', 'flute', 'cello', 'ukulele', 'erhu', 'sax', 'trumpet', 'dizi', 'clarinet'];
 
@@ -31,7 +33,8 @@ export function WelcomeSheet() {
       </div>
       <div class="sheet-body" style={{ alignItems: 'center', textAlign: 'center', justifyContent: 'center' }} key={i}>
         <div class="tour-card">
-          <div class="tour-pair fade-up">{sl.icons.map(([ic, c]) => <span key={ic} class={`tour-ic c-${c}`}><Icon name={ic} size={46} stroke={2} /></span>)}</div>
+          <div class="tour-hapi fade-up"><Mascot mood={['wave', 'think', 'cheer'][i] || 'happy'} size={110} /></div>
+          <div class="tour-pair fade-up">{sl.icons.map(([ic, c]) => <span key={ic} class={`tour-ic c-${c}`}><Icon name={ic} size={30} stroke={2} /></span>)}</div>
           <h2 class="fade-up d1" style={{ font: '800 28px/1.15 var(--round)' }}>{sl.title}</h2>
           <p class="fade-up d2" style={{ fontSize: 17, color: 'var(--ink2)', lineHeight: 1.45, margin: 0 }}>{sl.body}</p>
         </div>
@@ -47,7 +50,12 @@ export function WelcomeSheet() {
         <div style={{ width: '100%', maxWidth: 460, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {i < slides.length - 1
             ? <Button kind="brand" full onClick={() => setI(i + 1)}>{t('next')} <Icon name="chevronR" size={18} stroke={2.6} /></Button>
-            : <Button kind="brand" full icon="mic" id="tour-start" onClick={() => finish(() => go('summary'))}>{t('tourStart')}</Button>}
+            : <Button kind="brand" full icon="sparkles" id="tour-start" onClick={() => finish(() => {
+              // came from a search on the website: carry on to that song (the Home card offers the guide later)
+              if (getState().stacks.summary.length) { go('summary'); return; }
+              go('summary'); setTimeout(startCoach, 350);
+            })}>{t('coachStart')}</Button>}
+          {i === slides.length - 1 && <Button kind="plain" full id="tour-no-guide" onClick={() => finish(() => go('summary'))}>{t('coachNotNow')}</Button>}
           {i > 0 && <Button kind="plain" full onClick={() => setI(i - 1)}>{t('back')}</Button>}
         </div>
       </div>

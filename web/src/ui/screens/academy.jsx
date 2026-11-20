@@ -18,7 +18,7 @@ export function AcademyView({ active, pushed = false }) {
   return (
     <div class="scroll">
       <div class="wrap">
-        <LargeTitle title={t('academy')} back={pushed} />
+        <LargeTitle title={t('academy')} back={pushed} hapi="think" color="orange" />
         <AcademyBody active={active} />
       </div>
     </div>

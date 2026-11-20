@@ -78,7 +78,7 @@ export function LibraryView() {
   return (
     <div class="scroll" id="library">
       <div class="wrap">
-        <LargeTitle title={t('library')} eyebrow={t('libEyebrow')} actions={<><button type="button" class="btn brand small" onClick={() => openSheet('add')} id="lib-add"><Icon name="plus" size={18} stroke={2.6} />{t('add')}</button><span class="ph-only"><Avatar /></span></>} />
+        <LargeTitle title={t('library')} eyebrow={t('libEyebrow')} hapi="listen" color="blue" actions={<><button type="button" class="btn brand small" onClick={() => openSheet('add')} id="lib-add"><Icon name="plus" size={18} stroke={2.6} />{t('add')}</button><span class="ph-only"><Avatar /></span></>} />
         <div class="acts three stagger" id="lib-doors">
           <button type="button" class="act c-blue" onClick={() => document.getElementById('lib-search')?.focus()}><span class="ic"><Icon name="library" size={22} stroke={2.2} /></span><strong>{t('myScores')}</strong><span>{t('piecesCount', { n: s.pieces.length })}</span></button>
           <button type="button" class="act c-violet" id="lib-free" onClick={() => push('catalog')}><span class="ic"><Icon name="books" size={22} stroke={2.2} /></span><strong>{t('freeLibrary')}</strong><span>{count ? t('freeLibraryN', { n: count.toLocaleString() }) : t('freeLibrarySub')}</span></button>
