@@ -38,6 +38,13 @@
   the right drums; TAB staves show as guitar notation; rhythm slashes don't play. The AI reader has new choices
   (Lead sheet, Band score, Drum kit) and reads chord symbols over slashes or empty bars, every instrument of a band
   score on its own staff, drum staves (x noteheads, open hi-hat, ghost notes) and guitar TAB.
+- **More free classical music: 7,258 pieces** (was 6,679). 575 more art songs from the **OpenScore Lieder Corpus**
+  (CC0: Schubert, Schumann, Brahms, Fauré, Gounod, Mendelssohn, Clara Schumann, Fanny Hensel and many more),
+  converted from MuseScore with `tools/stage-openscore-lieder.py` and checked against the songs already in the
+  library (by title and by their first notes). Four openly licensed pieces from the music21 corpus (Weber's
+  Clarinet Concertino, Lift Every Voice and Sing, Aloha ʻOe, Webern's Dormi Jesu). Every piece lists its source
+  and licence. Not taken: the DCML piano corpora (Mozart and Beethoven sonatas, Chopin mazurkas...), which are
+  NonCommercial, and music21 files without a licence of their own.
 
 ## The quick-start video, and a first run that asks nothing (November 2026)
 - **Quick-start video** (1:30, 1920×1080): a real practice session, start to finish, with a voice guide and captions
