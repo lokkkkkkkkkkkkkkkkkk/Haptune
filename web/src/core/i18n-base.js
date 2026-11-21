@@ -431,4 +431,5 @@ export const INSTR = {
   tenorsax: ['Tenor sax', 'Saksofon tenor', '次中音萨克斯', '次中音薩克斯'], horn: ['French horn', 'Hon Perancis', '圆号', '法國號'], trombone: ['Trombone', 'Trombon', '长号', '長號'],
   tuba: ['Tuba', 'Tuba', '大号', '低音號'], guzheng: ['Guzheng', 'Guzheng', '古筝', '古箏'], pipa: ['Pipa', 'Pipa', '琵琶', '琵琶'],
   harmonica: ['Harmonica', 'Harmonika', '口琴', '口琴'], xylophone: ['Xylophone', 'Xilofon', '木琴', '木琴'],
+  drums: ['Drum kit', 'Set dram', '架子鼓', '爵士鼓'],
 };

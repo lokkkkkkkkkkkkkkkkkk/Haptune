@@ -282,6 +282,12 @@ async function run(mode, base, browser) {
     await p.waitForFunction((n) => document.querySelectorAll('.st-score g.note').length >= n + 4, before, { timeout: 20000 });
     await p.locator('#st-back').click(); await p.waitForTimeout(300);
     await shot('06b-studio'); await overflow('studio');
+    // the ribbon: a staccato on the note just written, a dynamic, a 1st ending, every tab opens
+    await p.locator('#rbt-marks').click(); await p.locator('#rb-staccato').click();
+    await p.waitForSelector('.st-score g.artic', { timeout: 15000 });
+    for (const tb of ['orn', 'dyn', 'lines', 'text', 'bars']) { await p.locator(`#rbt-${tb}`).click(); await p.waitForSelector(`#rbp-${tb}`); }
+    await p.locator('#rb-end1').click(); await p.waitForTimeout(300);
+    await shot('06c-studio-ribbon'); await overflow('studio ribbon');
     // Instruments: add a cello part; Palettes: mf at the cursor
     if (wide) await p.locator('#side-instruments').click(); else await p.locator('#dock-instruments').click();
     await p.locator('#add-cello').click(); await p.waitForSelector('#part-1');

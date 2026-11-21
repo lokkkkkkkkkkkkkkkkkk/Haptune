@@ -34,7 +34,15 @@ Marks go right after a note or rest, no spaces, each starting with "!":
 - Text: !words="dolce"  Tempo marks: !tempo="Allegro" and !bpm=120 (quarter-note beats per minute; convert other beat units).
 - Chord symbols above the staff: !chord="G7"   Lyrics: !ly="Twin-" (end with - when the word continues on the next note), second verse !ly2="..."
 - Piano pedal: !ped=start / !ped=end
+- More marks: !breath !caesura !prall (short trill) !tremolo (slashes through the stem) !harmonic (small circle) !open
 Put dynamics written between the two staves of a piano part on the upper staff.
+
+## Lead sheets, band scores, drums and guitar
+- Lead sheets and band charts: write the melody as usual and put each chord symbol on the note or rest it is printed over (!chord="Am7"); a chord printed between two notes goes on the later one. Keep every chord symbol, also N.C.
+- Rhythm slashes (slanted noteheads under chord symbols): write each as B4 with its value and !slash, e.g. B4/4!slash!chord="C" B4/4!slash B4/2!slash!chord="G7". A bar with chord symbols but no notes or slashes: write rests that place each chord where it is printed, e.g. r/2!chord="C" r/2!chord="G".
+- A score for several instruments (band, ensemble, voice + piano + guitar...): every staff is its own part, in the order printed; never merge two instruments into one staff and never leave one out.
+- Drum staff (percussion clef: two short thick lines; or a one-line rhythm staff): write each notehead by its position as if it were in treble clef, and add !x to x-shaped noteheads (hi-hat, ride, crash), !ox to a circled x (open hi-hat), !ghost to a note in brackets. Usual places: F4 bass drum, C5 snare, E5 and D5 toms, A4 floor tom, G5 hi-hat, F5 ride, A5 crash, D4 hi-hat pedal. Notes struck together are a chord (F4+G5/8!x). In the overview this part is instrument "percussion" with clef "percussion".
+- Guitar or bass TAB (six or four lines with fret numbers instead of noteheads) is its own staff: give each fret number as the pitch it sounds, written one octave higher as guitar music is (guitar strings from the bottom TAB line: E3 A3 D4 G4 B4 E5 in written pitch; bass: E2 A2 D3 G3 written in bass clef; a fret number adds that many semitones). In the overview the TAB staff is a part with the same instrument and clef "treble8vb" (guitar) or "bass" (bass).
 
 ## Voices
 Most staves have one voice: one string. When a staff has two independent rhythms (stems up and stems down), write two strings: voice 1 = the stems-up/upper part, voice 2 = the lower part. Notes that share a stem are a chord, not two voices.

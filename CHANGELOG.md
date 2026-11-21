@@ -1,5 +1,44 @@
 # Changelog
 
+## Part 8: a professional writing studio, band scores and more free classical music (November 2026)
+- **The studio's ribbon**: under the note toolbar, a menu of tabs (Marks · Ornaments · Dynamics · Lines · Text ·
+  Bars, and one for the instrument being written) and a long strip of tools for the open tab, as in MuseScore 4,
+  Dorico and Flat. Every button shows the real symbol, drawn from the engraving font (Leipzig, SIL OFL).
+  - Marks: staccato, staccatissimo, tenuto, portato, accent, marcato, spiccato, fermata (above / below),
+    breath mark, caesura; ornaments: trill, mordent, short trill, turn, inverted turn, tremolo (1–3 strokes),
+    arpeggio and strums up / down; between notes: slur, tie, glissando, slide, hammer-on, pull-off.
+  - Dynamics: ppp to fff, sf, sfz, sffz, sfp, fp, fz, rfz, hairpins over 1, 2, 4 or 8 bars, cresc. / dim. / subito.
+  - Lines: 8va, 8vb, 15ma, pedal (line or Ped. ✱), let ring, palm mute.
+  - Text: tempo marks with their metronome (playback follows), rit. / rall. / accel. / a tempo, expression words,
+    rehearsal letters, Segno, Coda, Fine, D.C., D.C. al Fine, D.S., D.S. al Coda, To Coda (playback follows), and
+    your own text.
+  - Bars: barlines, repeats, 1st / 2nd endings, insert before / after, delete, clear, copy, paste, 4 more bars,
+    a new time signature from an empty bar on (2/4 to 12/8, 2/2), clefs (treble, bass, alto, tenor, treble 8vb,
+    percussion).
+  - Note toolbar: every value from whole to 32nd drawn as notes, dot, triplets (three in the time of two, the
+    group kept together), rest, tie (holds the note on), sharp, flat, natural, chord, right / left hand for piano.
+- **A tab for each instrument**:
+  - Guitar / ukulele: **chord boxes** ("finger pictures") for the key's chords and any chord you build (root +
+    type), open shapes first then barre chords; the box goes on the beat with its name and is saved in the file
+    (MusicXML <frame>), and a row of boxes under the music shows where the fingers go for every chord. Also
+    hammer-on, pull-off, slide, bends, vibrato, P.M., let ring, harmonics, strums, p i m a, fingers, strings ①–⑥.
+  - Strings and erhu: bowing, fingers 0–4, **Suggest fingering** (first position, open strings where they ring),
+    which string (sul G... / 内弦 外弦), pizz., arco, col legno, sul pont., sul tasto, con sord., harmonics, snap
+    pizz., thumb position (cello), 滑音 揉弦 颤音.
+  - Piano: right / left hand, fingers 1–5 (left hand below), **Suggest fingering** by hand position, pedal,
+    una corda, octave lines, arpeggios.
+  - Drums: a **drum kit** in place of the piano keys (kick, snare, cross-stick, hi-hat, open hi-hat, hi-hat foot,
+    ride, crash, three toms; "Together" for hits at once), **grooves** that fill a bar (rock, pop, ballad, disco,
+    funk 16ths, half-time, waltz, tom fill, crash), ghost notes, rolls, sticking. Drums play with real drum sounds.
+  - Voice: **lyrics** typed note by note (Enter goes to the next note; "Hap-" joins syllables), breath marks.
+  - Winds, brass and Chinese instruments: tonguing, flutter, mutes, falls and doits, 花舌 叠音 摇指 刮奏 轮指...
+- **Importing band scores and lead sheets**: a MIDI file's drum track (channel 10) becomes a drum part (it used to
+  be dropped, and a drums-only file was refused); tracks without a program get their instrument from the track
+  name ("Bass", "Lead Vocal"...); MusicXML drum parts written with pitches and General MIDI drum instruments play
+  the right drums; TAB staves show as guitar notation; rhythm slashes don't play. The AI reader has new choices
+  (Lead sheet, Band score, Drum kit) and reads chord symbols over slashes or empty bars, every instrument of a band
+  score on its own staff, drum staves (x noteheads, open hi-hat, ghost notes) and guitar TAB.
+
 ## The quick-start video, and a first run that asks nothing (November 2026)
 - **Quick-start video** (1:30, 1920×1080): a real practice session, start to finish, with a voice guide and captions
   burned in. Search "Ode to Joy" → open it → Listen (the cursor follows the sheet) → change the key D → C (notes and

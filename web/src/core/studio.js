@@ -39,7 +39,7 @@ export function addPart(score, instrument) {
     };
   });
   const id = `P${pi + 1}${Math.random().toString(36).slice(2, 5)}`;
-  return { ...score, parts: [...score.parts, { id, name: instrument, abbr: '', instrument, program: null, transpose: null, staves, measures, percussion: false }] };
+  return { ...score, parts: [...score.parts, { id, name: instrument, abbr: '', instrument, program: null, transpose: null, staves, measures, percussion: !!INSTRUMENT_DEFS[instrument]?.percussion }] };
 }
 
 /** Removes a part (the last one stays). */
@@ -53,7 +53,7 @@ export function setPartInstrument(score, pi, instrument) {
   const p = score.parts[pi];
   if (!p) return score;
   const measures = p.staves === 1 ? p.measures.map((m, mi) => (mi === 0 ? { ...m, clefs: [{ staff: 1, ...clefFor(instrument), oct: 0, off: ZERO }] } : m)) : p.measures;
-  return { ...score, parts: score.parts.map((x, i) => (i === pi ? { ...x, name: instrument, instrument, measures } : x)) };
+  return { ...score, parts: score.parts.map((x, i) => (i === pi ? { ...x, name: instrument, instrument, measures, percussion: !!INSTRUMENT_DEFS[instrument]?.percussion } : x)) };
 }
 
 /** A key signature from a bar on (the notes keep their pitches, as in MuseScore's key palette). */
@@ -85,7 +85,7 @@ export function toggleArticulation(score, id, kind) {
     const has = (n.notationsXml || '').includes(kind === 'fermata' ? '<fermata' : `<${kind}/>`);
     const inner = (n.notationsXml || '').replace(/^<notations>|<\/notations>$/g, '');
     const next = has ? inner.replace(add, '').replace(kind === 'fermata' ? /<fermata[^>]*\/>/ : new RegExp(`<${kind}/>`), '').replace('<articulations></articulations>', '') : inner + add;
-    return { ...n, notationsXml: next ? `<notations>${next}</notations>` : '' };
+    return { ...n, notationsXml: next || '' };
   }) })) }));
   return changed ? { ...score, parts } : score;
 }
@@ -122,7 +122,7 @@ export function mixEvents(src, mix, fullScore = src) {
     if (fi >= 0 && !on[fi]) continue;
     const st = stripOf(mix, part || {});
     const a = secondsAt(perf.tempos, e.t);
-    evs.push({ time: a, dur: secondsAt(perf.tempos, e.t.add(e.dur)) - a, midi: e.midi, vel: Math.round(30 + 75 * st.vol), inst: st.sound || soundOf(part?.instrument), pan: st.pan });
+    evs.push({ time: a, dur: secondsAt(perf.tempos, e.t.add(e.dur)) - a, midi: e.midi, vel: Math.round(30 + 75 * st.vol), inst: st.sound || soundOf(part?.instrument), pan: st.pan, ...(e.drum ? { drum: e.drum } : {}) });
   }
   return { evs, length: secondsAt(perf.tempos, perf.length) + 0.3 };
 }

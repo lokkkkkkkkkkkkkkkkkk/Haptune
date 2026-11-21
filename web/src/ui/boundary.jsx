@@ -9,7 +9,7 @@ import { openSheet, closeSheet, pop } from './state.js';
 export class Boundary extends Component {
   constructor(props) { super(props); this.state = { error: null }; }
   static getDerivedStateFromError(error) { return { error }; }
-  componentDidCatch(error) { keepError(`${this.props.name || 'screen'}: ${error?.stack?.split('\n').slice(0, 3).join(' | ') || error}`); }
+  componentDidCatch(error) { console.error(error); keepError(`${this.props.name || 'screen'}: ${error?.stack?.split('\n').slice(0, 3).join(' | ') || error}`); }
   render({ children, sheet = false, name = '' }, { error }) {
     if (!error) return children;
     const again = () => this.setState({ error: null });

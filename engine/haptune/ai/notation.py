@@ -18,6 +18,7 @@ Marks follow a note or rest with no spaces, each starting with "!":
     !stacc !accent !tenuto !marcato !staccatissimo !fermata !trill !mordent !turn !arpeggio
     !upbow !downbow !slur-start !slur-end !p !mf (any dynamic) !cresc-start !cresc-end !dim-start !dim-end
     !words="dolce" !tempo="Allegro" !bpm=120 !chord="G7" !ly="Twin-" !ly2="..." !ped=start|end !fing=3
+    !breath !caesura !prall !tremolo !harmonic !open, and noteheads !x !ox !ghost !slash !diamond (drums, lead sheets)
 """
 from __future__ import annotations
 
@@ -48,7 +49,16 @@ SIMPLE_MARKS = {
     "cresc-end": "wedge-end", "cresc-stop": "wedge-end", "cresc)": "wedge-end",
     "dim-start": "dim-start", "dim(": "dim-start", "decresc-start": "dim-start", "diminuendo-start": "dim-start",
     "dim-end": "wedge-end", "dim-stop": "wedge-end", "dim)": "wedge-end", "decresc-end": "wedge-end",
+    # more marks (Part 8): breath, caesura, short trill, tremolo, harmonics, open strings
+    "breath": "breath-mark", "caesura": "caesura", "prall": "inverted-mordent", "inverted-mordent": "inverted-mordent",
+    "tremolo": "tremolo", "trem": "tremolo", "harmonic": "harmonic", "open": "open-string",
+    # noteheads: drums (x, circled x, ghost notes in brackets), rhythm slashes in lead sheets, diamonds
+    "x": "head-x", "cross": "head-x", "ox": "head-circle-x", "circle-x": "head-circle-x", "ghost": "head-ghost",
+    "slash": "head-slash", "diamond": "head-diamond",
 }
+NOTEHEADS = {"head-x": "<notehead>x</notehead>", "head-circle-x": "<notehead>circle-x</notehead>",
+             "head-ghost": '<notehead parentheses="yes">normal</notehead>', "head-slash": "<notehead>slash</notehead>",
+             "head-diamond": "<notehead>diamond</notehead>"}
 CLEFS = {"treble", "bass", "alto", "tenor", "treble8vb", "treble8va", "bass8vb", "percussion", "soprano", "mezzo"}
 
 _PITCH = r"[A-G](?:##|bb|#|b|n)?-?\d"

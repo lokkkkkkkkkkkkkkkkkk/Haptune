@@ -4,7 +4,8 @@
 // MIDI is aligned to the nearest grid point and the import report says how much was adjusted.
 import { Q, q, ZERO, lcm } from './q.js';
 import { performance, measureLength, makeNote, notesFromSpans, recomputeStarts, keyAt, concertKey } from './score.js';
-import { spellMidi } from './pitch.js';
+import { spellMidi, midiOf } from './pitch.js';
+import { kitForGm } from './drums.js';
 import { PROGRAMS } from './musicxml.js';
 import { estimateKeyFromNotes } from './analysis.js';
 
@@ -187,16 +188,19 @@ export function readMIDI(buf, { title = '' } = {}) {
   // channels -> parts (tracks with notes; format 0 split by channel)
   const groups = [];
   let drumNotes = 0;
+  const drums = [];
   raw.tracks.forEach((tr, ti) => {
     const byCh = new Map();
     for (const n of tr.notes) {
-      if (n.ch === 9) { drumNotes++; continue; }
+      if (n.ch === 9) { drumNotes++; drums.push(n); continue; }
       if (!byCh.has(n.ch)) byCh.set(n.ch, []);
       byCh.get(n.ch).push(n);
     }
     for (const [ch, notes] of byCh) groups.push({ name: tr.name, ch, program: tr.programs[ch] ?? null, notes, lyrics: tr.lyrics, ti });
   });
-  if (!groups.length) throw new Error(drumNotes ? 'This MIDI file only has drums, which Haptune cannot turn into sheet music yet.' : 'This MIDI file has no notes.');
+  // channel 10 is the drum kit: one drum part on a percussion staff, under the other instruments
+  if (drums.length) groups.push({ name: raw.tracks.find((tr) => tr.notes.some((n) => n.ch === 9))?.name || 'Drums', ch: 9, program: null, notes: drums, lyrics: [], drum: true });
+  if (!groups.length) throw new Error('This MIDI file has no notes.');
   // choose the grid from the onsets: exact files sit on 1/4 or 1/3 beats
   const onsets = groups.flatMap((g) => g.notes.map((n) => n.on));
   const grids = [q(1, 4), q(1, 3), q(1, 8), q(1, 6), q(1, 12), q(1, 16), q(1, 24)];
@@ -231,8 +235,20 @@ export function readMIDI(buf, { title = '' } = {}) {
     if (off.gt(endQ)) endQ = off;
     return { on, off, midi: n.midi, vel: n.vel };
   }));
+  // drum hits are short in the file; written, each lasts until the next hit (a quarter at most)
+  groups.forEach((g, gi) => {
+    if (!g.drum) return;
+    const list = partsNotes[gi];
+    const ons = [...new Set(list.map((n) => n.on.toString()))].map((x) => Q.parse(x)).sort((a, b) => a.cmp(b));
+    for (const n of list) {
+      const next = ons.find((o) => o.gt(n.on));
+      const cap = q(Math.floor(n.on.num() + 1e-9) + 1); // never past the next beat, so a hit never crosses a bar line
+      n.off = next && next.lt(cap) ? next : cap;
+      if (n.off.gt(endQ)) endQ = n.off;
+    }
+  });
   // legato fill: notes ending just before the next onset (gated playback) reach it
-  for (const list of partsNotes) {
+  for (const list of partsNotes.filter((_, gi) => !groups[gi].drum)) {
     list.sort((a, b) => a.on.cmp(b.on) || b.midi - a.midi);
     const onsetsSorted = [...new Set(list.map((n) => n.on.toString()))].map((s) => Q.parse(s)).sort((a, b) => a.cmp(b));
     for (const n of list) {
@@ -262,19 +278,28 @@ export function readMIDI(buf, { title = '' } = {}) {
   }
   if (!measures[0].tempo) measures[0].tempo = Math.round(tempo0);
   // key: from the file, else estimated
-  const allMidi = partsNotes.flat().map((n) => ({ midi: n.midi, dur: n.off.sub(n.on).num() }));
+  const allMidi = partsNotes.filter((_, gi) => !groups[gi].drum).flat().map((n) => ({ midi: n.midi, dur: n.off.sub(n.on).num() }));
   const fileKey = raw.keys[0] ? { fifths: raw.keys[0].fifths, mode: raw.keys[0].mode } : null;
   const key = fileKey || estimateKeyFromNotes(allMidi);
   const score = { title: title || raw.tracks.find((x) => x.name)?.name || '', composer: '', lyricist: '', measures, parts: [], meta: { source: 'midi', keyEstimated: !fileKey } };
   groups.forEach((g, gi) => {
-    const list = partsNotes[gi];
+    let list = partsNotes[gi];
+    // drums: each General MIDI drum goes to its place on the drum staff
+    const kitAt = new Map();
+    if (g.drum) {
+      list = list.map((n) => { const k = kitForGm(n.midi); const dm = midiOf({ step: k.step, alter: 0, octave: k.oct }); kitAt.set(`${n.on.toString()}|${dm}`, k); return { ...n, midi: dm, kit: k }; });
+      const seen = new Set();
+      list = list.filter((n) => { const key = `${n.on.toString()}|${n.midi}`; if (seen.has(key)) return false; seen.add(key); return true; });
+    }
     const lo = Math.min(...list.map((n) => n.midi)), hi = Math.max(...list.map((n) => n.midi));
     const program = g.program;
     const name = g.name || (program !== null && program < 8 ? GM_NAMES[program] : `Part ${gi + 1}`);
-    const twoStaves = hi - lo > 24 && lo < 55 && hi > 64 || (program !== null && program < 8 && hi - lo > 19);
-    const part = { id: `P${gi + 1}`, name, abbr: '', instrument: program !== null ? programInstrument(program) : 'piano', program, transpose: null, staves: twoStaves ? 2 : 1, measures: [] };
-    const clefs = twoStaves ? [{ staff: 1, sign: 'G', line: 2, oct: 0, off: ZERO }, { staff: 2, sign: 'F', line: 4, oct: 0, off: ZERO }]
-      : [lo < 55 ? { staff: 1, sign: 'F', line: 4, oct: 0, off: ZERO } : { staff: 1, sign: 'G', line: 2, oct: 0, off: ZERO }];
+    const twoStaves = !g.drum && (hi - lo > 24 && lo < 55 && hi > 64 || (program !== null && program < 8 && hi - lo > 19));
+    const instrument = g.drum ? 'drums' : program !== null ? programInstrument(program) : instrumentFromTrackName(g.name);
+    const part = { id: `P${gi + 1}`, name: g.drum && !g.name ? 'Drums' : name, abbr: '', instrument, program, transpose: null, staves: twoStaves ? 2 : 1, measures: [], percussion: !!g.drum };
+    const clefs = g.drum ? [{ staff: 1, sign: 'percussion', line: null, oct: 0, off: ZERO }]
+      : twoStaves ? [{ staff: 1, sign: 'G', line: 2, oct: 0, off: ZERO }, { staff: 2, sign: 'F', line: 4, oct: 0, off: ZERO }]
+        : [lo < 55 ? { staff: 1, sign: 'F', line: 4, oct: 0, off: ZERO } : { staff: 1, sign: 'G', line: 2, oct: 0, off: ZERO }];
     // voices per staff
     const staffOf = (n) => (twoStaves ? (n.midi >= 60 ? 1 : 2) : 1);
     const voices = new Map(); // `${staff}:${v}` -> [{on, off, pitches[]}]
@@ -316,16 +341,27 @@ export function readMIDI(buf, { title = '' } = {}) {
           const e = c.off.gt(mEnd) ? mEnd : c.off;
           const lyric = c.on.ge(m.start) ? lyricAt.get(c.on.toString()) : null;
           items.push({
-            off: s.sub(m.start), dur: e.sub(s), pitches: c.midis.sort((a, b) => a - b).map((md) => spellMidi(md, key.fifths)),
+            off: s.sub(m.start), dur: e.sub(s), pitches: c.midis.sort((a, b) => a - b).map((md) => spellMidi(md, g.drum ? 0 : key.fifths)),
             tieIn: c.on.lt(m.start), tieOut: c.off.gt(mEnd),
             lyrics: lyric ? [lyricFromText(lyric)] : null,
           });
         }
         if (!items.length && v > 1) continue;
         const notes = notesFromSpans(items, time, { voice: String(v), staff, fillRests: v === 1, measureDur: m.dur });
+        if (g.drum) {
+          for (const n of notes) {
+            if (!n.pitch || n.rest) continue;
+            const dm = midiOf(n.pitch);
+            const k = kitAt.get(`${m.start.add(n.off).toString()}|${dm}`) || list.find((x) => x.midi === dm)?.kit;
+            n.unpitched = { step: k?.step || n.pitch.step, octave: k?.oct ?? n.pitch.octave };
+            n.noteheadXml = k?.head ? `<notehead>${k.head}</notehead>` : '';
+            n.pitch = null; n.tie = { start: false, stop: false }; n.stem = 'up';
+          }
+        }
         pm.notes.push(...notes);
       }
       if (!pm.notes.length) pm.notes.push(makeNote({ off: ZERO, dur: m.dur, rest: true, type: 'whole', measureRest: true }));
+      if (g.drum) pm.key = null;
       part.measures.push(pm);
     });
     score.parts.push(part);
@@ -350,6 +386,15 @@ function lyricFromText(t) {
 function timeIn(measures, mi) {
   for (let i = mi; i >= 0; i--) if (measures[i].time) return measures[i].time;
   return { beats: 4, beatType: 4 };
+}
+
+/** An instrument from a track name when the file sets no program ("Bass", "Lead Vocal", "Strings"...). */
+function instrumentFromTrackName(name = '') {
+  const n = String(name).toLowerCase();
+  const pairs = [[/bass/, 'bassguitar'], [/guitar|gtr/, 'guitar'], [/vocal|voice|vox|melody|lead|sing/, 'voice'], [/violin|strings?/, 'violin'], [/cello/, 'cello'],
+    [/flute/, 'flute'], [/sax/, 'sax'], [/trumpet|brass/, 'trumpet'], [/clarinet/, 'clarinet'], [/organ/, 'organ'], [/uke|ukulele/, 'ukulele'], [/erhu/, 'erhu'], [/guzheng/, 'guzheng']];
+  for (const [re, k] of pairs) if (re.test(n)) return k;
+  return 'piano';
 }
 
 function programInstrument(p) {

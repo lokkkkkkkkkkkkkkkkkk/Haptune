@@ -287,7 +287,7 @@ export function ScaleSheet() {
       <Section title={t('key')}><div class="chips wrap">{TONICS.map((x) => <Chip key={x} on={tonic === x} color="teal" onClick={() => setTonic(x)}>{nameOf(parseName(x))}</Chip>)}</div></Section>
       <Section title={t('scaleKind')}><div class="chips wrap">{types.map((x) => <Chip key={x} on={type === x} color="teal" onClick={() => setType(x)}>{t(x)}</Chip>)}</div></Section>
       <Section title={t('octaves')}><Segmented value={oct} onChange={setOct} options={[{ value: 1, label: '1' }, { value: 2, label: '2' }]} /></Section>
-      <List><Row title={t('instrument')} right={<select id="scale-inst" value={inst} onChange={(e) => setInst(e.currentTarget.value)}>{INSTRUMENTS.map((k) => <option key={k} value={k}>{instrumentName(k)}</option>)}</select>} /></List>
+      <List><Row title={t('instrument')} right={<select id="scale-inst" value={inst} onChange={(e) => setInst(e.currentTarget.value)}>{INSTRUMENTS.filter((k) => k !== 'drums').map((k) => <option key={k} value={k}>{instrumentName(k)}</option>)}</select>} /></List>
       <Button onClick={add} color="teal" full>{t('addToLibrary')}</Button>
     </SheetFrame>
   );

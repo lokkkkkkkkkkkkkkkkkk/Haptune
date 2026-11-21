@@ -43,6 +43,7 @@ export const INSTRUMENT_DEFS = {
   pipa: { clef: G, range: [45, 88], sound: 'guitar', family: 'chinese' },
   harmonica: { clef: G, range: [60, 96], sound: 'clarinet', family: 'wind' },
   xylophone: { clef: G, range: [65, 108], sound: 'epiano', family: 'keys' },
+  drums: { clef: { sign: 'percussion', line: null }, range: [0, 127], sound: 'piano', family: 'percussion', percussion: true },
 };
 export const FAMILIES = ['keys', 'strings', 'plucked', 'voice', 'wind', 'brass', 'chinese'];
 export const soundOf = (id) => INSTRUMENT_DEFS[id]?.sound || 'piano';

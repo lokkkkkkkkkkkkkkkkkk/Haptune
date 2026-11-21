@@ -7,6 +7,7 @@
 // Note   { id, off: Q, dur: Q, rest, pitch|null, voice, staff, chord, type, dots, tm, tie:{start,stop},
 //          grace, cue, lyrics, beams, stem, notationsXml }
 // Every time value is an exact fraction of a quarter note (Q).
+import { drumOf } from './drums.js';
 import { Q, q, ZERO, ONE, lcm } from './q.js';
 import { midiOf, transposePitch, transposeKey, transposeInterval, iv, keyAlter, STEPS } from './pitch.js';
 import { transposeChord } from './chords.js';
@@ -258,6 +259,7 @@ export function performance(score, { repeats = true, partFilter = null } = {}) {
       if (!pm) return;
       for (const n of pm.notes) {
         if (n.rest || n.cue || (!n.pitch && !n.unpitched)) continue;
+        if (n.noteheadXml && />slash</.test(n.noteheadXml)) continue; // rhythm slashes in a lead sheet: the chords play, not the slash
         let p = n.pitch;
         if (p && part.transpose) p = transposePitch(p, part.transpose);
         const midi = p ? midiOf(p) : 38;
@@ -273,7 +275,7 @@ export function performance(score, { repeats = true, partFilter = null } = {}) {
           }
         }
         const dur = n.grace ? q(1, 8) : n.dur;
-        const ev = { t: n.grace ? start.sub(q(1, 16)) : start, dur, midi, vel: n.vel || 80, pi, staff: n.staff, voice: n.voice, ids: [n.id], mi, off: n.off, unpitched: !n.pitch };
+        const ev = { t: n.grace ? start.sub(q(1, 16)) : start, dur, midi, vel: n.vel || 80, pi, staff: n.staff, voice: n.voice, ids: [n.id], mi, off: n.off, unpitched: !n.pitch, drum: n.pitch ? null : drumOf(n) };
         if (ev.t.lt(0)) ev.t = ZERO;
         events.push(ev);
         if (n.tie.start) openTies.set(key, ev); else openTies.delete(key);

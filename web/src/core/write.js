@@ -28,7 +28,7 @@ export function blankScore({ title = 'Untitled', composer = '', instrument = 'pi
   const [beats, beatType] = time;
   const divisions = 4;
   const barDiv = Math.round(beats * 4 / beatType * divisions);
-  const clef = piano ? null : LOW.has(instrument) ? CLEF.bass : CLEF.treble;
+  const clef = piano ? null : instrument === 'drums' ? ['percussion', null] : LOW.has(instrument) ? CLEF.bass : CLEF.treble;
   const restBar = (staff) => `<note><rest measure="yes"/><duration>${barDiv}</duration><voice>${staff === 2 ? 5 : 1}</voice><staff>${staff}</staff></note>`;
   const measures = [];
   for (let i = 0; i < Math.max(1, bars); i++) {
@@ -36,7 +36,7 @@ export function blankScore({ title = 'Untitled', composer = '', instrument = 'pi
     if (i === 0) {
       m += `<attributes><divisions>${divisions}</divisions><key><fifths>${key}</fifths><mode>${mode}</mode></key><time><beats>${beats}</beats><beat-type>${beatType}</beat-type></time>`;
       if (piano) m += '<staves>2</staves><clef number="1"><sign>G</sign><line>2</line></clef><clef number="2"><sign>F</sign><line>4</line></clef>';
-      else m += `<clef><sign>${clef[0]}</sign><line>${clef[1]}</line></clef>`;
+      else m += clef[1] === null ? `<clef><sign>${clef[0]}</sign></clef>` : `<clef><sign>${clef[0]}</sign><line>${clef[1]}</line></clef>`;
       m += `</attributes><direction placement="above"><direction-type><metronome><beat-unit>quarter</beat-unit><per-minute>${tempo}</per-minute></metronome></direction-type><sound tempo="${tempo}"/></direction>`;
     }
     m += restBar(1);
@@ -51,6 +51,7 @@ export function blankScore({ title = 'Untitled', composer = '', instrument = 'pi
   score.composer = composer;
   score.parts[0].instrument = instrument;
   score.parts[0].staves = staves;
+  score.parts[0].percussion = instrument === 'drums';
   return score;
 }
 
@@ -159,7 +160,8 @@ function advance(score, cur, len) {
  * Writes a note (midi) or a rest (midi = null) of length `len` at the cursor {pi, staff, mi, off}.
  * Returns {score, cur (the next place), id (the note written)}.
  */
-export function writeAt(score, cur, { midi = null, len }) {
+export function writeAt(score, cur, { midi = null, len, drum = null, tuplet = false }) {
+  if (tuplet) { const r = writeTriplet(score, cur, { midi, len, drum }); if (r) return r; }
   let out = score;
   let { mi, off } = cur;
   if (mi >= out.measures.length) out = addBars(out, mi - out.measures.length + 1);
@@ -189,8 +191,10 @@ export function writeAt(score, cur, { midi = null, len }) {
     let at = off;
     pieces.forEach((len2, k) => {
       const tf = typeFor(len2);
-      kept.push(makeNote({ id: ids[k], off: at, dur: len2, rest: midi === null, pitch, voice, staff, type: tf?.type || 'quarter', dots: tf?.dots || 0,
-        tie: { start: midi !== null && k < pieces.length - 1, stop: midi !== null && k > 0 } }));
+      const nn = makeNote({ id: ids[k], off: at, dur: len2, rest: midi === null && !drum, pitch, voice, staff, type: tf?.type || 'quarter', dots: tf?.dots || 0,
+        tie: { start: midi !== null && k < pieces.length - 1, stop: midi !== null && k > 0 }, unpitched: drum?.unpitched || null });
+      if (drum) { nn.noteheadXml = drum.noteheadXml || ''; nn.stem = 'up'; }
+      kept.push(nn);
       at = at.add(len2);
     });
     // fill every gap with rests, so the bar is exactly full
@@ -206,6 +210,63 @@ export function writeAt(score, cur, { midi = null, len }) {
   });
   const next = advance(out, { ...cur, pi, staff, mi, off }, end.sub(off));
   return { score: next.score, cur: next.cur, id: ids[0] };
+}
+
+/**
+ * A triplet note: three notes in the time of two (len = the plain note value, e.g. an eighth). The cursor's
+ * group of three is kept together; empty places in it become triplet rests. null when the group doesn't fit.
+ */
+function writeTriplet(score, cur, { midi = null, len, drum = null }) {
+  let out = score;
+  let { mi, off } = cur;
+  if (mi >= out.measures.length) out = addBars(out, mi - out.measures.length + 1);
+  if (off.ge(out.measures[mi].dur)) { mi += 1; off = ZERO; if (mi >= out.measures.length) out = addBars(out, 1); }
+  const tf = typeFor(len);
+  if (!tf || tf.dots) return null;
+  const d = len.mul(q(2, 3)), group = len.mul(q(2));
+  const barLen = out.measures[mi].dur;
+  const k = Math.floor(off.num() / group.num() + 1e-9);
+  const gStart = group.mul(q(k)), gEnd = gStart.add(group);
+  if (gEnd.gt(barLen)) return null;
+  const slot = Math.min(2, Math.max(0, Math.round(off.sub(gStart).num() / d.num())));
+  const at = gStart.add(d.mul(q(slot)));
+  const pi = cur.pi || 0, staff = cur.staff || 1;
+  const voice = voiceOf(out.parts[pi].measures[mi], staff);
+  const fifths = (keyAt(out.parts[pi], mi) || { fifths: 0 }).fifths;
+  const pitch = midi === null ? null : spellMidi(midi, fifths);
+  const id = newId();
+  const tm = { actual: 3, normal: 2, normalType: null, normalDots: 0 };
+  out = rebuildMeasure(out, pi, mi, (notes) => {
+    const others = notes.filter((n) => !sameVoice(n, staff, voice));
+    const mine = notes.filter((n) => sameVoice(n, staff, voice) && !n.grace);
+    const kept = [];
+    const slots = [null, null, null];
+    for (const n of mine) {
+      const s = n.off, e = n.off.add(n.dur);
+      if (e.le(gStart) || s.ge(gEnd)) { kept.push({ ...n, measureRest: false }); continue; }
+      if (n.tm && n.dur.eq(d) && s.ge(gStart) && e.le(gEnd)) { const sl = Math.round(s.sub(gStart).num() / d.num()); if (sl !== slot) { if (!n.chord) slots[sl] = n; else kept.push(n); } continue; }
+      if (s.lt(gStart) && !n.tm) { const t2 = typeFor(gStart.sub(s)); if (t2) kept.push({ ...n, dur: gStart.sub(s), type: t2.type, dots: t2.dots, measureRest: false, tie: { start: false, stop: !!n.tie?.stop } }); }
+    }
+    for (let sl = 0; sl < 3; sl++) {
+      let n = slots[sl];
+      if (sl === slot) {
+        n = makeNote({ id, off: at, dur: d, rest: midi === null && !drum, pitch, voice, staff, type: tf.type, tm, unpitched: drum?.unpitched || null });
+        if (drum) { n.noteheadXml = drum.noteheadXml || ''; n.stem = 'up'; }
+      } else if (!n) n = makeNote({ id: newId('r'), off: gStart.add(d.mul(q(sl))), dur: d, rest: true, voice, staff, type: tf.type, tm });
+      kept.push({ ...n, tuplet: { start: sl === 0, stop: sl === 2 } });
+    }
+    const heads = kept.filter((n) => !n.chord).sort((a, b) => a.off.cmp(b.off));
+    const filled = [];
+    let pos = ZERO;
+    for (const n of heads) {
+      if (n.off.gt(pos)) filled.push(...restsFor(pos, n.off, staff, voice));
+      pos = n.off.add(n.dur).gt(pos) ? n.off.add(n.dur) : pos;
+    }
+    if (pos.lt(barLen)) filled.push(...restsFor(pos, barLen, staff, voice));
+    return [...others, ...kept, ...filled];
+  });
+  const next = advance(out, { ...cur, pi, staff, mi, off: at }, d);
+  return { score: next.score, cur: next.cur, id };
 }
 
 /** The note or rest that starts at the cursor's place (or the one sounding there), in its staff. */
@@ -238,7 +299,7 @@ export function eraseBefore(score, cur) {
   const n = hit.note;
   const out = rebuildMeasure(score, cur.pi || 0, hit.mi, (notes) => notes
     .filter((x) => !(x.chord && x.off.eq(n.off) && sameVoice(x, n.staff || 1, n.voice)))
-    .map((x) => (x.id === n.id ? { ...x, rest: true, pitch: null, tie: { start: false, stop: false }, lyrics: [], notationsXml: '' } : x)));
+    .map((x) => (x.id === n.id ? { ...x, rest: true, pitch: null, unpitched: null, noteheadXml: '', tie: { start: false, stop: false }, lyrics: [], notationsXml: '' } : x)));
   return { score: out, cur: { ...cur, mi: hit.mi, off: n.off } };
 }
 

@@ -27,7 +27,7 @@ import { RHYTHM_IDS } from '../../core/rhythm.js';
 import { flag } from '../analytics.js';
 import { tick } from '../native.js';
 
-const INSTRUMENTS = ['piano', 'violin', 'guitar', 'voice', 'flute', 'cello', 'ukulele', 'clarinet', 'sax', 'trumpet', 'erhu', 'guzheng'];
+const INSTRUMENTS = ['piano', 'violin', 'guitar', 'voice', 'drums', 'flute', 'cello', 'ukulele', 'bassguitar', 'viola', 'clarinet', 'sax', 'trumpet', 'erhu', 'guzheng', 'dizi', 'pipa'];
 const KEYS = [-4, -3, -2, -1, 0, 1, 2, 3, 4, 5];
 const TIMES = [[4, 4], [3, 4], [2, 4], [6, 8]];
 const keyLabel = (f) => keyName({ fifths: f, mode: 'major' });
