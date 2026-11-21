@@ -146,7 +146,7 @@ export function ComposeSheet({ type: initial = 'request', piece = null, show = n
       {(type === 'request' || type === 'share') && <>
         <label class="field-label">{t('whoseMusic')}{type === 'share' ? ' *' : ''}</label>
         <div class="chips wrap">{LICENCES.filter((l) => type === 'request' || l !== 'unknown').map((l) => <Chip key={l} on={licence === l} onClick={() => setLicence(l)}>{t(`lic_${l}`)}</Chip>)}</div>
-        <p class="note-text"><Icon name="info" size={13} /> {t(type === 'share' ? (licence && !['pd', 'own', 'arr'].includes(licence) ? 'shareCopyrightNote' : 'sharePublicNote') : 'requestCopyrightNote')}</p>
+        <p class="note-text"><Icon name="info" size={13} /> {t(type === 'share' ? (licence === 'copyrighted' ? 'shareCopyrightNote' : licence === 'unknown' ? 'shareUnknownNote' : 'sharePublicNote') : 'requestCopyrightNote')}</p>
       </>}
 
       {(type === 'request' || type === 'question') && <>

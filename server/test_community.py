@@ -214,20 +214,60 @@ def test_questions_helpful_replies_and_caps():
     assert credits(helpers[1][0]) == 105
 
 
-def test_library_shares_public_domain_and_keeps_copyrighted_unlisted():
+def test_library_lists_public_domain_and_copyrighted_but_keeps_unknown_unlisted():
     h, me = person()
     pd = client.post("/c/posts", headers=h, json={"type": "share", "title": "Minuet in G", "licence": "pd", "xml": XML}).json()
     cr = client.post("/c/posts", headers=h, json={"type": "share", "title": "A pop song", "licence": "copyrighted", "xml": XML}).json()
-    assert pd["visibility"] == "public" and cr["visibility"] == "unlisted"
+    un = client.post("/c/posts", headers=h, json={"type": "share", "title": "Who wrote this", "licence": "unknown", "xml": XML}).json()
+    assert pd["visibility"] == "public" and cr["visibility"] == "public" and un["visibility"] == "unlisted"
     listed = [p["id"] for p in client.get("/c/posts", params={"type": "share"}).json()["items"]]
-    assert listed == [pd["id"]]
-    assert client.get(f"/c/files/{cr['file_id']}").status_code == 200          # anyone with the link
-    assert credits(h) == 110                                                 # the public-domain share earned 10
+    assert set(listed) == {pd["id"], cr["id"]}
+    assert client.get(f"/c/files/{un['file_id']}").status_code == 200          # anyone with the link
+    assert credits(h) == 110                                                 # only the public-domain share earned Notes
     other, _ = person("Bala")
     assert client.post("/c/react", json={"target": f"p:{pd['id']}", "kind": "save"}, headers=other).json()["on"] is True
     assert credits(h) == 112
     mine = client.get("/c/posts", params={"mine": True}, headers=h).json()["items"]
-    assert len(mine) == 2
+    assert len(mine) == 3
+
+
+def test_one_copyright_report_takes_a_copyrighted_score_down_until_reviewed():
+    h, _ = person("Musician")
+    cr = client.post("/c/posts", headers=h, json={"type": "share", "title": "A pop song", "licence": "copyrighted", "xml": XML}).json()
+    pd = client.post("/c/posts", headers=h, json={"type": "share", "title": "Minuet in G", "licence": "pd", "xml": XML}).json()
+    owner, _ = person("Label")
+    r = client.post("/c/report", json={"target": f"p:{cr['id']}", "reason": "copyright", "note": "We own this song."}, headers=owner).json()
+    assert r.get("hidden") is True
+    assert client.post("/c/report", json={"target": f"p:{pd['id']}", "reason": "copyright"}, headers=owner).json().get("hidden") is None
+    listed = [p["id"] for p in client.get("/c/posts", params={"type": "share"}).json()["items"]]
+    assert cr["id"] not in listed and pd["id"] in listed                    # a public-domain score needs a review first
+    assert client.get(f"/c/files/{cr['file_id']}").status_code in (403, 404)
+    d, _ = dev()
+    rep = [x for x in client.get("/c/admin/reports", headers=d).json()["items"] if x["target"] == f"p:{cr['id']}"][0]
+    assert rep["reason"] == "copyright"
+    assert client.post(f"/c/admin/reports/{rep['id']}", json={"action": "restore"}, headers=d).status_code == 200
+    assert cr["id"] in [p["id"] for p in client.get("/c/posts", params={"type": "share"}).json()["items"]]
+
+
+def _gz(xml):
+    import base64
+    import gzip
+    return base64.b64encode(gzip.compress(xml.encode())).decode()
+
+
+def test_admin_bulk_share_seeds_the_library_as_a_musician():
+    m, mus = person("Haptune Musician")
+    items = [{"title": f"Song {i}", "song": f"Song {i}", "artist": "Singer", "xml_gz": _gz(XML)} for i in range(15)]
+    items.append({"title": "Broken", "xml_gz": _gz("<html>not music</html>")})
+    assert client.post("/c/admin/bulk-share", json={"handle": mus["handle"], "items": items[:2]}, headers=m).status_code == 403
+    d, _ = dev()
+    r = client.post("/c/admin/bulk-share", json={"handle": mus["handle"], "items": items}, headers=d).json()
+    assert len(r["created"]) == 15 and [s["why"] for s in r["skipped"]] == ["not a MusicXML score"]
+    listed = client.get("/c/posts", params={"type": "share"}).json()["items"]
+    assert len(listed) >= 15 and all(p["licence"] == "copyrighted" and p["visibility"] == "public" for p in listed)
+    assert credits(m) == 100                                                 # no Notes for seeding
+    again = client.post("/c/admin/bulk-share", json={"handle": mus["handle"], "items": items[:3]}, headers=d).json()
+    assert again["created"] == [] and len(again["skipped"]) == 3              # safe to run again
 
 
 def test_reports_hide_after_three_and_admin_can_restore():

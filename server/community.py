@@ -7,8 +7,10 @@
                good and large (see REWARDS), with caps so nobody can farm credits. Other useful submissions and
                comments get a share too.
     Questions  Ask the community instead of the paid AI tutor; the accepted answer earns credits.
-    Library    Scores people share. Public domain and your own work are listed for everyone; anything else is
-               shared by link only (unlisted), as copyrighted songs should stay private.
+    Library    Scores people share. Public domain, your own work and arrangements of copyrighted songs (marked
+               "copyrighted") are listed for everyone; scores whose rights are unknown are shared by link only.
+               A copyright report on a copyrighted score takes it down at once until the developer has looked
+               (notice and takedown); only public-domain and own work earns Notes for sharing.
     Show       "I played Ode to Joy at 96%!": practice wins with claps.
     Challenge  One public-domain song a week; best Play Along accuracy wins; credits for taking part and the top 3.
     Plus profiles, follows, blocks, a feed, leaderboards (helpers, practice, challenge), reports with
@@ -23,6 +25,7 @@ import base64
 import gzip
 import re
 import time
+import zlib
 from datetime import datetime, timedelta, timezone
 from typing import Literal
 
@@ -159,7 +162,9 @@ CHALLENGES = [  # public-domain songs from the app's songbook, one a week
     ("silentnight", "Silent Night"), ("jingle", "Jingle Bells"), ("birthday", "Happy Birthday"),
 ]
 LICENCES = {"pd", "own", "arr", "copyrighted", "unknown"}
-PUBLIC_OK = {"pd", "own", "arr"}           # may be listed publicly (arr = an arrangement of a public-domain tune)
+PUBLIC_OK = {"pd", "own", "arr"}           # free to reuse (arr = an arrangement of a public-domain tune)
+LISTED = PUBLIC_OK | {"copyrighted"}       # shares that may be listed publicly; "unknown" stays link-only
+TAKEDOWN = {"copyrighted", "unknown"}      # a copyright report hides these at once, pending review
 MAX_XML = 3 * 1024 * 1024
 MAX_ATTACH = 2 * 1024 * 1024
 
@@ -386,8 +391,8 @@ def create_post(body: PostIn, me: A.Me = Depends(A.current)):
         raise HTTPException(400, "The link should start with http:// or https://")
     licence = body.licence if body.licence in LICENCES else ("unknown" if body.type in ("request", "share") else "")
     visibility = body.visibility if body.visibility in ("public", "unlisted") else "public"
-    if body.type == "share" and licence not in PUBLIC_OK:
-        visibility = "unlisted"           # copyrighted or unknown: shared by link only, never listed
+    if body.type == "share" and licence not in LISTED:
+        visibility = "unlisted"           # rights unknown: shared by link only, never listed
     pid, now = A.new_id(), _now()
     with engine().begin() as c:
         _housekeeping(c)
@@ -572,7 +577,7 @@ def edit_post(pid: str, body: PostPatch, me: A.Me = Depends(A.current)):
             vals["body"] = clean_text(body.body, 4000)
         if body.licence in LICENCES:
             vals["licence"] = body.licence
-            if p["type"] == "share" and body.licence not in PUBLIC_OK:
+            if p["type"] == "share" and body.licence not in LISTED:
                 vals["visibility"] = "unlisted"
         if vals:
             c.execute(update(posts).where(posts.c.id == pid).values(**vals))
@@ -1186,7 +1191,8 @@ class ReportIn(BaseModel):
 @router.post("/report")
 def report(body: ReportIn, me: A.Me = Depends(A.current)):
     """Anyone can report a post, reply or person. Three reports from different people hide it until the
-    developer has looked (Google Play and the App Store require a way to report and block)."""
+    developer has looked (Google Play and the App Store require a way to report and block). A copyright report
+    on a score marked copyrighted (or of unknown rights) hides it at once: notice and takedown."""
     _limit_user(me, "report", 20, 86400, "Thanks for keeping Haptune friendly. That's enough reports for today.")
     m = re.fullmatch(r"([pru]):([\w.]{3,40})", body.target)
     if not m:
@@ -1206,6 +1212,12 @@ def report(body: ReportIn, me: A.Me = Depends(A.current)):
             c.execute(insert(reports).values(id=A.new_id(), reporter=me.id, target=body.target, target_user=owner, reason=body.reason,
                                              note=body.note.strip()[:500], created=_now()))
         n = c.execute(select(func.count(func.distinct(reports.c.reporter))).where(reports.c.target == body.target, reports.c.status == "open")).scalar()
+        if kind == "p" and body.reason == "copyright":
+            p = c.execute(select(posts.c.type, posts.c.licence).where(posts.c.id == key)).first()
+            if p and p[0] == "share" and p[1] in TAKEDOWN:
+                c.execute(update(posts).where(posts.c.id == key).values(hidden=True, hide_reason="copyright"))
+                A.notify(c, owner, "mod", action="hidden", reason="copyright", post=key)
+                return {"ok": True, "hidden": True}
         if n >= 3 and kind in ("p", "r"):
             t = posts if kind == "p" else replies
             c.execute(update(t).where(t.c.id == key).values(hidden=True, **({"hide_reason": "reported"} if kind == "p" else {})))
@@ -1336,6 +1348,67 @@ def admin_credits(body: CreditsIn, me: A.Me = Depends(A.require_scope("manage_us
         bal = A.grant(c, user["id"], body.delta, "admin", note=body.note)
         A.notify(c, user["id"], "credits", amount=body.delta, reason="admin")
     return {"ok": True, "credits": bal}
+
+
+class BulkShareItem(BaseModel):
+    title: str = Field(..., min_length=2, max_length=120)
+    song: str = Field("", max_length=140)
+    artist: str = Field("", max_length=100)
+    body: str = Field("", max_length=1000)
+    instruments: list[str] = Field(default_factory=lambda: ["piano"], max_length=6)
+    level: str = Field("", max_length=16)
+    licence: Literal["pd", "own", "arr", "copyrighted"] = "copyrighted"
+    xml_gz: str = Field(..., max_length=int(MAX_XML * 1.4))      # base64 of the gzipped MusicXML
+
+
+class BulkShareIn(BaseModel):
+    handle: str = Field(..., max_length=24)                       # the musician account the scores are shared as
+    items: list[BulkShareItem] = Field(..., min_length=1, max_length=20)
+
+
+@router.post("/admin/bulk-share")
+def admin_bulk_share(body: BulkShareIn, me: A.Me = Depends(A.require_scope("manage_users"))):
+    """Seeds the Library: shares scores as one musician account, in batches of up to 20. Unlike a person sharing
+    in the app there is no hourly limit, no Notes and no follower notifications. A score already shared by that
+    account (same song and artist, or same title) is skipped, so a run that stopped half way can be repeated."""
+    created, skipped = [], []
+    with engine().begin() as c:
+        user, acc = _user_by_handle(c, body.handle)
+        have = {(r[0] or "").lower() for r in c.execute(select(func.lower(posts.c.song + " / " + posts.c.artist)).where(
+            posts.c.user_id == user["id"], posts.c.type == "share")).all()}
+        have |= {(r[0] or "").lower() for r in c.execute(select(posts.c.title).where(posts.c.user_id == user["id"], posts.c.type == "share")).all()}
+        now = _now()
+        for i, it in enumerate(body.items):
+            title = clean_text(it.title, 120)
+            song, artist = clean_text(it.song or it.title, 140), clean_text(it.artist, 100)
+            if f"{song} / {artist}".lower() in have or title.lower() in have:
+                skipped.append({"title": title, "why": "already shared"})
+                continue
+            try:
+                d = zlib.decompressobj(16 + zlib.MAX_WBITS)                 # gzip, read no more than the size limit
+                xml = d.decompress(base64.b64decode(it.xml_gz, validate=True), MAX_XML + 1).decode("utf-8")
+                if d.unconsumed_tail:
+                    raise ValueError("too big")
+                xml = _check_xml(xml)
+            except (ValueError, OSError, UnicodeDecodeError, HTTPException):
+                skipped.append({"title": title, "why": "not a MusicXML score"})
+                continue
+            bars, notes = _score_size(xml)
+            if bars < 4 or notes < 16:
+                skipped.append({"title": title, "why": "too short"})
+                continue
+            pid, t = A.new_id(), now + i * 0.001
+            file_id = _save_file(c, user["id"], "musicxml", f"{title}.musicxml", "application/vnd.recordare.musicxml+xml", xml.encode(), pid)
+            c.execute(insert(posts).values(
+                id=pid, user_id=user["id"], type="share", title=title, body=clean_text(it.body, 1000), song=song, artist=artist,
+                instruments=[x[:24] for x in it.instruments[:6]] or ["piano"],
+                level=it.level if it.level in ("", "beginner", "intermediate", "advanced") else "",
+                link="", licence=it.licence, visibility="public", file_id=file_id, attachments=None, data={"bars": bars, "notes": notes},
+                status="done", lang="", created=t, bumped=t))
+            have |= {f"{song} / {artist}".lower(), title.lower()}
+            created.append({"id": pid, "title": title})
+        A.audit(c, me, "bulk_share", user["id"], after={"created": len(created), "skipped": len(skipped)})
+    return {"ok": True, "handle": acc["handle"], "created": created, "skipped": skipped}
 
 
 class RoleIn(BaseModel):
