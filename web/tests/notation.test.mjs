@@ -206,3 +206,15 @@ test('auto fingering: violin in first position, piano by hand position', () => {
   assert.equal(pf[0], 1, 'the right hand starts on the thumb');
   assert.equal(autoFingering(melody('flute'), 0).count, 0, 'no fingering for a flute');
 });
+
+test('note ids stay unique: a saved score with the same id twice is repaired, and new ids never repeat saved ones', () => {
+  const xml = `<?xml version="1.0"?><score-partwise version="4.0"><part-list><score-part id="P1"><part-name>V</part-name></score-part></part-list><part id="P1"><measure number="1"><attributes><divisions>1</divisions><time><beats>2</beats><beat-type>4</beat-type></time></attributes>
+    <note id="n4m"><pitch><step>C</step><octave>5</octave></pitch><duration>1</duration><voice>1</voice><type>quarter</type></note>
+    <note id="n4m"><pitch><step>D</step><octave>5</octave></pitch><duration>1</duration><voice>1</voice><type>quarter</type></note></measure></part></score-partwise>`;
+  const sc = parseMusicXML(xml);
+  const ids = sc.parts[0].measures[0].notes.map((n) => n.id);
+  assert.equal(new Set(ids).size, 2);
+  // ids written by an older session (n1, n2...) are never handed out again
+  const r = writeAt(melody(), { pi: 0, staff: 1, mi: 1, off: ZERO }, { midi: 70, len: q(1) });
+  assert.ok(!/^n[0-9a-z]{1,2}$/.test(r.id), 'a new id carries this session\'s tag');
+});

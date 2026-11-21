@@ -304,6 +304,9 @@ export function parseMusicXML(xmlText, dom = globalThis) {
     finishPart(part, info);
     score.parts.push(part);
   });
+  // every note keeps its own id (scores saved before ids were unique could hold the same id twice)
+  const ids = new Set();
+  for (const p of score.parts) for (const pm of p.measures) for (const n of pm.notes) { if (!n.id || ids.has(n.id)) n.id = newId(n.rest ? 'r' : 'n'); ids.add(n.id); }
 
   // finish shared measure data: a bar is as long as its time signature unless every part is shorter
   // (pickups, bars split by a repeat); a part that overfills a bar does not stretch the others.

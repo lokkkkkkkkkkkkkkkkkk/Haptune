@@ -78,6 +78,7 @@ const ScaleSheet = lazy(m_library, 'ScaleSheet');
 const ImportReportSheet = lazy(m_library, 'ImportReportSheet');
 const CatalogView = lazy(m_library, 'CatalogView');
 const InstallHelpSheet = lazy(m_library, 'InstallHelpSheet');
+const FolderSheet = lazy(m_library, 'FolderSheet');
 const m_addmusic = () => import('./screens/addmusic.jsx');
 const AddSheet = lazy(m_addmusic, 'AddSheet');
 const ImportWizardSheet = lazy(m_addmusic, 'ImportWizardSheet');
@@ -239,7 +240,7 @@ const VIEWS = {
   browse: BrowseView, practice: PracticeView, soundCheck: SoundCheckView, report: ReportView, sound: SoundView, vary: VaryView, chordEditor: ChordEditorView, learnMore: (p) => <LearnMoreView {...p} pushed />,
 };
 const SHEETS = {
-  add: AddSheet, paste: PasteSheet, findSong: FindSongSheet, scale: ScaleSheet, report: ImportReportSheet, chord: ChordSheet, findKey: FindKeySheet,
+  add: AddSheet, libFolder: FolderSheet, paste: PasteSheet, findSong: FindSongSheet, scale: ScaleSheet, report: ImportReportSheet, chord: ChordSheet, findKey: FindKeySheet,
   export: ExportSheet, lesson: LessonSheet, challenge: ChallengeSheet, account: AccountSheet, paywall: PaywallSheet,
   importWizard: ImportWizardSheet, finder: FinderSheet, welcome: WelcomeSheet, demoVideo: DemoVideoSheet, playAlong: PlayAlongSheet, keySheet: KeySheet, details: DetailsSheet,
   joinClass: JoinClassSheet, newClass: NewClassSheet, newAssignment: NewAssignmentSheet, review: ReviewSheet,

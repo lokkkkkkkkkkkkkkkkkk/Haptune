@@ -50,8 +50,12 @@ export function beatLength(time) {
   return q(4, time.beatType);
 }
 
+// Ids are saved with the score (MusicXML id=""), so a new session must never hand out an id an older one used:
+// a counter that restarts at 0 made a new note share its id with a saved one, and an edit then changed the wrong
+// note. Each session gets its own random tag.
 let idCounter = 0;
-export function newId(prefix = 'n') { idCounter += 1; return `${prefix}${idCounter.toString(36)}`; }
+const SESSION = Math.floor(Math.random() * 36 ** 4).toString(36).padStart(4, '0');
+export function newId(prefix = 'n') { idCounter += 1; return `${prefix}${SESSION}${idCounter.toString(36)}`; }
 
 export function emptyScore(title = 'Untitled') {
   return { title, composer: '', lyricist: '', measures: [], parts: [], meta: {} };

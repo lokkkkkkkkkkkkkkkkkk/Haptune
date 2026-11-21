@@ -4,7 +4,7 @@
 // Every symbol is drawn from the engraving font, so a button looks like the mark it puts on the page.
 // Marks go on the chosen note (or the note just written); dynamics, text and lines go where the chosen note
 // is (or at the cursor); bar tools work on the cursor's bar.
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { t } from '../../core/i18n.js';
 import { toast } from '../state.js';
 import { Icon } from '../components.jsx';
@@ -51,11 +51,13 @@ function Tool({ g, line, txt, cls = '', label, on, onClick, id, wide }) {
 }
 const Group = ({ title, children, cls = '' }) => <div class={`rb-group ${cls}`}><div class="rb-items">{children}</div>{title && <div class="rb-gt">{title}</div>}</div>;
 
-export function Ribbon({ api }) {
+export function Ribbon({ api, fold = false }) {
   const { score, cur, sel, part, commit, setSel, setCur, keyF, instrument } = api;
   const itab = instTab(instrument);
   const [tab, setTab] = useState(itab);
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(!fold);
+  // on a phone the note input and the tools share the bottom: opening the input folds the tools to their tabs
+  useEffect(() => { if (fold) setOpen(false); }, [fold]);
   const [bars, setBars] = useState(1);
   const [clip, setClip] = useState(null);
   const [word, setWord] = useState('');

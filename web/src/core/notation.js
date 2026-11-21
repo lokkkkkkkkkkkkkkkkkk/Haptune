@@ -154,6 +154,20 @@ export function nextNote(score, id, { rests = false } = {}) {
   return null;
 }
 
+/** The note before `id` (rests too when asked) in the same part, staff and voice, over bar lines. */
+export function prevNote(score, id, { rests = false } = {}) {
+  const loc = findNote(score, id);
+  if (!loc) return null;
+  const n = loc.note, part = score.parts[loc.pi];
+  for (let mi = loc.mi; mi >= 0; mi--) {
+    const list = part.measures[mi].notes.filter((x) => (x.staff || 1) === (n.staff || 1) && String(x.voice) === String(n.voice) && !x.chord && !x.grace && (rests || !x.rest))
+      .sort((a, b) => b.off.cmp(a.off));
+    const hit = list.find((x) => mi < loc.mi || x.off.lt(n.off));
+    if (hit) return { note: hit, mi };
+  }
+  return null;
+}
+
 export const LINKS = {
   slur: ['', (t) => `<slur type="${t}" number="1"/>`, /<slur [^>]*type="(start|stop)"[^>]*\/>/g],
   gliss: ['', (t) => `<glissando type="${t}" line-type="wavy"/>`, /<glissando [^>]*\/>/g],

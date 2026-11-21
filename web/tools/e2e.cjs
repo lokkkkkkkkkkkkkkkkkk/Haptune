@@ -196,6 +196,28 @@ async function run(mode, base, browser) {
     await p.locator('.list .row:visible').first().click(); await p.waitForSelector('.vrv-page svg', { timeout: 60000 });
     await back(); await back();
   });
+  await step('library: select, a folder, move, filter, delete, remove the folder', async () => {
+    await tab('library'); await p.waitForSelector('#lib-select'); await p.waitForTimeout(300);
+    const total = await p.locator('#lib-list .lib-card').count();
+    await p.locator('#lib-select').click(); await p.waitForSelector('#lib-bar');
+    const card = p.locator('#lib-list .lib-card').filter({ hasText: /washerwoman/i }).first();
+    await card.locator('.lc-main').click();
+    if (!(await card.evaluate((e) => e.classList.contains('picked')))) throw new Error('tapping a card in select mode should pick it');
+    await p.locator('#lib-move').click(); await p.waitForSelector('#folder-name');
+    await p.fill('#folder-name', 'Exam pieces'); await p.locator('#folder-make').click(); await p.waitForTimeout(400);
+    await p.locator('#lib-select').click(); // done
+    await p.locator('#lib-folders .chip').filter({ hasText: 'Exam pieces' }).click(); await p.waitForTimeout(300);
+    if ((await p.locator('#lib-list .lib-card').count()) !== 1) throw new Error('the folder should hold the one piece moved into it');
+    await shot('05b-library-folder'); await overflow('library folder');
+    await p.locator('#lib-select').click(); await p.locator('#lib-all').click();
+    await p.locator('#lib-delete').click(); await p.locator('#lib-delete').click(); await p.waitForTimeout(500);
+    await shot('05c-library-deleted');
+    if (await p.locator('#lib-list .lib-card').count()) throw new Error('delete did not delete');
+    await p.locator('#lib-select').click().catch(() => {});
+    await p.locator('#lib-folder-edit').click(); await p.locator('#folder-remove').click(); await p.waitForTimeout(400);
+    if (await p.locator('#lib-folders .chip').filter({ hasText: 'Exam pieces' }).count()) throw new Error('the folder was not removed');
+    if ((await p.locator('#lib-list .lib-card').count()) !== total - 1) throw new Error('the rest of the library should stay');
+  });
   await step('Home: hero row, chips, band, shelves; a playable sheet in two taps from each hero tile', async () => {
     const home = async () => { await p.evaluate(() => { for (const k of ['summary', 'library', 'write']) window.__haptune.popToRoot(k); }); await p.waitForTimeout(300); await tab('home'); await p.waitForSelector('#home-hero:visible'); };
     await home();
@@ -277,10 +299,18 @@ async function run(mode, base, browser) {
     await p.locator('#wiz-full').click(); await p.waitForSelector('#new-song-make');
     await p.fill('#new-song-title', 'My first song'); await p.locator('#new-song-make').click();
     await p.waitForSelector('.st-score svg', { timeout: 60000 }); await p.waitForSelector('#st-toolbar'); await p.waitForTimeout(400);
+    // the note input is closed until asked for; open it (piano keys for a melody)
+    if (await p.locator('.st-kbd').count()) throw new Error('the note input should start closed');
+    await p.locator('#st-input').click(); await p.waitForSelector('#st-input-panel');
+    if (!(await p.locator('.st-kbd').count())) await p.locator('#in-piano').click();
+    await p.waitForSelector('.st-kbd .wkey');
     const before = await p.locator('.st-score g.note').count();
     for (const k of [0, 2, 4, 5]) { await p.locator('.st-kbd .wkey').nth(k).click(); await p.waitForTimeout(120); }
     await p.waitForFunction((n) => document.querySelectorAll('.st-score g.note').length >= n + 4, before, { timeout: 20000 });
     await p.locator('#st-back').click(); await p.waitForTimeout(300);
+    await shot('06b-studio-input');
+    await p.locator('#st-input-close').click(); await p.waitForTimeout(200);
+    if (await p.locator('.st-kbd').count()) throw new Error('closing the note input did not close it');
     await shot('06b-studio'); await overflow('studio');
     // the ribbon: a staccato on the note just written, a dynamic, a 1st ending, every tab opens
     await p.locator('#rbt-marks').click(); await p.locator('#rb-staccato').click();
@@ -293,7 +323,7 @@ async function run(mode, base, browser) {
     await p.locator('#add-cello').click(); await p.waitForSelector('#part-1');
     if (wide) await p.locator('#side-palettes').click(); else await p.locator('#dock-palettes').click();
     await p.locator('#pal-dyn-mf').click(); await p.waitForTimeout(300);
-    if (!wide) await p.locator('#dock-notes').click();
+    if (!wide) await p.locator('#dock-tools').click();
     // Lead sheet: a chord on bar 1 from the lane
     await p.locator('#st-lead').click(); await p.waitForSelector('#lead-lane');
     await p.locator('#lead-lane .ll-bar').first().locator('button').filter({ hasText: /^C$/ }).click(); await p.waitForTimeout(300);
