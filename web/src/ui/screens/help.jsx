@@ -12,6 +12,7 @@ import { hasServer } from '../api.js';
 import { platform } from '../native.js';
 import { track } from '../analytics.js';
 import { startCoach } from '../coach.jsx';
+import { DemoVideo } from './demovideo.jsx';
 
 const TOPICS = [
   { id: 'start', icon: 'sparkles', color: 'purple', qs: ['faq_add', 'faq_formats', 'faq_scanTips', 'faq_searchTips'] },
@@ -33,6 +34,7 @@ export function HelpView({ topic = '' }) {
       <div class="wrap">
         <div class="with-mascot"><Mascot mood="happy" size={60} /><div class="bubble left">{t('helpIntro')}</div></div>
         <button type="button" class="help-tour" id="help-tour" onClick={() => startCoach()}><Icon name="sparkles" size={20} stroke={2.2} /><span><strong>{t('coachReplayT')}</strong><span>{t('coachReplayS')}</span></span><Icon name="chevronR" size={15} /></button>
+        <div class="help-video"><DemoVideo id="help-video" compact /></div>
         <label class="search" for="help-search"><Icon name="search" size={18} /><input id="help-search" type="search" placeholder={t('searchHelp')} value={q} onInput={(e) => setQ(e.currentTarget.value)} /></label>
         {TOPICS.map((tp) => {
           const qs = tp.qs.filter(match);

@@ -44,7 +44,7 @@ async function startApi() {
 }
 
 async function person(browser, base, api, { name, role, handle }) {
-  const ctx = await browser.newContext({ ...devices['iPhone 13'], acceptDownloads: true, permissions: ['microphone'] });
+  const ctx = await browser.newContext({ ...devices['iPhone 13'], ...(process.env.VIEW ? { viewport: JSON.parse(process.env.VIEW) } : {}), acceptDownloads: true, permissions: ['microphone'] });   // VIEW='{"width":390,"height":800}' for taller shots
   await ctx.addInitScript(([server, r]) => {
     localStorage.setItem('haptune.settings', JSON.stringify({ server, name: '', instrument: 'violin' }));
     localStorage.setItem('haptune.welcomed', 'true');

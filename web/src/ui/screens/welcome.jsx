@@ -1,11 +1,12 @@
 // First run: one clean card (Hapi says hello and asks what you play), then "Show me around" points at the real
-// buttons (coach.jsx). Skip at any step; see it again any time in Settings › Guide or Help.
+// buttons (coach.jsx). The 1-minute video plays right in the card. Skip at any step; see it again any time in Settings › Guide or Help.
 import { useApp, updateSettings, closeSheet, go, getState } from '../state.js';
 import { t, instrumentName } from '../../core/i18n.js';
 import { Chip, Button, Icon } from '../components.jsx';
 import { local } from '../storage.js';
 import { Mascot } from '../mascot.jsx';
 import { startCoach } from '../coach.jsx';
+import { DemoVideo } from './demovideo.jsx';
 
 const PICK = ['piano', 'guitar', 'violin', 'voice', 'flute', 'cello', 'ukulele', 'erhu', 'sax', 'trumpet', 'dizi', 'clarinet'];
 
@@ -34,6 +35,7 @@ export function WelcomeSheet() {
             <span key={k} class={`w2-way c-${c}`}><Icon name={ic} size={16} stroke={2.3} />{t(k)}</span>
           ))}
         </div>
+        <div class="fade-up d2 w2-video"><DemoVideo id="tour-video" compact /></div>
         <div class="fade-up d3 w2-pick">
           <strong>{t('whatDoYouPlay')}</strong>
           <div class="choice-chips">

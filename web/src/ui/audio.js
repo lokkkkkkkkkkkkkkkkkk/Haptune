@@ -88,6 +88,7 @@ function flushWaiting() {
 const anythingPlaying = () => [...transports].some((t) => t.playing) || waiting.size > 0;
 /** Music, a drone or the microphone is in use: the app's own background music and sound effects keep quiet. */
 export const soundBusy = () => anythingPlaying() || micOpen || !!droneNodes || problem === 'tap'
+  || [...(globalThis.document?.querySelectorAll?.('video') || [])].some((v) => !v.paused)
   || !!globalThis.document?.querySelector?.('.app.immersive');
 
 function build() {

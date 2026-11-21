@@ -83,7 +83,9 @@ const AddSheet = lazy(m_addmusic, 'AddSheet');
 const ImportWizardSheet = lazy(m_addmusic, 'ImportWizardSheet');
 const FinderSheet = lazy(m_addmusic, 'FinderSheet');
 const m_welcome = () => import('./screens/welcome.jsx');
+const m_demovideo = () => import('./screens/demovideo.jsx');
 const WelcomeSheet = lazy(m_welcome, 'WelcomeSheet');
+const DemoVideoSheet = lazy(m_demovideo, 'DemoVideoSheet');
 const m_practice = () => import('./screens/practice.jsx');
 const PracticeView = lazy(m_practice, 'PracticeView');
 const m_soundcheck = () => import('./screens/soundcheck.jsx');
@@ -239,7 +241,7 @@ const VIEWS = {
 const SHEETS = {
   add: AddSheet, paste: PasteSheet, findSong: FindSongSheet, scale: ScaleSheet, report: ImportReportSheet, chord: ChordSheet, findKey: FindKeySheet,
   export: ExportSheet, lesson: LessonSheet, challenge: ChallengeSheet, account: AccountSheet, paywall: PaywallSheet,
-  importWizard: ImportWizardSheet, finder: FinderSheet, welcome: WelcomeSheet, playAlong: PlayAlongSheet, keySheet: KeySheet, details: DetailsSheet,
+  importWizard: ImportWizardSheet, finder: FinderSheet, welcome: WelcomeSheet, demoVideo: DemoVideoSheet, playAlong: PlayAlongSheet, keySheet: KeySheet, details: DetailsSheet,
   joinClass: JoinClassSheet, newClass: NewClassSheet, newAssignment: NewAssignmentSheet, review: ReviewSheet,
   plans: PlansSheet, manualPay: ManualPaySheet, compose: ComposeSheet, accept: AcceptSheet, changes: ChangesSheet, addCredits: AddCreditsSheet, submitScore: SubmitScoreSheet, pickVersion: PickVersionSheet,
   image: ImageSheet, reportPost: ReportSheet, more: MoreSheet, feedback: FeedbackSheet, guidelines: GuidelinesSheet, about: AboutSheet, installHelp: InstallHelpSheet, stageGuide: StageGuideSheet, mixer: MixerSheet, instrumentPick: InstrumentPickSheet, lessonAsk: LessonAskSheet, lessonRate: LessonRateSheet,
