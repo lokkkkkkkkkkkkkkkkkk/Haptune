@@ -1,6 +1,7 @@
 // MusicXML (.musicxml / .xml) reader and writer. Reading keeps every note, rest, tie, tuplet, voice,
 // staff, lyric, chord symbol, clef, key, time, tempo, repeat, ending and jump exactly; markings the app
 // does not need to understand (slurs, articulations, dynamics, fingering...) are carried through verbatim.
+import { frameXml } from './fretboard.js';
 import { Q, q, ZERO } from './q.js';
 import { parseChord, formatChord, QUALITIES } from './chords.js';
 import { makeNote, newId, measureLength, computeAccidentals, divisionsFor, keyAt, recomputeStarts, autoBeam, timeAt, markTuplets } from './score.js';
@@ -150,7 +151,10 @@ export function parseMusicXML(xmlText, dom = globalThis) {
       const midi = child(sp, 'midi-instrument');
       const program = midi && num(midi, 'midi-program') !== null ? num(midi, 'midi-program') - 1 : null;
       const channel = midi ? num(midi, 'midi-channel') : null;
-      partInfo.set(id, { name: name === 'MusicXML Part' ? '' : name, abbr, instName, program, channel });
+      // drum kits list one instrument per drum: <midi-unpitched> is the General MIDI drum (1-based)
+      const unpitched = new Map();
+      for (const mi of named(sp, 'midi-instrument')) { const u = num(mi, 'midi-unpitched'); if (u !== null) unpitched.set(mi.getAttribute('id'), u - 1); }
+      partInfo.set(id, { name: name === 'MusicXML Part' ? '' : name, abbr, instName, program, channel, unpitched });
     }
   }
 
@@ -158,10 +162,10 @@ export function parseMusicXML(xmlText, dom = globalThis) {
   const partEls = named(root, 'part');
   partEls.forEach((partEl, pi) => {
     const id = partEl.getAttribute('id') || `P${pi + 1}`;
-    const info = partInfo.get(id) || { name: '', abbr: '', instName: '', program: null, channel: null };
+    const info = partInfo.get(id) || { name: '', abbr: '', instName: '', program: null, channel: null, unpitched: new Map() };
     const part = {
       id, name: info.name || info.instName || `Part ${pi + 1}`, abbr: info.abbr, instrument: instrumentFromName(`${info.name} ${info.instName}`, info.program),
-      program: info.program, transpose: null, staves: 1, measures: [], percussion: info.channel === 10,
+      program: info.program, transpose: null, staves: 1, measures: [], percussion: info.channel === 10 || (info.unpitched?.size || 0) > 1,
     };
     let divisions = 1;
     named(partEl, 'measure').forEach((mEl, mi) => {
@@ -267,7 +271,8 @@ export function parseMusicXML(xmlText, dom = globalThis) {
             if (chord) {
               const kindEl = child(el, 'kind');
               const t = chord.nc ? 'N.C.' : formatChord(chord);
-              pm.harmonies.push({ off, chord, text: t, printed: kindEl?.getAttribute('text') ?? null });
+              const fr = child(el, 'frame');
+              pm.harmonies.push({ off, chord, text: t, printed: kindEl?.getAttribute('text') ?? null, ...(fr ? { frame: parseFrame(fr) } : {}) });
             }
             break;
           }
@@ -296,8 +301,12 @@ export function parseMusicXML(xmlText, dom = globalThis) {
       (meta.lens || (meta.lens = []))[pi] = len;
       part.measures.push(pm);
     });
+    finishPart(part, info);
     score.parts.push(part);
   });
+  // every note keeps its own id (scores saved before ids were unique could hold the same id twice)
+  const ids = new Set();
+  for (const p of score.parts) for (const pm of p.measures) for (const n of pm.notes) { if (!n.id || ids.has(n.id)) n.id = newId(n.rest ? 'r' : 'n'); ids.add(n.id); }
 
   // finish shared measure data: a bar is as long as its time signature unless every part is shorter
   // (pickups, bars split by a repeat); a part that overfills a bar does not stretch the others.
@@ -333,6 +342,42 @@ export function parseMusicXML(xmlText, dom = globalThis) {
   if (!score.measures[0]?.time && score.measures[0]) score.measures[0].time = { beats: 4, beatType: 4 };
   recomputeStarts(score);
   return score;
+}
+
+/** A chord box (<frame>) as {strings, frets (low string first, -1 not played), fingers, barre, base}. */
+function parseFrame(fr) {
+  const S = num(fr, 'frame-strings', 6);
+  const frets = Array(S).fill(-1), fingers = Array(S).fill(0);
+  let barre = null, bStart = null;
+  for (const fn of named(fr, 'frame-note')) {
+    const i = S - num(fn, 'string', 1);
+    if (i < 0 || i >= S) continue;
+    frets[i] = num(fn, 'fret', 0);
+    fingers[i] = Number(text(fn, 'fingering')) || 0;
+    const b = child(fn, 'barre');
+    if (b?.getAttribute('type') === 'start') bStart = i;
+    if (b?.getAttribute('type') === 'stop' && bStart !== null) barre = { fret: frets[i], from: bStart, to: i };
+  }
+  const first = num(fr, 'first-fret', 1);
+  return { strings: S, frets, fingers, barre, base: first > 1 ? first : 1 };
+}
+
+/**
+ * After a part is read: a drum part written with pitches (as many programs and the AI reader do) gets
+ * unpitched notes at those staff positions, with the General MIDI drum each note names; a TAB staff is
+ * shown as guitar notation (treble clef an octave down), its sounding notes kept.
+ */
+function finishPart(part, info) {
+  const clefs = part.measures.flatMap((m) => m.clefs || []);
+  if (clefs.some((c) => c.sign === 'percussion')) part.percussion = true;
+  if (part.percussion) {
+    part.instrument = 'drums';
+    for (const pm of part.measures) for (const n of pm.notes) {
+      if (n.pitch && !n.rest) { n.unpitched = { step: n.pitch.step, octave: n.pitch.octave }; n.pitch = null; }
+      if (n.instId && info.unpitched?.has(n.instId)) n.gm = info.unpitched.get(n.instId);
+    }
+  }
+  for (const pm of part.measures) for (const c of pm.clefs || []) if (c.sign === 'TAB') { c.sign = 'G'; c.line = 2; c.oct = -1; }
 }
 
 function parseNote(el, dq, serialize) {
@@ -371,6 +416,8 @@ function parseNote(el, dq, serialize) {
   if (beams.length) n.beams = beams.map((b) => ({ n: Number(b.getAttribute('number') || 1), v: text(b) }));
   const nh = child(el, 'notehead');
   if (nh) n.noteheadXml = serialize(nh);
+  const ins = child(el, 'instrument');
+  if (ins) n.instId = ins.getAttribute('id');
   const notations = named(el, 'notations');
   if (notations.length) {
     n.notationsXml = notations.map((x) => kids(x).map(serialize).join('')).join('');
@@ -432,7 +479,7 @@ function chordXml(h, divisions, cursor) {
   x += `<kind text="${esc(sym)}">${Qd.kind}</kind>`;
   if (c.bass) x += `<bass><bass-step>${c.bass.step}</bass-step>${c.bass.alter ? `<bass-alter>${c.bass.alter}</bass-alter>` : ''}</bass>`;
   for (const [v, a, t] of Qd.degrees || []) x += `<degree><degree-value>${v}</degree-value><degree-alter>${a}</degree-alter><degree-type>${t || 'add'}</degree-type></degree>`;
-  return x + offXml + '</harmony>';
+  return x + (h.frame ? frameXml(h.frame) : '') + offXml + '</harmony>';
 }
 
 function noteXml(n, divisions) {

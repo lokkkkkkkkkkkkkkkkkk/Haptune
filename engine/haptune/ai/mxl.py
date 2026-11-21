@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from fractions import Fraction
 from xml.sax.saxutils import escape
 
-from .notation import Ev, measure_length, voice_length
+from .notation import NOTEHEADS, Ev, measure_length, voice_length
 
 CLEF_XML = {
     "treble": ("G", 2, 0), "bass": ("F", 4, 0), "alto": ("C", 3, 0), "tenor": ("C", 4, 0), "soprano": ("C", 1, 0),
@@ -28,7 +28,7 @@ INSTRUMENTS = {
     "voice": (53, "Voice"), "flute": (74, "Flute"), "recorder": (75, "Recorder"), "clarinet": (72, "Clarinet"),
     "oboe": (69, "Oboe"), "bassoon": (71, "Bassoon"), "sax": (66, "Alto Sax"), "trumpet": (57, "Trumpet"),
     "trombone": (58, "Trombone"), "horn": (61, "Horn"), "tuba": (59, "Tuba"), "erhu": (111, "Erhu"),
-    "dizi": (78, "Dizi"), "guzheng": (108, "Guzheng"), "percussion": (1, "Percussion"), "other": (1, "Instrument"),
+    "dizi": (78, "Dizi"), "guzheng": (108, "Guzheng"), "percussion": (1, "Percussion"), "drums": (1, "Drum Kit"), "other": (1, "Instrument"),
 }
 TYPE_BEAMS = {"eighth": 1, "16th": 2, "32nd": 3, "64th": 4, "128th": 5}
 DYN_SOUND = {"pppp": 15, "ppp": 24, "pp": 36, "p": 54, "mp": 69, "mf": 83, "f": 100, "ff": 115, "fff": 128,
@@ -261,7 +261,7 @@ def write_musicxml(doc: ReadDoc) -> str:
     for idx, p in enumerate(doc.parts):
         prog, default_name = INSTRUMENTS.get(p.instrument, INSTRUMENTS["other"])
         name = p.name or default_name
-        channel = 10 if p.instrument == "percussion" else [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16][idx % 15]
+        channel = 10 if p.instrument in ("percussion", "drums") else [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16][idx % 15]
         out.append(f'<score-part id="{p.id}"><part-name>{escape(name)}</part-name>'
                    f'<score-instrument id="{p.id}-I1"><instrument-name>{escape(name)}</instrument-name></score-instrument>'
                    f'<midi-instrument id="{p.id}-I1"><midi-channel>{channel}</midi-channel>'
@@ -470,8 +470,9 @@ def _note_xml(e: Ev, div: int, voice: int, staff: int | None, bar_len: Fraction,
             for n, text in sorted(e.lyrics.items()):
                 syl, word = lyr.syllabic(lkey + (n,), text)
                 lyrics += f'<lyric number="{n}"><syllabic>{syl}</syllabic><text>{escape(word)}</text></lyric>'
+        head = next((NOTEHEADS[m] for m in e.marks if m in NOTEHEADS), "")
         parts.append(f"<note>{grace}{chord}<pitch><step>{p.step}</step>{alter}<octave>{p.octave}</octave></pitch>{dur}{ties}"
-                     f"<voice>{voice}</voice><type>{e.type}</type>{dots}{acc}{tm}{stem_x}{st}{beam_x}{nots}{lyrics}</note>")
+                     f"<voice>{voice}</voice><type>{e.type}</type>{dots}{acc}{tm}{stem_x}{head}{st}{beam_x}{nots}{lyrics}</note>")
     return "".join(parts)
 
 
@@ -489,13 +490,14 @@ def _notations(e: Ev, first: bool, pitch) -> str:
             items.append('<slur type="start" number="1"/>')
         if "slur-end" in e.marks:
             items.append('<slur type="stop" number="1"/>')
-        arts = [m for m in e.marks if m in ("staccato", "accent", "tenuto", "strong-accent", "staccatissimo")]
+        arts = [m for m in e.marks if m in ("staccato", "accent", "tenuto", "strong-accent", "staccatissimo", "breath-mark", "caesura")]
         if arts:
             items.append("<articulations>" + "".join(f"<{a}/>" for a in arts) + "</articulations>")
-        orn = [m for m in e.marks if m in ("trill-mark", "mordent", "turn")]
-        if orn:
-            items.append("<ornaments>" + "".join(f"<{o}/>" for o in orn) + "</ornaments>")
-        tech = [m for m in e.marks if m in ("up-bow", "down-bow")]
+        orn = [m for m in e.marks if m in ("trill-mark", "mordent", "inverted-mordent", "turn")]
+        trem = '<tremolo type="single">3</tremolo>' if "tremolo" in e.marks else ""
+        if orn or trem:
+            items.append("<ornaments>" + "".join(f"<{o}/>" for o in orn) + trem + "</ornaments>")
+        tech = [m for m in e.marks if m in ("up-bow", "down-bow", "harmonic", "open-string")]
         if e.fingering:
             tech.append(("fingering", e.fingering))
         if tech:

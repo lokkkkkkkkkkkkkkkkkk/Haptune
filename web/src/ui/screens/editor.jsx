@@ -18,6 +18,8 @@ import { audioContext, note, Transport } from '../audio.js';
 import { soundOf } from '../../core/instruments.js';
 import { difficulty } from '../../core/analysis.js';
 import { issueLines } from '../readflags.js';
+import { nextNote, prevNote, naturalize, toggleTie, toggleMark, hasMark } from '../../core/notation.js';
+import { Glyph, LineIcon } from '../glyphs.jsx';
 
 const TYPE_LABEL = { whole: '𝅝', half: '𝅗𝅥', quarter: '♩', eighth: '♪', '16th': '𝅘𝅥𝅯', '32nd': '𝅘𝅥𝅰' };
 
@@ -106,7 +108,7 @@ export function EditorView({ id, bar = 0, onSaved, active }) {
     let g = e.target.closest?.('g.note, g.rest, g.mRest');
     if (!g && boxRef.current) {
       // a finger rarely lands exactly on a note head: take the nearest note or rest within reach
-      let best = 34;
+      let best = 40;
       for (const el of boxRef.current.querySelectorAll('g.note, g.rest, g.mRest')) {
         const r = (el.querySelector('.notehead') || el).getBoundingClientRect();
         const d = Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2));
@@ -132,6 +134,36 @@ export function EditorView({ id, bar = 0, onSaved, active }) {
     if (rests[idx]) setSel(rests[idx].id);
   };
 
+  // step to the next / previous note or rest (exact, without tapping), moving the bars in view with it
+  const stepSel = (d) => {
+    if (!score) return;
+    let target = null;
+    if (!selId) {
+      const pm = score.parts[0]?.measures[win];
+      const first = pm?.notes.filter((x) => !x.chord && !x.grace).sort((a, b) => (a.staff || 1) - (b.staff || 1) || a.off.cmp(b.off))[0];
+      if (first) target = { note: first, mi: win };
+    } else target = (d > 0 ? nextNote : prevNote)(score, selId, { rests: true });
+    if (!target) return;
+    setSel(target.note.id);
+    if (target.mi < win || target.mi >= win + N) setWin(target.mi - (target.mi % N));
+    if (target.note.pitch) { const ctx = audioContext(); if (ctx) note(ctx.currentTime + 0.02, midiOf(target.note.pitch), 0.4, 80, soundOf(score.parts[0]?.instrument)); }
+  };
+  useEffect(() => {
+    if (!active) return undefined;
+    const onKey = (e) => {
+      if (/input|textarea|select/i.test(e.target?.tagName || '')) return;
+      const k = e.key.toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && k === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
+      if ((e.ctrlKey || e.metaKey) && k === 'y') { e.preventDefault(); redo(); return; }
+      if (e.key === 'ArrowRight') { e.preventDefault(); stepSel(1); return; }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); stepSel(-1); return; }
+      if (e.key === 'ArrowUp' && selId) { e.preventDefault(); apply((sc, i) => movePitch(sc, i, e.shiftKey ? 'octaveUp' : 'up')); return; }
+      if (e.key === 'ArrowDown' && selId) { e.preventDefault(); apply((sc, i) => movePitch(sc, i, e.shiftKey ? 'octaveDown' : 'down')); }
+    };
+    addEventListener('keydown', onKey);
+    return () => removeEventListener('keydown', onKey);
+  });
+
   const hear = () => {
     if (!slice) return;
     audioContext();
@@ -154,9 +186,9 @@ export function EditorView({ id, bar = 0, onSaved, active }) {
   const info = !n ? t('edHint') : n.rest ? `${t('edRestWord')} ${TYPE_LABEL[n.type] || ''} · ${t('bar', { n: loc.mi + 1 })}`
     : `${pitchName(n.pitch)} ${TYPE_LABEL[n.type] || ''}${n.dots ? '.' : ''} · ${t('bar', { n: loc.mi + 1 })}`;
   void key;
-  const B = ({ icon, label, onClick: fn, text, id: bid, off }) => (
-    <button type="button" class="ed-b" id={bid} onClick={fn} disabled={off} aria-label={label}>
-      {text ? <span class="tx">{text}</span> : <Icon name={icon} size={20} stroke={2.2} />}<span>{label}</span>
+  const B = ({ icon, label, short, onClick: fn, text, g, line, id: bid, off, on }) => (
+    <button type="button" class={`ed-b${on ? ' on' : ''}`} id={bid} onClick={fn} disabled={off} aria-label={label} title={label}>
+      {g ? <Glyph name={g} size={24} /> : line ? <LineIcon kind={line} size={22} /> : text ? <span class="tx">{text}</span> : <Icon name={icon} size={20} stroke={2.2} />}<span class="lb">{short || label}</span>
     </button>
   );
   if (!meta) return <div class="scroll"><NavBar title={t('editNotes')} /></div>;
@@ -187,20 +219,37 @@ export function EditorView({ id, bar = 0, onSaved, active }) {
         {!svg && <div class="loading"><div class="spinner" /></div>}
         <p class="note-text center" id="ed-info" style={{ fontWeight: n ? 700 : 500, color: n ? 'var(--ink)' : undefined }}>{info}</p>
       </div>
-      <div class="ed-bar">
-        <div class="ed-grid">
-          <B icon="arrowUp" label={t('edUp')} onClick={() => apply((sc, i) => movePitch(sc, i, 'up'))} off={!n || n.rest} id="ed-up" />
-          <B icon="arrowDown" label={t('edDown')} onClick={() => apply((sc, i) => movePitch(sc, i, 'down'))} off={!n || n.rest} id="ed-down" />
-          <B text="♯" label={t('edSharp')} onClick={() => apply((sc, i) => movePitch(sc, i, 'sharp'))} off={!n || n.rest} />
-          <B text="♭" label={t('edFlat')} onClick={() => apply((sc, i) => movePitch(sc, i, 'flat'))} off={!n || n.rest} />
-          <B text="8↑" label={t('ed8va')} onClick={() => apply((sc, i) => movePitch(sc, i, 'octaveUp'))} off={!n || n.rest} />
-          <B text="8↓" label={t('ed8vb')} onClick={() => apply((sc, i) => movePitch(sc, i, 'octaveDown'))} off={!n || n.rest} />
-          {n?.rest
-            ? <B icon="library" label={t('edNote')} onClick={() => apply((sc, i) => toNote(sc, i))} id="ed-note" />
-            : <B text="𝄽" label={t('edRest')} onClick={() => apply((sc, i) => toRest(sc, i), false)} off={!n} id="ed-rest" />}
-          <B text="÷2" label={t('edSplit')} onClick={() => apply(splitNote)} off={!n} id="ed-split" />
-          <B text="+" label={t('edJoin')} onClick={() => apply(joinNext)} off={!n} id="ed-join" />
-          <B icon="chords" label={t('edChord')} onClick={() => apply(addChordNote)} off={!n || n.rest} id="ed-chord" />
+      <div class="ed-bar ed-bar2">
+        <div class="ed-rows">
+          <div class="ed-row hscroll" role="toolbar" aria-label={t('edMove')}>
+            <B icon="chevronL" label={t('edPrev')} onClick={() => stepSel(-1)} id="ed-prev" />
+            <B icon="chevronR" label={t('edNext')} onClick={() => stepSel(1)} id="ed-next" />
+            <span class="ed-sep" />
+            <B icon="skipBack" label={t('edUndo')} onClick={undo} off={hist.i <= 0} id="ed-undo2" />
+            <B icon="skipFwd" label={t('edRedo')} onClick={redo} off={hist.i >= hist.list.length - 1} id="ed-redo2" />
+            <span class="ed-sep" />
+            <B icon="speaker" label={t('edHear')} onClick={hear} id="ed-hear2" />
+          </div>
+          <div class="ed-row hscroll" role="toolbar" aria-label={t('edPitch')}>
+            <B icon="arrowUp" label={t('edUp')} onClick={() => apply((sc, i) => movePitch(sc, i, 'up'))} off={!n || n.rest} id="ed-up" />
+            <B icon="arrowDown" label={t('edDown')} onClick={() => apply((sc, i) => movePitch(sc, i, 'down'))} off={!n || n.rest} id="ed-down" />
+            <B g="sharp" label={t('edSharpS')} onClick={() => apply((sc, i) => movePitch(sc, i, 'sharp'))} off={!n || n.rest} id="ed-sharp" />
+            <B g="flat" label={t('edFlatS')} onClick={() => apply((sc, i) => movePitch(sc, i, 'flat'))} off={!n || n.rest} id="ed-flat" />
+            <B g="natural" label={t('edNaturalS')} onClick={() => apply((sc, i) => naturalize(sc, i))} off={!n || n.rest || !n.pitch?.alter} id="ed-natural" />
+            <B text="8↑" label={t('ed8va')} short={t('edOctUpS')} onClick={() => apply((sc, i) => movePitch(sc, i, 'octaveUp'))} off={!n || n.rest} />
+            <B text="8↓" label={t('ed8vb')} short={t('edOctDnS')} onClick={() => apply((sc, i) => movePitch(sc, i, 'octaveDown'))} off={!n || n.rest} />
+          </div>
+          <div class="ed-row hscroll" role="toolbar" aria-label={t('edRhythm')}>
+            {n?.rest
+              ? <B icon="note1" label={t('edNote')} onClick={() => apply((sc, i) => toNote(sc, i))} id="ed-note" />
+              : <B g="restQuarter" label={t('edRest')} onClick={() => apply((sc, i) => toRest(sc, i), false)} off={!n} id="ed-rest" />}
+            <B text="÷2" label={t('edSplit')} onClick={() => apply(splitNote)} off={!n} id="ed-split" />
+            <B text="+" label={t('edJoin')} short={t('edJoinS')} onClick={() => apply(joinNext)} off={!n} id="ed-join" />
+            <B icon="chords" label={t('edChord')} short={t('edChordS')} onClick={() => apply(addChordNote)} off={!n || n.rest} id="ed-chord" />
+            <B line="tie" label={t('lk_tie')} onClick={() => apply((sc, i) => toggleTie(sc, i))} off={!n || n.rest} id="ed-tie" />
+            <B g="staccato" label={t('mk_staccato')} short={t('edStaccS')} on={n && hasMark(n, 'staccato')} onClick={() => apply((sc, i) => toggleMark(sc, i, 'staccato'))} off={!n || n.rest} id="ed-stacc" />
+            <B g="accent" label={t('mk_accent')} on={n && hasMark(n, 'accent')} onClick={() => apply((sc, i) => toggleMark(sc, i, 'accent'))} off={!n || n.rest} id="ed-accent" />
+          </div>
         </div>
       </div>
     </div>

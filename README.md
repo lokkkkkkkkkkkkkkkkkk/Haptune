@@ -1,7 +1,7 @@
 # Haptune: the sheet music for any song, and practice that listens
 
 **Two things, done well.** (1) Get the score: search a song name, drop a PDF, photo, MusicXML or MIDI, or type 簡譜;
-6,600+ free pieces are built in. (2) **Stage**, the community: request any song, musicians write it, play the daily
+7,200+ free pieces are built in. (2) **Stage**, the community: request any song, musicians write it, play the daily
 challenge with friends, earn Notes that unlock Pro days. Then practise with an app that hears every note.
 
 * Website: `https://haptune.name.my/` (landing page) and `/app/` (the app, installable on PC, iPad, iPhone).

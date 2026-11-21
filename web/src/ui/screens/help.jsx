@@ -152,6 +152,7 @@ export function AboutSheet() {
         <List>
           <Row title="Salamander Grand Piano V3" subtitle="Alexander Holm · CC BY 3.0" />
           <Row title="Verovio" subtitle="RISM Digital Center · LGPL-3.0" />
+          <Row title="Leipzig music font" subtitle="Etienne Darbellay, Jean-François Marti, Laurent Pugin · SIL OFL 1.1 (the studio's symbol buttons)" />
           <Row title="PDF.js" subtitle="Mozilla · Apache-2.0" />
           <Row title="Preact" subtitle="MIT" />
           <Row title="Capacitor" subtitle="Ionic · MIT" />

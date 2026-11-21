@@ -273,7 +273,7 @@ function PieceBody({ meta, data, semis, setSemis, view, setView, active, start, 
       if (only && !only(e)) { if (!others) continue; gain *= 0.4; }
       if (gain <= 0.01) continue;
       const a = sec(e.t);
-      evs.push({ time: a, dur: sec(e.t.add(e.dur)) - a, midi: e.midi, vel: Math.max(8, Math.round((e.vel || 80) * gain)), inst: instFor(e), pan: e.pi === 0 ? 0 : -0.2 });
+      evs.push({ time: a, dur: sec(e.t.add(e.dur)) - a, midi: e.midi, vel: Math.max(8, Math.round((e.vel || 80) * gain)), inst: instFor(e), pan: e.pi === 0 ? 0 : -0.2, ...(e.drum ? { drum: e.drum } : {}) });
     }
     if (withChords && harmonies.length && tScore.parts.length === 1 && !mute) {
       let prev = null;

@@ -177,10 +177,13 @@ const LAYOUTS = [
   { id: 'melody', label: 'layoutMelody', text: 'one melody line on a single staff' },
   { id: 'piano', label: 'layoutPiano', text: 'piano music on two staves (right hand and left hand)' },
   { id: 'melodyPiano', label: 'layoutMelodyPiano', text: 'a melody instrument or voice with piano accompaniment' },
+  { id: 'lead', label: 'layoutLead', text: 'a lead sheet: a melody with chord symbols above it (and maybe lyrics or rhythm slashes)' },
+  { id: 'band', label: 'layoutBand', text: 'a band or ensemble score: several instruments, each on its own staff, maybe with chord symbols, guitar TAB and a drum staff' },
   { id: 'choir', label: 'layoutChoir', text: 'several voices or instruments' },
+  { id: 'drums', label: 'layoutDrums', text: 'a drum kit part on a percussion staff' },
   { id: 'unsure', label: 'notSure', text: '' },
 ];
-const QUICK_INSTRUMENTS = ['piano', 'violin', 'guitar', 'voice', 'flute', 'cello', 'erhu', 'sax'];
+const QUICK_INSTRUMENTS = ['piano', 'violin', 'guitar', 'voice', 'flute', 'cello', 'erhu', 'sax', 'bassguitar', 'drums'];
 
 export function ImportWizardSheet({ files: initial = [], title = '', youtube = null }) {
   const s = useApp();

@@ -462,12 +462,18 @@ export function drum(t, kind, vel = 80, dest = null) {
     n.connect(f); f.connect(g);
     g.gain.setValueAtTime((kind === 'rim' ? 0.25 : 0.45) * v, t); g.gain.exponentialRampToValueAtTime(0.001, t + (kind === 'rim' ? 0.06 : 0.2));
     n.start(t); n.stop(t + 0.25); srcs.push(n);
+  } else if (kind === 'tom-h' || kind === 'tom-m' || kind === 'tom-l') {
+    const o = ctx.createOscillator(); o.type = 'sine';
+    const f0 = kind === 'tom-h' ? 230 : kind === 'tom-m' ? 170 : 115;
+    o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f0 * 0.62, t + 0.25);
+    g.gain.setValueAtTime(0.7 * v, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.42);
+    o.connect(g); o.start(t); o.stop(t + 0.45); srcs.push(o);
   } else {
     const n = ctx.createBufferSource(); n.buffer = noise();
-    const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = kind === 'ride' ? 5200 : 7500;
+    const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = kind === 'ride' ? 5200 : kind === 'crash' ? 4200 : 7500;
     n.connect(f); f.connect(g);
-    const len = kind === 'ride' ? 0.45 : kind === 'pedal' ? 0.04 : 0.06;
-    g.gain.setValueAtTime((kind === 'ride' ? 0.16 : 0.2) * v, t); g.gain.exponentialRampToValueAtTime(0.001, t + len);
+    const len = kind === 'crash' ? 1.3 : kind === 'ride' ? 0.45 : kind === 'ohat' ? 0.32 : kind === 'pedal' ? 0.04 : 0.06;
+    g.gain.setValueAtTime((kind === 'crash' ? 0.24 : kind === 'ride' ? 0.16 : 0.2) * v, t); g.gain.exponentialRampToValueAtTime(0.001, t + len);
     n.start(t); n.stop(t + len + 0.02); srcs.push(n);
   }
   if (dest.sources) dest.sources.push(...srcs);

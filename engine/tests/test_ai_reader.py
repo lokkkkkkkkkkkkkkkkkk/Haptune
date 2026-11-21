@@ -402,3 +402,19 @@ def test_the_same_notes_on_two_staves_that_look_different_are_flagged(minuet):
     codes = [i["code"] for f in result.flags for i in f["issues"]]
     if len(top[0].split()) >= 3:
         assert "copied" in codes or "range" in codes
+
+
+def test_drum_noteheads_slashes_and_more_marks():
+    # drums: x noteheads, a circled x and a ghost note; lead sheets: rhythm slashes under chords
+    doc = _doc([(["F4+G5/8!x G5/8!x C5/8!ghost G5/8!ox F4/4!tremolo r/4"], ["R"])], key=0, time=(4, 4))
+    xml = write_musicxml(doc)
+    assert "<notehead>x</notehead>" in xml and "<notehead>circle-x</notehead>" in xml
+    assert '<notehead parentheses="yes">normal</notehead>' in xml
+    assert '<tremolo type="single">3</tremolo>' in xml
+    lead = _doc([(['B4/4!slash!chord="C" B4/4!slash B4/2!slash!chord="G7"'], ["R"])], key=0, time=(4, 4))
+    lx = write_musicxml(lead)
+    assert lx.count("<notehead>slash</notehead>") == 3 and lx.count("<harmony") == 2
+    marks = _doc([(["C5/4!breath D5/4!prall E5/4!harmonic F5/4!open"], ["R"])], key=0, time=(4, 4))
+    mx = write_musicxml(marks)
+    for tag in ("<breath-mark/>", "<inverted-mordent/>", "<harmonic/>", "<open-string/>"):
+        assert tag in mx, tag

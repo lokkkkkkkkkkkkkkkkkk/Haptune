@@ -488,8 +488,8 @@ button.card, .card[role="button"], .lift { transition: transform .22s var(--spri
 .pro-tag.beta { background: color-mix(in srgb, var(--s-orange) 16%, transparent); color: var(--s-orange); margin-left: 8px; }
 
 /* spring push / pop between screens (the way UINavigationController slides) */
-.view.pushed:not([hidden]) { animation: v-push .46s cubic-bezier(.22,1.18,.36,1) both; }
-.view.popped:not([hidden]) { animation: v-pop .36s cubic-bezier(.22,1.1,.36,1) both; }
+.view.pushed:not([hidden]) { animation: v-push .46s cubic-bezier(.22,1.18,.36,1) backwards; }
+.view.popped:not([hidden]) { animation: v-pop .36s cubic-bezier(.22,1.1,.36,1) backwards; }
 @keyframes v-push { from { transform: translateX(34%); opacity: .4; } to { transform: none; opacity: 1; } }
 @keyframes v-pop { from { transform: translateX(-12%); opacity: .6; } to { transform: none; opacity: 1; } }
 .sheet { animation-timing-function: cubic-bezier(.22,1.15,.36,1) !important; }

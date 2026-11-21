@@ -1,4 +1,7 @@
-// The studio, MuseScore 4 style (Part 2 F): three modes at the top, Score · Mix · Share.
+// The studio, MuseScore 4 style (Part 2 F, Part 8): three modes at the top, Score · Mix · Share.
+// Part 8: a menu ribbon under the note toolbar (Marks, Ornaments, Dynamics, Lines, Text, Bars and a tab for the
+// instrument: chord boxes for guitar and ukulele, bowing and fingering for strings, hands, fingering and pedal for
+// piano, a drum kit and grooves, lyrics for voice...), see studiotools.jsx. Triplets, ties and naturals in the toolbar.
 //   Score  a note toolbar (lengths, dot, rest, chord, accidentals, articulations, delete), the bars large,
 //          and Palettes (key, tempo, dynamics, articulations, chords) · Instruments (add, change, remove a
 //          part) · Properties (the selected note or bar): a side panel on computers, tabs in the dock on
@@ -27,10 +30,19 @@ import { addPart, removePart, setPartInstrument, setKeySig, addDynamic, toggleAr
 import { NextChips } from '../nextchips.jsx';
 import { track } from '../analytics.js';
 import { INSTRUMENT_HUE } from '../cover.jsx';
+import { Ribbon, DiagramLane } from './studiotools.jsx';
+import { NoteIcon, LineIcon, Glyph } from '../glyphs.jsx';
+import { fretsFor } from '../../core/fretboard.js';
+import { KIT, drumFields, writeDrum, toggleTie, naturalize } from '../../core/notation.js';
+import { noteBefore } from '../../core/write.js';
+import { drum as playDrum } from '../audio.js';
+import { Fingerboard, BOARDS, boardFor } from '../fingerboard.jsx';
+import { local } from '../storage.js';
 
-const ADDABLE = ['piano', 'violin', 'viola', 'cello', 'flute', 'clarinet', 'sax', 'trumpet', 'guitar', 'bassguitar', 'voice', 'erhu'];
+const ADDABLE = ['piano', 'violin', 'viola', 'cello', 'doublebass', 'flute', 'clarinet', 'sax', 'trumpet', 'horn', 'trombone', 'guitar', 'ukulele', 'bassguitar', 'drums', 'voice', 'erhu', 'guzheng', 'dizi'];
 const SOUNDS = ['piano', 'epiano', 'organ', 'strings', 'guitar', 'bass', 'flute', 'clarinet', 'brass', 'voice'];
 const TEMPOS = [60, 72, 90, 108, 120, 140];
+const INPUTS = ['piano', 'guitar', 'bass', 'ukulele', 'violin', 'viola', 'cello', 'erhu', 'drums'];
 
 export function StudioView({ id, active, fresh = false }) {
   const s = useApp();
@@ -40,6 +52,8 @@ export function StudioView({ id, active, fresh = false }) {
   const [cur, setCur] = useState({ pi: 0, staff: 1, mi: 0, off: ZERO });
   const [len, setLen] = useState(2);
   const [dot, setDot] = useState(false);
+  const [triplet, setTriplet] = useState(false);
+  const [diagrams, setDiagrams] = useState(true);
   const [chordMode, setChordMode] = useState(false);
   const [sel, setSel] = useState(null);
   const [octave, setOctave] = useState(4);
@@ -47,18 +61,30 @@ export function StudioView({ id, active, fresh = false }) {
   const [wide, setWide] = useState(true);
   const [mode, setMode] = useState('score');          // score | mix | share
   const [side, setSide] = useState('palettes');        // palettes | instruments | properties
-  const [dock, setDock] = useState('notes');           // phones: notes | palettes | instruments | properties
+  const [dock, setDock] = useState('tools');           // phones: tools | palettes | instruments | properties
+  // the note input (piano keys, a fretboard, a fingerboard or drum pads) is closed until asked for
+  const [inputOpen, setInputOpenS] = useState(() => !!local.get('studioInput', false));
+  const setInputOpen = (v) => { setInputOpenS(v); local.set('studioInput', v); };
+  const [board, setBoard] = useState(null);
   const [lead, setLead] = useState(false);
   const [mix, setMix] = useState({});
   const [playing, setPlaying] = useState(false);
   const boxRef = useRef(null);
+  const dockRef = useRef(null), pageRef = useRef(null);
+  useEffect(() => {
+    const d = dockRef.current, pg = pageRef.current;
+    if (!d || !pg || typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(() => { pg.style.paddingBottom = `${Math.round(d.getBoundingClientRect().height) + 24}px`; });
+    ro.observe(d);
+    return () => ro.disconnect();
+  });
   const transport = useRef(null);
   const saveTimer = useRef(null);
   const dirty = useRef(false);
   const score = hist.i >= 0 ? hist.list[hist.i] : null;
   const N = wide ? 4 : 2;
   const win = Math.max(0, cur.mi - (cur.mi % N));
-  const lenQ = LENGTHS[len]?.q.mul(dot ? q(3, 2) : q(1)) || q(1);
+  const lenQ = LENGTHS[len]?.q.mul(dot && !triplet ? q(3, 2) : q(1)) || q(1);
   const desk = typeof innerWidth === 'number' && innerWidth >= 900;
 
   useEffect(() => {
@@ -122,6 +148,7 @@ export function StudioView({ id, active, fresh = false }) {
 
   const part = score?.parts[cur.pi] || score?.parts[0];
   const instrument = part?.instrument || 'piano';
+  const inputKind = (instrument === 'drums' ? (board === 'piano' ? 'piano' : 'drums') : board === 'drums' ? null : board) || boardFor(instrument);
   const sound = (m) => { const ctx = audioContext(); if (ctx) note(ctx.currentTime + 0.02, m, 0.5, 84, stripOf(mix, part || {}).sound || soundOf(instrument), stripOf(mix, part || {}).pan); };
   const enter = (midi) => {
     if (!score) return;
@@ -131,11 +158,31 @@ export function StudioView({ id, active, fresh = false }) {
       if (r.id) commit(r.score); else toast(t('chordNeedsNote'), 'err');
       return;
     }
-    const r = writeAt(score, cur, { midi, len: lenQ });
+    const r = writeAt(score, cur, { midi, len: lenQ, tuplet: triplet });
     setSel(null);
     commit(r.score, r.cur);
   };
-  const rest = () => { if (!score) return; const r = writeAt(score, cur, { midi: null, len: lenQ }); setSel(null); commit(r.score, r.cur); };
+  // drums: a kit piece written at the cursor, or added to the hit before it
+  const [together, setTogether] = useState(false);
+  const hit = (k) => {
+    if (!score) return;
+    const ctx = audioContext(); if (ctx) playDrum(ctx.currentTime + 0.02, KIT.find((x) => x.id === k).drum, 96);
+    if (together || chordMode) { const r = writeDrum(score, cur, k, lenQ, true); if (r) commit(r.score); else toast(t('chordNeedsNote'), 'err'); return; }
+    const r = writeAt(score, cur, { midi: null, len: lenQ, drum: drumFields(k), tuplet: triplet });
+    setSel(null);
+    commit(r.score, r.cur);
+  };
+  // tie: the note before the cursor is held on (same pitch again, tied)
+  const tie = () => {
+    if (!score) return;
+    if (sel) { const out = toggleTie(score, sel); if (out === score) toast(t('tbTieNo'), 'err'); else commit(out); return; }
+    const b = noteBefore(score, cur);
+    if (!b || b.note.rest || !b.note.pitch) { toast(t('tbNoteFirst')); return; }
+    const r = writeAt(score, cur, { midi: midiOf(b.note.pitch), len: lenQ, tuplet: triplet });
+    const out = toggleTie(r.score, b.note.id);
+    commit(out === r.score ? r.score : out, r.cur);
+  };
+  const rest = () => { if (!score) return; const r = writeAt(score, cur, { midi: null, len: lenQ, tuplet: triplet }); setSel(null); commit(r.score, r.cur); };
   const back = () => { if (!score) return; const r = eraseBefore(score, cur); setSel(null); commit(r.score, r.cur); };
   const move = (d) => { if (score) { setSel(null); setCur(step(score, cur, d)); } };
   const onSel = (fn, keep = true) => {
@@ -220,7 +267,7 @@ export function StudioView({ id, active, fresh = false }) {
     if (!loc) return;
     setCur({ pi: loc.pi, staff: loc.note.staff || 1, mi: loc.mi, off: loc.note.off });
     setSel(loc.note.rest ? null : g.id);
-    if (!loc.note.rest && !desk) setDock((d) => (d === 'notes' ? d : 'properties'));
+
     if (!loc.note.rest && desk) setSide('properties');
     if (loc.note.pitch) sound(midiOf(loc.note.pitch) + (loc.part.transpose?.c || 0));
   };
@@ -319,7 +366,7 @@ export function StudioView({ id, active, fresh = false }) {
   const panels = { palettes, instruments, properties };
 
   return (
-    <div class={`scroll has-editor studio ms4 m-${mode}`} id="studio">
+    <div class={`scroll has-editor studio ms4 m-${mode}`} id="studio" ref={pageRef}>
       <NavBar title={score?.title || meta.title} backLabel={t('write')} actions={<>
         <button type="button" onClick={undo} disabled={hist.i <= 0} aria-label={t('edUndo')} id="st-undo" style={hist.i <= 0 ? { opacity: 0.35 } : null}><Icon name="skipBack" size={21} /></button>
         <button type="button" onClick={redo} disabled={hist.i >= hist.list.length - 1} aria-label={t('edRedo')} style={hist.i >= hist.list.length - 1 ? { opacity: 0.35 } : null}><Icon name="skipFwd" size={21} /></button>
@@ -330,16 +377,22 @@ export function StudioView({ id, active, fresh = false }) {
 
       {mode === 'score' && <>
         <div class="ms-toolbar hscroll" id="st-toolbar" role="toolbar" aria-label={t('noteLength')}>
-          {LENGTHS.slice(0, 5).map((L, i) => <button type="button" key={L.id} role="radio" aria-checked={len === i} class={len === i ? 'on' : ''} onClick={() => setLen(i)} title={L.id} id={`len-${L.id}`}><span class="gl">{L.glyph}</span></button>)}
-          <button type="button" class={dot ? 'on' : ''} onClick={() => setDot(!dot)} aria-pressed={dot} title={t('dotted')}><span class="gl">•</span></button>
-          <button type="button" onClick={rest} id="st-rest" title={t('edRest')}><span class="gl">𝄽</span></button>
+          {LENGTHS.map((L, i) => <button type="button" key={L.id} role="radio" aria-checked={len === i} class={len === i ? 'on' : ''} onClick={() => setLen(i)} title={t(`len_${L.id}`)} id={`len-${L.id}`}><NoteIcon type={L.id} size={26} /></button>)}
+          <button type="button" class={dot ? 'on' : ''} onClick={() => setDot(!dot)} aria-pressed={dot} title={t('dotted')} id="st-dot"><NoteIcon type={LENGTHS[len]?.id || 'quarter'} dots={1} size={26} /></button>
+          <button type="button" class={triplet ? 'on' : ''} onClick={() => setTriplet(!triplet)} aria-pressed={triplet} title={t('tbTriplet')} id="st-triplet"><LineIcon kind="triplet" size={24} /></button>
+          <button type="button" onClick={rest} id="st-rest" title={t('edRest')}><NoteIcon type={LENGTHS[len]?.id || 'quarter'} rest size={26} /></button>
           <span class="sep" />
-          <button type="button" disabled={!sel} onClick={() => onSel((sc, i) => movePitch(sc, i, 'sharp'))} title="♯">♯</button>
-          <button type="button" disabled={!sel} onClick={() => onSel((sc, i) => movePitch(sc, i, 'flat'))} title="♭">♭</button>
-          <button type="button" class={chordMode ? 'on' : ''} onClick={() => setChordMode(!chordMode)} aria-pressed={chordMode} title={t('edChord')}><Icon name="chords" size={18} /></button>
-          <button type="button" onClick={back} id="st-back" title={t('delete')}><span class="tiny">⌫</span></button>
+          <button type="button" onClick={tie} id="st-tie" title={t('tbTie')}><LineIcon kind="tie" size={24} /></button>
+          <button type="button" disabled={!sel} onClick={() => onSel((sc, i) => movePitch(sc, i, 'sharp'))} title="♯" id="st-sharp"><Glyph name="sharp" size={24} /></button>
+          <button type="button" disabled={!sel} onClick={() => onSel((sc, i) => movePitch(sc, i, 'flat'))} title="♭" id="st-flat"><Glyph name="flat" size={24} /></button>
+          <button type="button" disabled={!sel} onClick={() => onSel((sc, i) => naturalize(sc, i))} title={t('tbNatural')} id="st-natural"><Glyph name="natural" size={24} /></button>
+          <button type="button" class={chordMode ? 'on' : ''} onClick={() => setChordMode(!chordMode)} aria-pressed={chordMode} title={t('edChord')} id="st-chordmode"><Icon name="chords" size={18} /><span class="lbl">{t('edChord')}</span></button>
+          {(part?.staves || 1) > 1 && <button type="button" onClick={() => { setSel(null); setCur((c) => ({ ...c, staff: c.staff === 2 ? 1 : 2, off: c.off })); }} id="st-hand" title={cur.staff === 2 ? t('tbLH') : t('tbRH')}><span class="lbl hand">{cur.staff === 2 ? 'L.H.' : 'R.H.'}</span></button>}
+          <button type="button" onClick={back} id="st-back" title={t('delete')}><Icon name="backspace" size={19} /></button>
           <span class="sep" />
           <button type="button" class={lead ? 'on' : ''} onClick={toggleLead} aria-pressed={lead} id="st-lead" title={t('leadSheet')}><Icon name="doc" size={17} /><span class="lbl">{t('leadSheetShort')}</span></button>
+          {fretsFor(instrument) && <button type="button" class={diagrams ? 'on' : ''} onClick={() => setDiagrams(!diagrams)} aria-pressed={diagrams} id="st-diagrams" title={t('gtShow')}><Icon name="grid" size={17} /><span class="lbl">{t('gtBoxes')}</span></button>}
+          <button type="button" class={inputOpen ? 'on' : ''} onClick={() => setInputOpen(!inputOpen)} aria-pressed={inputOpen} id="st-input" title={t('stInputT')}><Icon name={inputKind === 'drums' ? 'drum' : BOARDS[inputKind] ? 'guitar' : 'piano'} size={17} /><span class="lbl">{t('stInputT')}</span></button>
           <button type="button" class={playing ? 'on' : ''} onClick={() => hear(false)} id="st-hear" title={t('edHear')}><Icon name={playing ? 'stop' : 'speaker'} size={17} /></button>
         </div>
         <div class="ms-layout">
@@ -364,23 +417,37 @@ export function StudioView({ id, active, fresh = false }) {
                 <button type="button" class="ll-n" onClick={() => setCur((c) => ({ ...c, mi, off: ZERO }))}>{mi + 1}</button>
                 <div class="ll-chips">{chordsForKey(keyF).slice(0, 6).map((c) => <button type="button" key={c} class={chords[mi] === c ? 'on' : ''} onClick={() => chordAt(mi, chords[mi] === c ? '' : c)} id={`ll-${mi}-${c}`}>{c}</button>)}</div>
               </div>))}</div>}
+            {diagrams && fretsFor(instrument) && score && <DiagramLane score={score} from={win} count={N} set={fretsFor(instrument)} cur={cur} onBar={(mi, off) => { setSel(null); setCur((c) => ({ ...c, mi, off })); }} />}
             <p class="note-text center" id="st-info">
               {n ? <><b>{pitchName(n.pitch)}</b> · {t('bar', { n: cur.mi + 1 })} · {t('stSelHint')}</>
-                : <>{t('bar', { n: cur.mi + 1 })} · {t('stBeat', { n: Math.round(cur.off.num() * 100) / 100 + 1 })} · {here?.rest ? t('stOnRest') : t('stOnNote')}{fresh && hist.i <= 0 ? ` · ${t('stFirstHint')}` : ''}</>}
+                : <>{t('bar', { n: cur.mi + 1 })} · {t('stBeat', { n: Math.round(cur.off.num() * 100) / 100 + 1 })} · {here?.rest ? t('stOnRest') : t('stOnNote')}{fresh && hist.i <= 0 ? ` · ${inputOpen ? t('stFirstHint') : t('stInputHint')}` : ''}</>}
               {midiIn && <span class="pill3 c-teal" style={{ marginLeft: 8 }}><Icon name="piano" size={13} />MIDI</span>}
             </p>
             <p class="tiny center pc-only">{t('stKeysHelp')}</p>
           </div>
         </div>
-        <div class="ed-bar st-dock">
-          {!desk && <div class="st-tabs">{[['notes', 'piano'], ['palettes', 'grid'], ['instruments', 'staff'], ['properties', 'sliders']].map(([v, ic]) => (
-            <button type="button" key={v} class={dock === v ? 'on' : ''} onClick={() => setDock(v)} id={`dock-${v}`}><Icon name={ic} size={15} />{t(`ms_${v}`)}</button>))}</div>}
-          {(desk || dock === 'notes') && <div class="st-keys">
-            <button type="button" class="oct" onClick={() => setOctave((o) => Math.max(1, o - 1))} aria-label={t('octaveDown')}>−</button>
-            <div class="st-kbd"><Keyboard lo={lo} hi={lo + 24} labels onKey={enter} height={wide ? 120 : 104} /></div>
-            <button type="button" class="oct" onClick={() => setOctave((o) => Math.min(7, o + 1))} aria-label={t('octaveUp')}>+</button>
+        <div class={`ed-bar st-dock${inputOpen ? ' with-input' : ''}`} id="st-dock" ref={dockRef}>
+          {inputOpen && <div class="st-input" id="st-input-panel">
+            <div class="st-input-head">
+              <div class="chips st-boards" role="radiogroup" aria-label={t('stInputT')}>
+                {(instrument === 'drums' ? ['drums', 'piano'] : INPUTS.filter((k) => k !== 'drums')).map((k) => <button type="button" key={k} role="radio" aria-checked={inputKind === k} class={`chip${inputKind === k ? ' on' : ''}`} onClick={() => setBoard(k)} id={`in-${k}`}>{k === 'piano' ? t('inPiano') : k === 'drums' ? t('rbDrums') : k === 'bass' ? instrumentName('bassguitar') : instrumentName(k)}</button>)}
+              </div>
+              <button type="button" class="st-input-x" onClick={() => setInputOpen(false)} aria-label={t('close')} id="st-input-close"><Icon name="close" size={15} stroke={2.6} /></button>
+            </div>
+            {inputKind === 'drums' ? <div class="st-pads" id="st-pads">
+              {KIT.map((k) => <button type="button" key={k.id} class={`pad p-${k.id}`} onClick={() => hit(k.id)} id={`pad-${k.id}`}><Icon name="drum" size={16} /><span>{t(`kt_${k.id}`)}</span></button>)}
+              <button type="button" class={`pad tog${together ? ' on' : ''}`} onClick={() => setTogether(!together)} aria-pressed={together} id="pad-together"><Icon name="plus" size={16} /><span>{t('drTogether')}</span></button>
+            </div> : BOARDS[inputKind] ? <div class="st-fb"><Fingerboard kind={inputKind} keyFifths={keyF} onNote={(sounding) => enter(sounding - (part?.transpose?.c || 0))} /></div>
+              : <div class="st-keys">
+                <button type="button" class="oct" onClick={() => setOctave((o) => Math.max(1, o - 1))} aria-label={t('octaveDown')}>−</button>
+                <div class="st-kbd"><Keyboard lo={lo} hi={lo + 24} labels onKey={enter} height={wide ? 112 : 96} /></div>
+                <button type="button" class="oct" onClick={() => setOctave((o) => Math.min(7, o + 1))} aria-label={t('octaveUp')}>+</button>
+              </div>}
           </div>}
-          {!desk && dock !== 'notes' && <div class="st-panel ms-dock-panel">{panels[dock]}</div>}
+          {!desk && <div class="st-tabs">{[['tools', 'tools'], ['palettes', 'grid'], ['instruments', 'staff'], ['properties', 'sliders']].map(([v, ic]) => (
+            <button type="button" key={v} class={dock === v ? 'on' : ''} onClick={() => setDock(v)} id={`dock-${v}`}><Icon name={ic} size={15} />{t(v === 'tools' ? 'stToolsT' : `ms_${v}`)}</button>))}</div>}
+          {(desk || dock === 'tools') && score && <Ribbon key={`${cur.pi}-${instrument}`} fold={!desk && inputOpen} api={{ score, cur, sel, part, commit, setSel, setCur, keyF, instrument }} />}
+          {!desk && dock !== 'tools' && <div class="st-panel ms-dock-panel">{panels[dock]}</div>}
         </div>
       </>}
 
