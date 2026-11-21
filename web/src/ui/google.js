@@ -33,7 +33,27 @@ export function googleError(code) {
   return t('gErrOther', { code });
 }
 
-/** The whole page goes to Google and comes back signed in (when a popup can't open). */
+/** A browser built into another app (Instagram, Facebook, LINE, WeChat, TikTok …, or any app's Android WebView):
+ *  Google refuses to sign in there ("403 disallowed_useragent") or its window stays white. */
+export function inAppBrowser(ua = globalThis.navigator?.userAgent || '') {
+  return /FBAN|FBAV|FB_IAB|Instagram|Line\/|MicroMessenger|WeChat|TikTok|musical_ly|BytedanceWebview|Snapchat|Twitter|LinkedInApp|GSA\/|KAKAOTALK|Zalo|; wv\)/i.test(ua);
+}
+
+/** Phones and tablets: Google's popup opens as a separate tab there and often can't hand the answer back (the
+ *  sign-in tab stays white). The whole page goes to Google and back instead, which works everywhere. */
+export function popupUnreliable(ua = globalThis.navigator?.userAgent || '') {
+  if (/Android|iPhone|iPad|iPod|Mobile|Silk|Kindle/i.test(ua)) return true;
+  try { return !!globalThis.matchMedia?.('(pointer: coarse)').matches && !globalThis.matchMedia?.('(any-pointer: fine)').matches; } catch { return false; }
+}
+
+/** An address that opens this page in the phone's own browser (Chrome on Android), out of an in-app browser. */
+export function openInBrowserURL(href = globalThis.location?.href || '') {
+  const u = new URL(href);
+  if (/Android/i.test(globalThis.navigator?.userAgent || '')) return `intent://${u.host}${u.pathname}${u.search}${u.hash}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(href)};end`;
+  return href;
+}
+
+/** The whole page goes to Google and comes back signed in (phones, and when a popup can't open). */
 export async function googleRedirect(extra = {}) {
   const ret = `${location.origin}${location.pathname}`;
   const st = await googleStatus().catch(() => ({}));
@@ -51,7 +71,8 @@ export function googleSignInPopup({ fresh = false } = {}) {
   return googleStatus().then((st) => new Promise((resolve, reject) => {
     if (!st.configured) { reject(new Error(t('googleNotSetUp'))); return; }
     if (WEB_ID() && st.web_known === false) { reject(new Error(t('gErrClient'))); return; }
-    if (!g?.accounts?.oauth2) { googleRedirect({ fresh }).catch(reject); return; }
+    if (inAppBrowser()) { reject(Object.assign(new Error(t('gInApp')), { code: 'in_app' })); return; }
+    if (popupUnreliable() || !g?.accounts?.oauth2) { googleRedirect({ fresh }).catch(reject); return; }
     const client = g.accounts.oauth2.initCodeClient({
       client_id: st.web_id, scope: 'openid email profile', ux_mode: 'popup', select_account: true, include_granted_scopes: true,
       callback: (resp) => {

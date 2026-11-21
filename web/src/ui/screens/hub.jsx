@@ -253,6 +253,7 @@ export const GoogleG = ({ size = 18 }) => (
 export function GoogleButton({ onDone, fresh = false }) {
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  const [inApp, setInApp] = useState(false);
   const [ready, setReady] = useState(isNative() || null);               // web: is Google sign-in set up on the server?
   useEffect(() => {
     if (isNative()) return;
@@ -264,16 +265,28 @@ export function GoogleButton({ onDone, fresh = false }) {
       if (isNative()) {
         const S = await import('../signin.js');
         if (!S.nativeGoogleAvailable()) { setBusy(false); openSheet('pair', { then: onDone }); return; }
-        const me = await S.nativeGoogleSignIn({ fresh });
-        if (me) onDone?.(me);
+        try {
+          const me = await S.nativeGoogleSignIn({ fresh });
+          if (me) onDone?.(me);
+        } catch (e) {
+          // Google's sign-in sheet doesn't work on this phone (no Google Play services, an old version, a work
+          // profile …): sign in through the phone's browser instead, which pairs the app to the same account
+          if (!e.native) throw e;
+          setBusy(false); toast(t('gUseBrowser')); openSheet('pair', { then: onDone }); return;
+        }
       } else {
         const G = await import('../google.js');
         const me = await G.googleSignInPopup({ fresh });
         if (me) onDone?.(me);
       }
-    } catch (e) { setErr(e.detail?.message || e.message || String(e)); }
+    } catch (e) { setErr(e.detail?.message || e.message || String(e)); setInApp(e.code === 'in_app'); }
     setBusy(false);
   };
+  const openOutside = async () => {
+    const G = await import('../google.js');
+    location.href = G.openInBrowserURL();
+  };
+  const copyLink = async () => { try { await navigator.clipboard.writeText(location.href); toast(t('copied')); } catch { toast(location.href); } };
   if (ready === false) return null;
   return (
     <div class="gsi-wrap">
@@ -281,6 +294,10 @@ export function GoogleButton({ onDone, fresh = false }) {
         <GoogleG />{busy ? t('gSigningIn') : t('signInGoogle')}
       </button>
       {err && <p class="t-red tiny" id="google-err">{err}</p>}
+      {inApp && <div class="btn-row" id="google-inapp">
+        <Button kind="secondary" icon="globe" onClick={openOutside}>{t('gOpenBrowser')}</Button>
+        <Button kind="plain" icon="copy" onClick={copyLink}>{t('copyLink')}</Button>
+      </div>}
     </div>
   );
 }

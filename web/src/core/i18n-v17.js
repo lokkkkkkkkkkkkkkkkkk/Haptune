@@ -90,4 +90,8 @@ export const V17 = {
   libMake: ['Make folder', 'Buat folder', '建立文件夹', '建立資料夾'], libMakeMove: ['Make and move', 'Buat dan pindah', '建立并移入', '建立並移入'],
   libNoFolder: ['No folder', 'Tiada folder', '不放文件夹', '不放資料夾'], libRemoveFolder: ['Remove folder', 'Buang folder', '删除文件夹', '刪除資料夾'],
   libRemoveFolderSub: ['The {n} pieces in it stay in your library', '{n} karya di dalamnya kekal dalam pustaka anda', '里面的 {n} 首乐曲仍保留在乐库中', '裡面的 {n} 首樂曲仍保留在樂庫中'],
+  // Part 9: Google sign-in on phones and in other apps' browsers
+  gInApp: ['Google doesn’t allow signing in inside this app’s built-in browser. Open Haptune in Chrome or Safari, then sign in there.', 'Google tidak membenarkan log masuk dalam pelayar terbina dalam aplikasi ini. Buka Haptune dalam Chrome atau Safari, kemudian log masuk di sana.', 'Google 不允许在这个应用的内置浏览器里登录。请在 Chrome 或 Safari 中打开 Haptune 再登录。', 'Google 不允許在這個應用程式的內建瀏覽器裡登入。請在 Chrome 或 Safari 中開啟 Haptune 再登入。'],
+  gOpenBrowser: ['Open in browser', 'Buka dalam pelayar', '在浏览器中打开', '在瀏覽器中開啟'],
+  gUseBrowser: ['Google’s sign-in didn’t open on this phone, so we’ll sign you in through your browser.', 'Log masuk Google tidak terbuka pada telefon ini, jadi kami akan log masuk anda melalui pelayar.', 'Google 登录在这部手机上打不开，我们改用浏览器帮你登录。', 'Google 登入在這部手機上打不開，我們改用瀏覽器幫你登入。'],
 };

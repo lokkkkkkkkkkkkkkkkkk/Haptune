@@ -107,6 +107,7 @@ async function run(mode, base, browser) {
     await p.locator('#play-btn').click(); await p.waitForTimeout(1800);
     const a = await p.evaluate(() => ({ ...window.__haptuneAudio(), cursor: !document.querySelector('.vrv-cursor')?.hidden }));
     if (a.state !== 'running' || !a.scheduled || !a.cursor) throw new Error('not playing: ' + JSON.stringify(a));
+    if (a.cutEarly) throw new Error(`the voice limit cut ${a.cutEarly} notes before they sounded`);
   });
   await step('sound system freezes and recovers', async () => {
     const before = await p.locator('.bar-pos strong').innerText();

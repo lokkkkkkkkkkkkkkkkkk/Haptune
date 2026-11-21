@@ -103,13 +103,22 @@ function scheduleBar(t) {
   bar++;
 }
 
+// While real music plays (or the microphone listens, or the app is in the background) the background music's own
+// sound system is SUSPENDED, not just turned down: a second sound system running silently next to the music still
+// costs a phone an audio thread and its echo, which is enough to make busy music crackle (Part 9).
+let quietSince = 0;
 function tick() {
   if (!ctx || !track) return;
   const busy = soundBusy() || globalThis.document?.hidden || !cfg.music;
+  if (busy && ctx.state === 'suspended') return;                 // asleep: nothing to do until it is wanted again
+  if (!busy && ctx.state === 'suspended') { ctx.resume?.().catch(() => {}); return; }   // wake first, schedule next tick
   const now = ctx.currentTime;
-  if (busy && !lowered) { lowered = true; master.gain.cancelScheduledValues(now); master.gain.setTargetAtTime(0, now, 0.3); }
+  if (busy && !lowered) { lowered = true; quietSince = performance.now(); master.gain.cancelScheduledValues(now); master.gain.setTargetAtTime(0, now, 0.3); }
   if (!busy && lowered) { lowered = false; master.gain.cancelScheduledValues(now); master.gain.setTargetAtTime(0.5 * cfg.volume, now, 1.2); if (nextBar < now) nextBar = now + 0.1; }
-  if (lowered) return;
+  if (lowered) {
+    if (busy && performance.now() - quietSince > 2000 && ctx.state === 'running') ctx.suspend?.().catch(() => {});   // faded out by now
+    return;
+  }
   while (nextBar < now + 1.5) { scheduleBar(Math.max(nextBar, now + 0.05)); nextBar = Math.max(nextBar, now) + (60 / track.bpm) * 4; }
 }
 

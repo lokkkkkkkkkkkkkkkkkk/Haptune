@@ -36,9 +36,19 @@ function decideLight(mode = readSetting()) {
   return light;
 }
 decideLight();
-const LOOKAHEAD_FULL = 1.0;      // seconds scheduled ahead of the audio clock (a jump or stop fades the bus, so this costs nothing)
-const lookahead = () => (light ? 1.6 : LOOKAHEAD_FULL);
-const maxVoices = () => (light ? 24 : LOW_END ? 32 : 64);   // a phone that runs out of time per audio block crackles
+// Phones (Part 9): the page can be busy for a second or more (drawing the score, the system), so notes are queued
+// further ahead there. A jump or stop fades the bus, so queueing ahead costs nothing.
+const IS_PHONE = IS_ANDROID || isTouchPhone();
+function isTouchPhone() {
+  try { return !!globalThis.matchMedia?.('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 900; } catch { return false; }
+}
+const LOOKAHEAD_FULL = IS_PHONE ? 1.5 : 1.0;     // seconds scheduled ahead of the audio clock
+const lookahead = () => (light ? 2.0 : LOOKAHEAD_FULL);
+// at most this many notes SOUNDING AT THE SAME MOMENT (notes queued for later don't count: see track())
+const maxVoices = () => (light ? 32 : LOW_END ? 40 : 64);
+/** How often the screen follows the music (ms): every frame on computers, less often on phones so drawing the
+ *  score leaves the processor to the sound. The cursor steps from note to note, so it looks the same. */
+const uiEvery = () => (light ? 50 : IS_PHONE ? 33 : 0);
 
 /** Settings > Sound > Light sound: 'auto' | 'on' | 'off'. Rebuilds the sound system when it changes. */
 export function setLightSound(mode) {
@@ -47,7 +57,10 @@ export function setLightSound(mode) {
   if (decideLight(mode) !== was && ctx) rebuildAudio();
 }
 export const isLightSound = () => light;
-const STALL_MS = 1500;          // the audio clock standing still this long while playing = the sound system is stuck
+// the audio clock standing still this long while playing = the sound system is stuck. Android pauses the clock for a
+// moment when the output changes (Bluetooth, headphones), so it gets longer before a rebuild.
+const STALL_MS = IS_ANDROID ? 2500 : 1500;
+let rebuildWhenIdle = false;     // light sound was switched on while playing: rebuild before the next play, not mid-song
 const stats = { scheduled: 0, dropped: 0, stolen: 0, transports: 0, rebuilds: 0, stalls: 0 };
 let userOffset = 0;              // seconds, from Settings > Sound > Sync (calibration)
 
@@ -275,19 +288,30 @@ function releaseBus(bus) {
 
 // ---------- voices ----------
 
+// Notes are queued up to a couple of seconds ahead, so `live` holds notes that are sounding AND notes that haven't
+// started yet. The limit is on notes sounding at the same moment: when a new note starts, only the notes that are
+// still sounding at that moment count, and if there are too many the oldest of them fades out exactly then.
+// (Part 9 fix: the old limit counted queued notes too, so on phones with light sound most notes of busy music were
+// cut before they had even started: the "stuck", choppy sound.)
 const live = [];   // {start, end, gain, srcs}
 function track(v) {
-  const t = ctx.currentTime;
-  for (let i = live.length - 1; i >= 0; i--) if (live[i].end < t) live.splice(i, 1);
+  const now = ctx.currentTime;
+  for (let i = live.length - 1; i >= 0; i--) if (live[i].end < now) live.splice(i, 1);
+  const t = v.start;
+  let n = 0, k = -1;
+  for (let i = 0; i < live.length; i++) {
+    const o = live[i];
+    if (o.start <= t && o.end > t) { n++; if (k < 0 || o.start < live[k].start) k = i; }
+  }
   live.push(v);
-  if (live.length > maxVoices()) {
-    // steal the voice that started first (it is the quietest by now)
-    let k = 0;
-    for (let i = 1; i < live.length; i++) if (live[i].start < live[k].start) k = i;
-    const old = live.splice(k, 1)[0];
-    const at = Math.max(t, old.start);
+  if (n >= maxVoices() && k >= 0) {
+    // the note that started first is the quietest by now: it fades out as the new one starts
+    const old = live[k];
+    const at = Math.max(now, t);
     try { old.gain.gain.cancelScheduledValues(at); old.gain.gain.setTargetAtTime(0.0001, at, 0.02); } catch { /* ok */ }
     old.srcs.forEach((s) => { try { s.stop(at + 0.12); } catch { /* ok */ } });
+    old.end = at + 0.12;
+    if (old.start > now) stats.cutEarly = (stats.cutEarly || 0) + 1;     // should stay 0: a note cut before it sounded
     stats.stolen++;
   }
 }
@@ -533,8 +557,9 @@ export class Transport {
     return seg.off + (heard - seg.at);
   }
   play(from = 0, { preroll = [] } = {}) {
-    if (!audioContext()) return;
     this.stop(false);
+    if (rebuildWhenIdle && ctx && ![...transports].some((t) => t.playing)) { rebuildWhenIdle = false; rebuildAudio(); }
+    if (!audioContext()) return;
     this.playing = true;
     transports.add(this);
     unmuteIOS();
@@ -555,10 +580,14 @@ export class Transport {
       this.lastTick = 0; this.late = 0; this.dropped0 = stats.dropped;
       this.timer = setInterval(() => this.tick(), TICK_MS);
       this.tick();
+      // the screen follows the music: every frame on computers, about 30 (light sound: 20) times a second on phones
       const frame = () => {
+        this.raf = null;
         if (!this.playing || gen !== this.gen) return;
         this.onTime?.(Math.max(0, this.position()));
-        this.raf = requestAnimationFrame(frame);
+        const every = uiEvery();
+        if (every) this.uiTimer = setTimeout(() => { this.uiTimer = null; if (this.playing && gen === this.gen) this.raf = requestAnimationFrame(frame); }, every);
+        else this.raf = requestAnimationFrame(frame);
       };
       this.raf = requestAnimationFrame(frame);
     };
@@ -578,16 +607,18 @@ export class Transport {
       setProblem('tap');
       return;
     }
-    // falling behind (the page was too busy to schedule in time): switch to light sound once, carry on from here
+    // falling behind: notes came due before the page could queue them (they are skipped, not played late). Switch
+    // to light sound once: it queues further ahead straight away; the lighter sound system (no reverb) is built
+    // before the next play, never in the middle of the music (rebuilding mid-song was itself a break in the sound).
+    // A busy moment alone (a long gap between ticks) is not a reason: the notes queued ahead cover it.
     const gap = this.lastTick ? wall - this.lastTick : 0;
     this.lastTick = wall;
-    if (gap > 400 && !globalThis.document?.hidden) this.late = (this.late || 0) + 1;
-    if (!light && readSetting() === 'auto' && ((this.late || 0) >= 3 || stats.dropped - (this.dropped0 || 0) >= 6)) {
+    if (gap > lookahead() * 1000 * 0.8 && !globalThis.document?.hidden) this.late = (this.late || 0) + 1;
+    if (!light && readSetting() === 'auto' && stats.dropped - (this.dropped0 || 0) >= 6) {
       try { localStorage.setItem('haptune.soundLightAuto', 'true'); } catch { /* storage blocked */ }
       decideLight();
       stats.lightSwitches = (stats.lightSwitches || 0) + 1;
-      setTimeout(() => rebuildAudio(), 0);
-      return;
+      rebuildWhenIdle = true;
     }
     const horizon = nowT + lookahead();
     const fireAt = (e) => {
@@ -643,7 +674,8 @@ export class Transport {
     this.gen++;
     clearInterval(this.timer); this.timer = null;
     if (this.raf) cancelAnimationFrame(this.raf);
-    this.raf = null;
+    if (this.uiTimer) clearTimeout(this.uiTimer);
+    this.raf = null; this.uiTimer = null;
     if (this.bus) { releaseBus(this.bus); this.bus = null; }
     this.segs = [];
     if (resetPos) this.pos = 0;

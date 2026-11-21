@@ -88,15 +88,19 @@ export async function nativeGoogleSignIn({ fresh = false } = {}) {
   const social = plugin('SocialLogin');
   let tok = null;
   if (social) {
-    socialReady ||= social.initialize({ google: { webClientId: googleClientId() } }).catch((e) => { socialReady = null; throw e; });
+    // Only the sign-in itself (an ID token: name, email, picture). Asking for scopes, or letting the plugin run
+    // Google's extra "authorize" step after signing in, needs a changed MainActivity to get the answer back; without
+    // it the plugin refuses, or Google's consent screen can stay open, white (Part 9).
+    socialReady ||= social.initialize({ google: { webClientId: googleClientId(), mode: 'online', skipAuthOnlyAuthorizationAfterSignIn: true } })
+      .catch((e) => { socialReady = null; throw e; });
     await socialReady;
     if (fresh) { try { await social.logout({ provider: 'google' }); } catch { /* nobody to forget */ } }   // show the account chooser
     try {
-      const r = await social.login({ provider: 'google', options: { scopes: ['email', 'profile'] } });
+      const r = await social.login({ provider: 'google', options: { style: 'standard', filterByAuthorizedAccounts: false } });
       tok = r?.result?.idToken || null;
     } catch (e) {
       if (/cancel/i.test(e?.message || e?.code || '')) return null;
-      throw e;
+      throw Object.assign(new Error(e?.message || String(e)), { native: true });
     }
   } else {
     const g = plugin('GoogleAuth');
