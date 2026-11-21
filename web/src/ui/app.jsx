@@ -403,10 +403,10 @@ function App() {
     loadAll().then(() => {
       startTracking();
       loadFlags().then(() => setState({ flagsRev: Date.now() }));
-      if (!local.get('welcomed', false)) openSheet('welcome');
+      // nothing pops up on the first open: Home has a "Get started" card with the video and the tour button
       if (hasServer()) ensureAccount().then(backFromCheckout);
-      // Google One Tap on the website for someone not signed in, after the tour and the first frame
-      if (hasServer() && local.get('welcomed', false)) setTimeout(() => import('./signin.js').then((S) => S.startOneTap(() => setState({ signedInAt: Date.now() }))).catch(() => {}), 4000);
+      // Google One Tap on the website for someone not signed in, a little after the first frame, not over a sheet
+      if (hasServer()) setTimeout(() => { if (!getState().sheet) import('./signin.js').then((S) => S.startOneTap(() => setState({ signedInAt: Date.now() }))).catch(() => {}); }, 5000);
       openHash();
       // the sheet engraver (2.3 MB) downloads once Home is on screen and the phone is idle, not before
       setTimeout(() => (globalThis.requestIdleCallback || setTimeout)(() => warmVerovio(), { timeout: 5000 }), 2500);

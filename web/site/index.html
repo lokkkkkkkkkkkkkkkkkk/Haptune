@@ -157,7 +157,7 @@ section { padding: 96px 0; }
 h2 { font-size: clamp(32px, 4.4vw, 52px); font-weight: 800; margin: 12px 0 16px; }
 .lead2 { font-size: 19px; color: var(--ink2); max-width: 36em; }
 .center { text-align: center; } .center .lead2 { margin: 0 auto; }
-/* ---------- the 1-minute video ---------- */
+/* ---------- the quick-start video ---------- */
 .vid { --cut: calc(96px + min(260px, 28vw)); background: linear-gradient(180deg, var(--night) 0, var(--night) calc(100% - var(--cut)), var(--bg) calc(100% - var(--cut))); padding-top: 64px; }
 .vid .eyebrow { color: #B9A8FF; }
 .vid h2 { color: #fff; } .vid .lead2 { color: rgba(255,255,255,.72); }
@@ -301,7 +301,7 @@ footer a:hover { color: var(--ink); }
       </form>
       <div class="cta">
         <a class="btn glass" id="get" href="app/"><svg class="i"><use href="#i-down"/></svg><span id="get-text">Get the app</span></a>
-        <a class="btn glass" id="watch" href="#video"><svg class="i"><use href="#i-play"/></svg><span>Watch the 1-minute video</span></a>
+        <a class="btn glass" id="watch" href="#video"><svg class="i"><use href="#i-play"/></svg><span>Watch the quick-start video</span></a>
       </div>
       <small id="get-note">Works on Android, iPhone, iPad and any computer. Your music stays on your device.</small>
       <div class="stores"><span><svg class="i"><use href="#i-check"/></svg>6,600+ free pieces</span><span><svg class="i"><use href="#i-check"/></svg>Staff notation and 簡譜</span><span><svg class="i"><use href="#i-check"/></svg>20+ instruments</span></div>
@@ -326,14 +326,14 @@ footer a:hover { color: var(--ink); }
   <div class="w">
     <div class="center reveal">
       <div class="eyebrow">See it in action</div>
-      <h2>Haptune in 1 minute</h2>
-      <p class="lead2">How Play Along listens to you, how a PDF becomes a score you can play, and how classes and Stage work. A quick start before you open the app.</p>
+      <h2>A real practice session, start to finish</h2>
+      <p class="lead2">Find a song, listen, change the key, slow it down, play with the band, then play it yourself while Haptune listens. With a voice guide and captions.</p>
     </div>
     <div class="vid-frame" id="vid-frame">
-      <video id="demo-video" controls playsinline preload="metadata" poster="media/haptune-demo.jpg" aria-label="Haptune in 1 minute: a demo of the app">
+      <video id="demo-video" controls playsinline preload="metadata" poster="media/haptune-demo.jpg" aria-label="Haptune quick start: a real practice session">
         <source src="media/haptune-demo.mp4" type="video/mp4">
       </video>
-      <button type="button" class="vid-go" id="vid-go" aria-label="Play the video"><span><svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg></span><b>1:12 · with music</b></button>
+      <button type="button" class="vid-go" id="vid-go" aria-label="Play the video"><span><svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg></span><b>1:29 · voice &amp; captions</b></button>
     </div>
   </div>
 </section>
@@ -504,7 +504,7 @@ footer a:hover { color: var(--ink); }
     location.href = 'app/' + (q ? '#q=' + encodeURIComponent(q) : '');
   });
 
-  // the 1-minute video: the big play button, and "Watch" in the hero scrolls to it and starts it
+  // the quick-start video: the big play button, and "Watch" in the hero scrolls to it and starts it
   var vid = document.getElementById('demo-video'), vframe = document.getElementById('vid-frame');
   var playVid = function () { vframe.classList.add('playing'); var p = vid.play(); if (p && p.catch) p.catch(function () {}); };
   document.getElementById('vid-go').onclick = playVid;

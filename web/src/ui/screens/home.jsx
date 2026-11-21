@@ -21,6 +21,7 @@ import { hasServer, call } from '../api.js';
 import { loadCatalog, searchCatalog, norm } from '../catalog.js';
 import { openFiles } from '../intake.js';
 import { startCoach, coachDone } from '../coach.jsx';
+import { DemoVideo } from './demovideo.jsx';
 
 export function dueLabel(iso, lang) {
   if (!iso) return '';
@@ -291,6 +292,18 @@ export function HomeView({ active }) {
           <span class="cc-t"><span class="cc-k">{t('continueK')}</span><strong>{last.title}</strong><span>{last.lastBar > 1 ? t('atBar', { n: last.lastBar }) : (last.composer || last.keyText || '')}</span></span>
           <span class="cc-play" role="presentation"><Icon name="play" size={20} fill /></span>
         </button>}
+
+        {!hidden.includes('start') && !(local.get('welcomed', false) && local.get('videoSeen', false)) && (
+          <section class="home-start" id="home-start" aria-label={t('startT')}>
+            <div class="hs2-top">
+              <span class="hs2-hapi" aria-hidden="true"><Mascot mood="wave" size={46} /></span>
+              <span class="hs2-t"><strong>{t('startT')}</strong><span>{t('startS')}</span></span>
+              <button type="button" class="hs2-x" id="home-start-x" onClick={() => hide('start')} aria-label={t('close')}><Icon name="close" size={14} stroke={2.6} /></button>
+            </div>
+            <DemoVideo id="home-video" compact />
+            <button type="button" class="hs2-tour" id="gs-tour" onClick={() => openSheet('welcome')}><Icon name="sparkles" size={18} stroke={2.3} /><span><strong>{t('coachStart')}</strong><span>{t('startTourS')}</span></span><Icon name="chevronR" size={15} stroke={2.4} /></button>
+          </section>
+        )}
 
         <div class="hero-row" id="home-hero">
           {hero('new', 'violet', 'sparkles', 'heroNew', 'heroNewSub', () => push('newSongs'))}

@@ -1,10 +1,12 @@
-// "Haptune in 1 minute": the demo video, for new people (the welcome card), Settings › Guide and Help.
+// The quick-start video (a real practice session with a voice guide and captions): Home's "Get started" card,
+// the welcome card, Settings › Guide and Help.
 // The file stays on the website (CONFIG.site + /media/...) so the app download doesn't grow; it streams when tapped.
 import { useState } from 'preact/hooks';
 import { t } from '../../core/i18n.js';
 import { Icon } from '../components.jsx';
 import { Mascot } from '../mascot.jsx';
 import { SheetFrame } from './common.jsx';
+import { local } from '../storage.js';
 
 export function demoVideoUrl(ext = 'mp4') {
   const cfg = globalThis.HAPTUNE_CONFIG || {};
@@ -30,7 +32,7 @@ export function DemoVideo({ id = 'demo-video', autoplay = false, compact = false
     <div class={`demo-player${compact ? ' compact' : ''}`}>
       {failed ? <p class="demo-off">{t('videoNeedsNet')}</p> : (
         <video id={`${id}-player`} class="demo-video" src={demoVideoUrl()} poster={demoVideoUrl('jpg')} controls playsInline autoPlay preload="auto"
-          onError={() => setFailed(true)} />
+          onError={() => setFailed(true)} onPlay={() => local.set('videoSeen', true)} />
       )}
     </div>
   );

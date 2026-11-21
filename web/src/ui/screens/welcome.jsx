@@ -1,5 +1,5 @@
-// First run: one clean card (Hapi says hello and asks what you play), then "Show me around" points at the real
-// buttons (coach.jsx). The 1-minute video plays right in the card. Skip at any step; see it again any time in Settings › Guide or Help.
+// The welcome card, opened from Home's "Get started" card (it no longer pops up by itself): Hapi says hello and asks
+// what you play, then "Show me around" points at the real buttons (coach.jsx). The quick-start video plays in the card. Skip at any step; see it again in Settings › Guide or Help.
 import { useApp, updateSettings, closeSheet, go, getState } from '../state.js';
 import { t, instrumentName } from '../../core/i18n.js';
 import { Chip, Button, Icon } from '../components.jsx';
