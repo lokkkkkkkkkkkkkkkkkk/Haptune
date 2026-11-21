@@ -1,16 +1,22 @@
 # Changelog
 
-## The 1-minute demo video (November 2026)
-- **"Haptune in 1 minute"** (1:12, 1920×1080, with music): Play Along listening to a real take (92%, 57 of 62 notes),
-  a PDF read into a score that checks itself, 簡譜 / slow down / loop / key, Create, the Learning hub, Stage and the
-  6,600+ free pieces. Every screen is the real app. For the Google Play promo video (upload the 1080p file to YouTube)
-  and the website.
-- **Website**: a "See it in action" section right under the hero, and "Watch the 1-minute video" next to Get the
-  app (scrolls to it and starts it). The web copy (720p, 5.5 MB) is `site/media/haptune-demo.mp4` with a poster.
-  The phone hero no longer runs past the right edge; the free library count now says 6,600+ (6,679 in the index).
-- **In the app**: the welcome card has "Watch the 1-minute video", which plays right in the card; it's also in
-  Settings › Guide and at the top of Help. The app streams it from the website, so the download doesn't grow. The
-  background music and sound effects go quiet while a video plays; the service worker leaves videos alone.
+## The quick-start video, and a first run that asks nothing (November 2026)
+- **Quick-start video** (1:30, 1920×1080): a real practice session, start to finish, with a voice guide and captions
+  burned in. Search "Ode to Joy" → open it → Listen (the cursor follows the sheet) → change the key D → C (notes and
+  chords move) → 75% speed, loop bars 2–5, 簡譜 → Improvise Over This, where the AI band loops the song's chords
+  (you hear the band as the chords change on screen) → Play Along with a real take (92%, 57 of 62 notes) → the report.
+  Then what only Haptune does: a PDF read into a score that checks itself, Stage requests answered with playable
+  versions, and the Learning hub. Every screen is the real app. Voice: Kokoro (open-source TTS, made on our machine).
+- **Home: "New here? Start here"** is the first card on Home: the video (plays in place) and **Show me around**
+  (opens the welcome card: pick your instrument, then the guided tour). Closed for good with ✕, or once both are done.
+- **Nothing pops up on the first open** any more: the welcome card only opens from that button, Settings › Guide or
+  Help. A song searched on the website goes straight to Find songs. Google One Tap waits 5 s and never covers a sheet.
+- **Website**: a "See it in action" section right under the hero, and "Watch the quick-start video" next to Get the
+  app (scrolls to it and starts it). The web copy (720p) is `site/media/haptune-demo.mp4` with a poster. The phone
+  hero no longer runs past the right edge; the free library count now says 6,600+ (6,679 in the index).
+- **In the app** the video is also in the welcome card, Settings › Guide and Help. It streams from the website, so
+  the download doesn't grow. The background music and sound effects go quiet while it plays; the service worker
+  leaves videos alone.
 
 ## Part 7: a phone layout of its own, and Haptune's own sounds (November 2026)
 - **Phones (up to 599 px) get their own layout** (`ui/v8.css`), after Apple Health on iPhone and the iOS sizes used

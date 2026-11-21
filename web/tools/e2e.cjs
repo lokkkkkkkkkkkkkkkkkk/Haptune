@@ -81,7 +81,7 @@ async function run(mode, base, browser) {
     if (side > 1) throw new Error(`the website is ${side}px too wide`);
     for (const f of ['privacy.html', 'terms.html', 'refunds.html']) { const r = await p.request.get(`${base}/${f}`); if (!r.ok()) throw new Error(`${f} is missing`); }
     await p.fill('#try-q', 'ode to joy'); await p.keyboard.press('Enter');
-    await p.waitForSelector('.welcome', { timeout: 20000 });
+    await p.waitForSelector('#find-q', { timeout: 20000 });
   });
   // "No screen shows more than 6 primary actions above the fold": big buttons (tiles, big play buttons, tool
   // buttons, brand buttons) fully inside the first screenful.
@@ -93,9 +93,9 @@ async function run(mode, base, browser) {
       return r.width > 0 && r.height > 0 && r.top >= 0 && r.bottom <= innerHeight;
     }).length;
   }).then((n) => { if (n > 6) errors.push(`${where} shows ${n} primary actions above the fold (max 6)`); return n; });
-  await step('first run: one welcome card, then on to the song searched on the website', async () => {
-    await p.waitForSelector('.welcome #tour-start'); await shot('00b-welcome');
-    await p.locator('#tour-start').click(); await p.waitForTimeout(500);
+  await step('first run: nothing pops up, straight on to the song searched on the website', async () => {
+    await p.waitForTimeout(800);
+    if (await p.locator('.welcome').count()) throw new Error('the welcome card should not open by itself any more');
     await p.waitForSelector('#find-q');
     if ((await p.inputValue('#find-q')) !== 'ode to joy') throw new Error('the song typed on the website did not arrive in Find songs');
     await shot('01-search'); await overflow('search');
@@ -235,7 +235,11 @@ async function run(mode, base, browser) {
   if (mode === 'phone') {
     await step('reload: tour shown once, More tools stays open', async () => {
       await p.reload({ waitUntil: 'networkidle' }); await p.waitForSelector('#home-hero');
-      if (await p.locator('.welcome').count()) throw new Error('the tour came back after it was finished');
+      if (await p.locator('.welcome').count()) throw new Error('the welcome card opened by itself');
+      await p.waitForSelector('#home-start #home-video'); await shot('00b-home-start');
+      await p.locator('#gs-tour').click(); await p.waitForSelector('.welcome #tour-start'); await shot('00c-welcome');
+      await p.locator('#tour-skip').click(); await p.waitForTimeout(400);
+      if (await p.locator('.welcome').count()) throw new Error('Skip did not close the welcome card');
       if (!(await p.locator('#more-tools.open').count())) throw new Error('More tools forgot that it was open');
     });
   }

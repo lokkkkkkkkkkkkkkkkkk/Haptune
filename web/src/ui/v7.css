@@ -63,7 +63,23 @@
 .w2-video, .help-video { width: 100%; }
 .help-video { margin: 4px 0 14px; }
 
-/* ---------- the 1-minute video ---------- */
+/* ---------- the quick-start video, and Home's "Get started" card ---------- */
+.home-start { margin: 4px 0 18px; padding: 14px; border-radius: 24px; display: flex; flex-direction: column; gap: 10px;
+  background: color-mix(in srgb, var(--card) 88%, transparent); box-shadow: var(--shadow); border: 1px solid color-mix(in srgb, #7B5CF0 18%, transparent); }
+.home-start .hs2-top { display: flex; align-items: center; gap: 10px; }
+.home-start .hs2-hapi { flex: none; display: grid; place-items: center; }
+.home-start .hs2-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.home-start .hs2-t strong { font: 800 18px/1.2 var(--round, inherit); }
+.home-start .hs2-t span { font-size: 13.5px; line-height: 1.35; color: var(--ink2); }
+.home-start .hs2-x { flex: none; align-self: flex-start; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--card2); color: var(--ink2); }
+.home-start .hs2-tour { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border-radius: 16px; text-align: left; color: #6B4BE0;
+  background: color-mix(in srgb, #7B5CF0 12%, transparent); transition: transform .15s ease, background .15s ease; }
+.home-start .hs2-tour:active { transform: scale(.98); }
+.home-start .hs2-tour > span { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+.home-start .hs2-tour strong { font-size: 15.5px; font-weight: 800; }
+.home-start .hs2-tour span span { font-size: 13px; color: var(--ink2); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .home-start .hs2-tour { color: #B9A8FF; } }
+:root[data-theme="dark"] .home-start .hs2-tour { color: #B9A8FF; }
 .demo-thumb { width: 100%; display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 20px; text-align: left; color: #fff; cursor: pointer;
   background: linear-gradient(120deg, #6E5BFF, #B04FEF 55%, #FF6FA8); box-shadow: 0 10px 26px rgba(120, 70, 230, .28); transition: transform .18s ease, box-shadow .18s ease; }
 .demo-thumb:hover { transform: translateY(-1px); box-shadow: 0 14px 30px rgba(120, 70, 230, .34); }
