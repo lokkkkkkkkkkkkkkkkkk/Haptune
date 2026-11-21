@@ -26,6 +26,7 @@ import gzip
 import re
 import time
 import zlib
+from urllib.parse import quote
 from datetime import datetime, timedelta, timezone
 from typing import Literal
 
@@ -941,8 +942,10 @@ def get_file(fid: str, me: A.Me | None = Depends(A.optional)):
             raise HTTPException(410, "This attachment has expired.")
     data = gzip.decompress(f["data"]) if f["kind"] == "musicxml" else f["data"]
     name = re.sub(r"[^\w .-]", "_", f["name"] or "file")[:80]
+    ascii_name = re.sub(r"[^A-Za-z0-9 ._-]", "_", name).strip() or "file"      # headers are Latin-1: 中文 / 한국어 titles go in filename*
+    disposition = f'inline; filename="{ascii_name}"; filename*=UTF-8\'\'{quote(name)}'
     return Response(content=data, media_type=f["mime"] or "application/octet-stream",
-                    headers={"Content-Disposition": f'inline; filename="{name}"', "Cache-Control": "private, max-age=3600"})
+                    headers={"Content-Disposition": disposition, "Cache-Control": "private, max-age=3600"})
 
 
 # --------------------------------------------------------------------------------------- people

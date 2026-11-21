@@ -266,6 +266,9 @@ def test_admin_bulk_share_seeds_the_library_as_a_musician():
     listed = client.get("/c/posts", params={"type": "share"}).json()["items"]
     assert len(listed) >= 15 and all(p["licence"] == "copyrighted" and p["visibility"] == "public" for p in listed)
     assert credits(m) == 100                                                 # no Notes for seeding
+    zh = client.post("/c/admin/bulk-share", json={"handle": mus["handle"], "items": [{"title": "周杰伦 - 晴天", "xml_gz": _gz(XML)}]}, headers=d).json()
+    f = client.get(f"/c/files/{client.get('/c/posts/' + zh['created'][0]['id']).json()['file_id']}")
+    assert f.status_code == 200 and "filename*=UTF-8''" in f.headers["content-disposition"]    # non-Latin titles download
     again = client.post("/c/admin/bulk-share", json={"handle": mus["handle"], "items": items[:3]}, headers=d).json()
     assert again["created"] == [] and len(again["skipped"]) == 3              # safe to run again
 
